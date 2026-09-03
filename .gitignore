@@ -1,0 +1,81 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Backend runtime data. Keep the empty directories themselves in Git.
+backend/data/uploads/*
+backend/data/clips/*
+!backend/data/uploads/.gitkeep
+!backend/data/clips/.gitkeep
+backend/data/*.db
+backend/data/*.db-*
+backend/data/*.sqlite
+backend/data/*.sqlite-*
+backend/data/*.sqlite3
+backend/data/*.sqlite3-*
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+.vite/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Unity-generated project state and IDE files
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+.vs/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+sysinfo.txt
+
+# Generated Unity WebGL/Burst output. Keep frontend/public/unity tracked: it is
+# the stable symlink through which Vite serves SignoraAvatarTracking/WebBuild.
+/SignoraAvatarTracking/WebBuild/
+/SignoraAvatarTracking/Data/
