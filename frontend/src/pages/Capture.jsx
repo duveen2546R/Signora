@@ -90,6 +90,11 @@ export default function Capture({ onLibraryChanged }) {
 
   return (
     <section className="capture">
+      <header className="page-masthead">
+        <p>02 / Capture</p>
+        <h1>Teach every<br />movement.</h1>
+        <span>Build the vocabulary<br />one performance at a time.</span>
+      </header>
       <div className="panel">
         <h2>Avatar rig</h2>
         <p className="hint">

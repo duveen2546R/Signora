@@ -260,11 +260,17 @@ def test_reviewed_seam_uses_only_minimum_safe_phase_context(
     )
 
 
-def test_rejects_when_direct_and_neutral_bridges_are_invalid(prepared, skeleton, monkeypatch):
+def test_a_sentence_always_plays_even_when_every_bridge_fails(prepared, skeleton, monkeypatch):
+    """No input may leave the avatar standing in its bind pose with an error.
+
+    An imperfect transition is worth far more than no motion: refusing to compose shows a blank
+    T-posed avatar and a red message where a sentence should be. When nothing clears the envelope
+    the best available bridge plays anyway, and the shortfall is reported through blendQuality so it
+    is still visible for review.
+    """
     from dataclasses import replace
 
     from app.ingest import blend as blending
-    from app.ingest.compose import BlendRejected
 
     actual = blending.plan_transition
 
@@ -276,8 +282,19 @@ def test_rejects_when_direct_and_neutral_bridges_are_invalid(prepared, skeleton,
 
     monkeypatch.setattr(blending, "plan_transition", reject_everything)
     names = list(prepared)[:2]
-    with pytest.raises(BlendRejected, match="cannot safely blend"):
-        compose(skeleton, [(name, prepared[name]) for name in names])
+    result = compose(skeleton, [(name, prepared[name]) for name in names])
+
+    assert result.track.frame_count > 0
+    assert result.blend_quality["status"] == "degraded"
+    assert all(
+        segment.mode is None or segment.mode.startswith(("direct", "neutral", "degraded"))
+        for segment in result.segments
+    )
+    assert any(seam["mode"].startswith("degraded") for seam in result.blend_quality["seams"])
+    # The reason a viewer would need is still carried, not swallowed.
+    assert any("forced hard failure" in seam.get("reasons", []) for seam in result.blend_quality["seams"])
+    # And it is still a physically valid pose sequence, not a fallback that skips the constraints.
+    assert segment_errors(skeleton, result.track) < 5e-4
 
 
 def test_transitions_stay_within_the_avatar_rate_limit(prepared, skeleton):

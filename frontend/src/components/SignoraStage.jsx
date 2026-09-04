@@ -86,6 +86,17 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
     }
   }, [isLoaded, sendMessage, report])
 
+  const [kind, detail] = status.split(':')
+  const label = kind === 'calibrated'
+    ? 'Ready'
+    : kind === 'calibration'
+      ? 'Calibrating'
+      : kind === 'error'
+        ? 'Error'
+        : kind === 'ready'
+          ? 'Starting'
+          : 'Loading'
+
   return (
     <div className="stage">
       <Unity
@@ -95,13 +106,26 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
         // it from retaining focus while the user types a sentence in the HTML form.
         tabIndex={-1}
       />
+
       {!isLoaded && (
         <div className="stage__overlay">
-          <p>Loading avatar… {Math.round(loadingProgression * 100)}%</p>
-          <p className="hint">First load fetches a 76&nbsp;MB build.</p>
+          <p className="eyebrow">Loading avatar</p>
+          <div className="stage__progress">
+            <span style={{ transform: `scaleX(${loadingProgression || 0})` }} />
+          </div>
+          <p className="hint mono">{Math.round(loadingProgression * 100)}% — first load fetches 76&nbsp;MB</p>
         </div>
       )}
-      {isLoaded && <span className={`stage__status stage__status--${status.split(':')[0]}`}>{status}</span>}
+
+      {isLoaded && (
+        <span
+          className={`stage__status stage__status--${kind === 'calibrated' ? 'ready' : kind}`}
+          title={detail ? `${label}: ${detail}` : label}
+        >
+          <span className="stage__dot" />
+          {label}
+        </span>
+      )}
     </div>
   )
 }

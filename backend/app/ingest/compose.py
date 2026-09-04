@@ -81,6 +81,18 @@ class Composition:
         return payload
 
 
+# A clip whose measured proportions differ from the composition skeleton by more than this is
+# projected onto it rather than trusted.
+SKELETON_MATCH_TOLERANCE_M = 0.002
+
+
+def _matches_skeleton(skel: LandmarkSkeleton, take: LandmarkTake) -> bool:
+    if take.frame_count == 0:
+        return True
+    gap, _where = LandmarkSkeleton.from_takes(take).deviation(skel)
+    return gap <= SKELETON_MATCH_TOLERANCE_M
+
+
 def enforce_track(skel: LandmarkSkeleton, take: LandmarkTake) -> LandmarkTake:
     """Project every frame back onto the skeleton's measured constraints."""
     frames = [blend.enforce(skel, Pose.at(take, i)) for i in range(take.frame_count)]
@@ -198,6 +210,16 @@ def compose(
         return _compose_legacy(skel, clips, fps, strokes, rest)
     if algorithm_version != ALGORITHM_VERSION:
         raise ValueError(f"unsupported blending algorithm version {algorithm_version}")
+
+    # Reconcile the inputs with the skeleton they are about to be composed against. Callers are
+    # expected to have prepared them together, but a clip measured from a differently proportioned
+    # performer - a recalibrated session, a second signer - otherwise gets forced onto the wrong
+    # limb lengths and silently distorted by over 20 mm inside its own sign. Measuring is cheap; the
+    # projection only runs for a clip that actually disagrees.
+    clips = [
+        (gloss, clip if _matches_skeleton(skel, clip) else enforce_track(skel, clip))
+        for gloss, clip in clips
+    ]
 
     strokes = strokes or {}
     phases = []
@@ -344,11 +366,14 @@ def compose(
             return "direct"
 
         if not allow_neutral:
+            # Nothing to fall back to at a sentence edge, and refusing here would leave the avatar
+            # standing in its bind pose with an error where a sentence should be. A bridge that
+            # misses the envelope is still far better than no motion at all, so it plays and the
+            # shortfall is reported instead.
+            seam["mode"] = "degraded"
             seams.append(seam)
-            raise BlendRejected(
-                f"cannot safely blend {from_gloss or 'neutral'} to {to_gloss or 'neutral'}: "
-                + "; ".join(direct.quality.reasons)
-            )
+            add(direct.track, to_gloss, "transition", "degraded", direct.quality.score)
+            return "degraded"
 
         # A reviewed capture provides safe transition material immediately outside the semantic
         # sign range. Search a small amount of that material before falling all the way back to
@@ -454,13 +479,31 @@ def compose(
                 "outOfNeutral": out_of_rest.quality.as_dict(),
             },
         })
-        seams.append(seam)
         if not fallback_passed:
-            reasons = list(into_rest.quality.reasons) + list(out_of_rest.quality.reasons)
-            raise BlendRejected(
-                f"cannot safely blend {from_gloss} to {to_gloss}, including through neutral: "
-                + "; ".join(dict.fromkeys(reasons))
-            )
+            # Neither route cleared the envelope. Play whichever scored better rather than dropping
+            # the sentence: the neutral route is two long bridges through rest, so a direct bridge
+            # that merely exceeds the envelope usually reads better than routing the hands down and
+            # back up. The seam records what fell short.
+            neutral_score = min(into_rest.quality.score, out_of_rest.quality.score)
+            if direct.quality.score >= neutral_score:
+                seam["mode"] = "degraded"
+                seam["score"] = round(direct.quality.score, 1)
+                seam["durationMs"] = int(round(direct.duration * 1000))
+                seam["reasons"] = list(direct.quality.reasons)
+                seams.append(seam)
+                add(direct.track, to_gloss, "transition", "degraded", direct.quality.score)
+                return "degraded"
+
+            seam["mode"] = "degraded-neutral"
+            seams.append(seam)
+            add(into_rest.track, to_gloss, "transition", "degraded-neutral", neutral_score)
+            add(_hold(
+                rest_track, 0, int(round(NEUTRAL_FALLBACK_HOLD_SECONDS * fps)), fps,
+            ), "", "hold", "degraded-neutral", neutral_score)
+            add(out_of_rest.track, to_gloss, "transition", "degraded-neutral", neutral_score)
+            return "degraded-neutral"
+
+        seams.append(seam)
 
         score = min(into_rest.quality.score, out_of_rest.quality.score)
         add(into_rest.track, to_gloss, "transition", "neutral-fallback", score)
@@ -520,8 +563,9 @@ def compose(
     add(_hold(rest_track, 0, int(round(FINAL_HOLD_SECONDS * fps)), fps), "", "hold")
 
     score = min((float(seam["score"]) for seam in seams), default=100.0)
+    degraded = any(seam.get("mode", "").startswith("degraded") for seam in seams)
     quality = {
-        "status": "neutral-fallback" if used_fallback else "direct",
+        "status": "degraded" if degraded else ("neutral-fallback" if used_fallback else "direct"),
         "score": round(score, 1),
         "algorithmVersion": ALGORITHM_VERSION,
         "seams": seams,

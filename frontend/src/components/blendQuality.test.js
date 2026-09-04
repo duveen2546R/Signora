@@ -29,3 +29,20 @@ test('legacy automatic-phase messages are grouped into one advisory', () => {
   assert.match(notices[0], /HELLO, NAMASTE, FATHER/)
   assert.match(notices[0], /safe full-motion fallback/)
 })
+
+test('a degraded sentence still plays and names the rough transitions', () => {
+  const result = {
+    track: { frameCount: 100 },
+    blendQuality: {
+      status: 'degraded',
+      seams: [
+        { mode: 'direct', fromGloss: '', toGloss: 'HELLO' },
+        { mode: 'degraded', fromGloss: 'HELLO', toGloss: 'FATHER' },
+      ],
+    },
+  }
+  assert.notEqual(playableTrack(result), null, 'a degraded sentence must still be playable')
+  const notices = blendNotices(result)
+  assert.match(notices[0], /played as recorded/)
+  assert.match(notices[0], /HELLO to FATHER/)
+})

@@ -44,34 +44,37 @@ export default function SignComposer({ activeGloss, onPlay, disabled }) {
   }
 
   return (
-    <section className="composer">
+    <section className="panel">
       <form onSubmit={handleSubmit}>
-        <label htmlFor="composer-text">Sentence</label>
-        <div className="composer__row">
-          <input
-            id="composer-text"
-            type="text"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={handlePhysicalKey}
-            placeholder="good morning"
-            autoComplete="off"
-            inputMode="text"
-          />
-          <button type="submit" disabled={busy || disabled || !text.trim()}>
-            {busy ? 'Translating…' : 'Sign it'}
-          </button>
+        <div className="field">
+          <label className="label" htmlFor="composer-text">Sentence</label>
+          <div className="row">
+            <input
+              id="composer-text"
+              className="input"
+              type="text"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              onKeyDown={handlePhysicalKey}
+              placeholder="good morning"
+              autoComplete="off"
+              inputMode="text"
+            />
+            <button type="submit" className="button" disabled={busy || disabled || !text.trim()}>
+              {busy ? 'Translating…' : 'Sign it'}
+            </button>
+          </div>
         </div>
       </form>
 
-      {error && <p className="error">{error}</p>}
+      {error && <p className="notice notice--bad">{error}</p>}
 
       {plan && (
-        <div className="plan">
+        <div>
           {blendNotices(plan).map((warning) => (
-            <p className="warning" role="status" key={warning}>{warning}</p>
+            <p className="notice notice--warn" role="status" key={warning}>{warning}</p>
           ))}
-          <ol className="plan__glosses">
+          <ol className="chips">
             {plan.items.map((item, index) => (
               <li
                 key={`${item.gloss}-${index}`}
@@ -79,14 +82,14 @@ export default function SignComposer({ activeGloss, onPlay, disabled }) {
                   'chip',
                   item.fingerspelled ? 'chip--spelled' : '',
                   item.gloss === activeGloss ? 'chip--active' : '',
-                ].join(' ')}
+                ].join(' ').trim()}
               >
                 {item.gloss}
               </li>
             ))}
           </ol>
           {plan.unmapped.length > 0 && (
-            <p className="plan__unmapped">
+            <p className="notice notice--warn">
               No sign recorded for: {plan.unmapped.join(', ')}. Record these, or add the manual
               alphabet so they can be fingerspelled.
             </p>

@@ -10,40 +10,45 @@ export default function SignLibrary({ signs, activeGloss, onPlay, disabled = fal
   }, [signs, query])
 
   return (
-    <section className="library">
-      <div className="library__head">
-        <h2>Vocabulary <span className="count">{signs.length}</span></h2>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search signs"
-          aria-label="Search signs"
-        />
+    <section className="panel">
+      <div className="panel__head">
+        <h2 className="label">Vocabulary</h2>
+        <span className="panel__count mono">{signs.length}</span>
       </div>
 
+      <input
+        className="input"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search signs"
+        aria-label="Search signs"
+      />
+
       {signs.length === 0 ? (
-        <p className="empty">
-          No signs yet. Upload a Rokoko CSV on the Capture tab to add the first one.
+        <p className="empty" style={{ marginTop: 16 }}>
+          No signs yet. Upload a Rokoko CSV on the Capture page to add the first one.
         </p>
       ) : (
-        <ul className="library__list">
+        <ul className="library">
           {visible.map((sign) => (
             <li key={sign.id}>
               <button
                 type="button"
-                className={sign.gloss === activeGloss ? 'sign sign--active' : 'sign'}
+                className={`sign-row ${sign.gloss === activeGloss ? 'sign-row--active' : ''}`.trim()}
                 onClick={() => onPlay(sign)}
                 disabled={disabled}
               >
-                <span className="sign__gloss">{sign.gloss}</span>
-                <span className="sign__meta">{(sign.durationMs / 1000).toFixed(1)}s</span>
+                <span className="sign-row__gloss">{sign.gloss}</span>
                 {sign.qc?.phases?.reviewed === false ? (
-                  <span className="sign__warn" title={sign.qc.warnings?.join('\n')}>
+                  <span className="sign-row__flag" title={sign.qc.warnings?.join('\n')}>
                     Review phases
                   </span>
                 ) : sign.qc?.warnings?.length > 0 ? (
-                  <span className="sign__warn" title={sign.qc.warnings.join('\n')}>Check capture</span>
+                  <span className="sign-row__flag" title={sign.qc.warnings.join('\n')}>
+                    Check capture
+                  </span>
                 ) : null}
+                <span className="sign-row__meta mono">{(sign.durationMs / 1000).toFixed(1)}s</span>
               </button>
             </li>
           ))}
