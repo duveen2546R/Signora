@@ -21,15 +21,18 @@ import numpy as np
 from . import blend, filters, resample
 from .blend import Pose
 from .landmarks import LandmarkSkeleton, LandmarkTake, concat, slice_frames
-from .segment import Stroke, boundary_candidates, find_stroke, usable_range
+from .segment import Phases, Stroke, boundary_candidates, find_phases, find_stroke, usable_range
 
 TARGET_FPS = 60.0
-ALGORITHM_VERSION = 2
+ALGORITHM_VERSION = 5
 
 # Stillness after each sign so one word reads as finished before the next begins.
 HOLD_SECONDS = 0.10
 FINAL_HOLD_SECONDS = 0.35
 NEUTRAL_FALLBACK_HOLD_SECONDS = 0.08
+PHASE_ASSIST_OUTGOING_SECONDS = 0.40
+PHASE_ASSIST_INCOMING_SECONDS = 0.15
+PHASE_ASSIST_STEP_SECONDS = 0.05
 
 
 class BlendRejected(ValueError):
@@ -86,6 +89,10 @@ def enforce_track(skel: LandmarkSkeleton, take: LandmarkTake) -> LandmarkTake:
         pose=np.stack([f.pose for f in frames]),
         left_hand=np.stack([f.left_hand for f in frames]),
         right_hand=np.stack([f.right_hand for f in frames]),
+        sign_start_s=take.sign_start_s,
+        sign_end_s=take.sign_end_s,
+        phase_source=take.phase_source,
+        phase_reviewed=take.phase_reviewed,
     )
 
 
@@ -124,6 +131,10 @@ def prepare(
     return enforce_track(skel, LandmarkTake(
         name=take.name, fps=fps,
         pose=tracks[0], left_hand=tracks[1], right_hand=tracks[2],
+        sign_start_s=take.sign_start_s,
+        sign_end_s=take.sign_end_s,
+        phase_source=take.phase_source,
+        phase_reviewed=take.phase_reviewed,
     ))
 
 
@@ -189,36 +200,84 @@ def compose(
         raise ValueError(f"unsupported blending algorithm version {algorithm_version}")
 
     strokes = strokes or {}
-    detected = [strokes.get(gloss) or find_stroke(clip) for gloss, clip in clips]
+    phases = []
+    for _gloss, clip in clips:
+        phase = find_phases(clip)
+        if not clip.phase_reviewed:
+            # Automatic boundaries are useful QC guidance, but they are not allowed to make an
+            # existing vocabulary item unplayable. Until a person reviews the timestamps, retain
+            # the complete detected activity envelope and mark start/end as absent.
+            stroke = find_stroke(clip)
+            phase = type(phase)(
+                stroke.start, stroke.start, stroke.end, stroke.end, clip.fps,
+                "detected", "phase boundaries need review; using the full active motion",
+            )
+        phases.append(phase)
+    # The seam optimizer works against the sign proper, so give it the tightened core rather than
+    # the whole movement envelope; preparation and retraction are now handled explicitly.
+    detected = [
+        strokes.get(gloss) or Stroke(ph.stroke_start, ph.stroke_end, 0.0, False)
+        for (gloss, _clip), ph in zip(clips, phases, strict=True)
+    ]
 
     if rest is None:
         rest = neutral_pose(skel, [clip for _, clip in clips])
     rest_track = _single(skel, rest, fps, "neutral")
+
+    # A sign keeps its recorded run-up only when it opens the sentence, and its recorded return
+    # only when it closes one. Everywhere else those phases describe a journey to and from rest
+    # that is wrong once the word has a neighbour, and the bridge replaces them.
+    preparations = [
+        slice_frames(clip, *phase.preparation) if phase.has_preparation else None
+        for (_gloss, clip), phase in zip(clips, phases, strict=True)
+    ]
+    retractions = [
+        slice_frames(clip, *phase.retraction) if phase.has_retraction else None
+        for (_gloss, clip), phase in zip(clips, phases, strict=True)
+    ]
+    lead_in = preparations[0]
+    lead_out = retractions[-1]
 
     # Select compatible boundary frames only from preparation/retraction. The detected stroke is a
     # protected core, so an optimizer can add context but can never clip meaning-bearing motion.
     entries = [stroke.start for stroke in detected]
     exits = [stroke.end - 1 for stroke in detected]
 
-    first_candidates = boundary_candidates(clips[0][1], detected[0], "entry")
-    entries[0] = min(
-        first_candidates,
-        key=lambda at: blend.seam_cost(skel, rest_track, 0, clips[0][1], at),
-    )
+    # Nothing is joined at an edge that plays its own recorded phase, so there is nothing to
+    # optimize there - the boundary is the phase boundary.
+    if lead_in is None:
+        first_candidates = (
+            [detected[0].start] if clips[0][1].phase_reviewed
+            else boundary_candidates(clips[0][1], detected[0], "entry")
+        )
+        entries[0] = min(
+            first_candidates,
+            key=lambda at: blend.seam_cost(skel, rest_track, 0, clips[0][1], at),
+        )
     for i in range(len(clips) - 1):
-        outgoing = boundary_candidates(clips[i][1], detected[i], "exit")
-        incoming = boundary_candidates(clips[i + 1][1], detected[i + 1], "entry")
+        outgoing = (
+            [detected[i].end - 1] if clips[i][1].phase_reviewed
+            else boundary_candidates(clips[i][1], detected[i], "exit")
+        )
+        incoming = (
+            [detected[i + 1].start] if clips[i + 1][1].phase_reviewed
+            else boundary_candidates(clips[i + 1][1], detected[i + 1], "entry")
+        )
         exits[i], entries[i + 1] = min(
             ((a_at, b_at) for a_at in outgoing for b_at in incoming),
             key=lambda pair: blend.seam_cost(
                 skel, clips[i][1], pair[0], clips[i + 1][1], pair[1],
             ),
         )
-    last_candidates = boundary_candidates(clips[-1][1], detected[-1], "exit")
-    exits[-1] = min(
-        last_candidates,
-        key=lambda at: blend.seam_cost(skel, clips[-1][1], at, rest_track, 0),
-    )
+    if lead_out is None:
+        last_candidates = (
+            [detected[-1].end - 1] if clips[-1][1].phase_reviewed
+            else boundary_candidates(clips[-1][1], detected[-1], "exit")
+        )
+        exits[-1] = min(
+            last_candidates,
+            key=lambda at: blend.seam_cost(skel, clips[-1][1], at, rest_track, 0),
+        )
 
     trimmed = [
         (gloss, slice_frames(clip, entries[i], exits[i] + 1))
@@ -256,6 +315,8 @@ def compose(
         from_frame: int,
         to_frame: int,
         allow_neutral: bool,
+        phase_outgoing: tuple[LandmarkTake, Phases] | None = None,
+        phase_incoming: tuple[LandmarkTake, Phases] | None = None,
     ) -> str:
         direct = blend.plan_transition(
             skel, previous, previous_index, following, following_index, fps,
@@ -288,6 +349,90 @@ def compose(
                 f"cannot safely blend {from_gloss or 'neutral'} to {to_gloss or 'neutral'}: "
                 + "; ".join(direct.quality.reasons)
             )
+
+        # A reviewed capture provides safe transition material immediately outside the semantic
+        # sign range. Search a small amount of that material before falling all the way back to
+        # neutral. Only the minimum passing tail/head is retained, so this cannot replay both full
+        # standalone clips as the old neutral fallback did.
+        if phase_outgoing is not None and phase_incoming is not None:
+            outgoing_take, outgoing_phase = phase_outgoing
+            incoming_take, incoming_phase = phase_incoming
+            step = max(int(round(PHASE_ASSIST_STEP_SECONDS * fps)), 1)
+            max_outgoing = min(
+                outgoing_phase.retract_end - outgoing_phase.stroke_end - 1,
+                int(round(PHASE_ASSIST_OUTGOING_SECONDS * fps)),
+            )
+            max_incoming = min(
+                incoming_phase.stroke_start - incoming_phase.prep_start - 1,
+                int(round(PHASE_ASSIST_INCOMING_SECONDS * fps)),
+            )
+            outgoing_offsets = list(range(0, max(max_outgoing, 0) + 1, step))
+            if max_outgoing >= 0 and max_outgoing not in outgoing_offsets:
+                outgoing_offsets.append(max_outgoing)
+            incoming_backs = [
+                value for value in (step, step * 2, 0, step * 3)
+                if value <= max_incoming
+            ]
+            if max_incoming >= 0 and max_incoming not in incoming_backs:
+                incoming_backs.append(max_incoming)
+
+            assisted = None
+            for back in dict.fromkeys(incoming_backs):
+                incoming_at = incoming_phase.stroke_start - 1 - back
+                for offset in outgoing_offsets:
+                    outgoing_at = outgoing_phase.stroke_end + offset
+                    candidate = blend.plan_transition(
+                        skel,
+                        outgoing_take,
+                        outgoing_at,
+                        incoming_take,
+                        incoming_at,
+                        fps,
+                    )
+                    if (
+                        candidate.quality.passed
+                        and float(candidate.quality.metrics["maxWristSpeedCmS"])
+                        <= blend.MAX_WRIST_SPEED_CM_S
+                        and float(candidate.quality.metrics["maxAngularSpeedDegS"])
+                        <= blend.MAX_ANGULAR_SPEED_DEG_S
+                    ):
+                        assisted = (outgoing_at, incoming_at, candidate)
+                        break
+                if assisted is not None:
+                    break
+
+            if assisted is not None:
+                outgoing_at, incoming_at, candidate = assisted
+                outgoing_context = slice_frames(
+                    outgoing_take, outgoing_phase.stroke_end, outgoing_at + 1,
+                )
+                incoming_context = slice_frames(
+                    incoming_take, incoming_at, incoming_phase.stroke_start,
+                )
+                score = candidate.quality.score
+                duration_seconds = (
+                    outgoing_context.frame_count / fps
+                    + candidate.duration
+                    + incoming_context.frame_count / fps
+                )
+                direct_attempt = direct.quality.as_dict()
+                seam.update(candidate.quality.as_dict())
+                seam.update({
+                    "mode": "direct",
+                    "fromFrame": outgoing_at,
+                    "toFrame": incoming_at,
+                    "durationMs": int(round(duration_seconds * 1000)),
+                    "directAttempt": direct_attempt,
+                    "boundaryAdjustment": {
+                        "outgoingFrames": outgoing_context.frame_count,
+                        "incomingFrames": incoming_context.frame_count,
+                    },
+                })
+                seams.append(seam)
+                add(outgoing_context, to_gloss, "transition", "direct", score)
+                add(candidate.track, to_gloss, "transition", "direct", score)
+                add(incoming_context, to_gloss, "transition", "direct", score)
+                return "direct"
 
         into_rest = blend.plan_transition(
             skel, previous, previous_index, rest_track, 0, fps,
@@ -333,14 +478,26 @@ def compose(
     used_fallback = False
 
     for position, (gloss, stroke_track) in enumerate(trimmed):
+        # The opening word plays its recorded run-up. Preparation and sign are contiguous frames of
+        # one recording, so the join happens before the preparation and nothing bridges the two.
+        target, target_index = (
+            (lead_in, 0) if position == 0 and lead_in is not None else (stroke_track, 0)
+        )
         mode = join(
-            previous, previous_index, stroke_track, 0,
+            previous, previous_index, target, target_index,
             previous_gloss, gloss,
             exits[position - 1] if position else 0,
             entries[position],
             allow_neutral=position > 0,
+            phase_outgoing=(clips[position - 1][1], phases[position - 1])
+            if position > 0 else None,
+            phase_incoming=(clips[position][1], phases[position])
+            if position > 0 else None,
         )
         used_fallback = used_fallback or mode == "neutral-fallback"
+
+        if position == 0 and lead_in is not None:
+            add(lead_in, gloss, "preparation")
         add(stroke_track, gloss, "sign")
 
         previous = stroke_track
@@ -350,6 +507,11 @@ def compose(
         # Version 2 carries the measured exit velocity directly into the optimized bridge. An
         # inserted coast would move the selected boundary after it had been scored and can pull a
         # resting hand through the torso; semantic holds already inside the protected stroke remain.
+
+    # The closing word plays its recorded return to rest, again contiguous with its own sign.
+    if lead_out is not None:
+        add(lead_out, previous_gloss, "retraction")
+        previous, previous_index = lead_out, lead_out.frame_count - 1
 
     join(
         previous, previous_index, rest_track, 0,

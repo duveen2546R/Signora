@@ -181,15 +181,35 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .sign--active { border-color: var(--accent); background: var(--accent-soft); }
 .sign__gloss { flex: 1; font-weight: 600; }
 .sign__meta { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-.sign__warn { color: var(--warn); font-weight: 700; }
+.sign__warn { color: var(--warn); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .empty, .hint { color: var(--muted); font-size: 13px; }
 .hint { margin: 0 0 10px; }
 
 /* --- capture --- */
 .capture { display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
+.capture__picker { display: inline-flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.capture__picker input { font-weight: 400; }
 .rigs { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .rigs li { display: flex; gap: 12px; align-items: baseline; font-size: 13px; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); font-size: 12px; }
+
+.phase-drafts { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.phase-draft { margin: 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); }
+.phase-draft legend { padding: 0 6px; font-weight: 650; }
+.phase-draft__duration, .phase-draft__summary { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+.phase-draft__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.phase-draft__fields label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 8px; font-size: 13px; }
+.phase-draft__fields label > input { grid-column: 1; min-width: 0; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font: inherit; }
+.phase-draft__fields label > span { grid-column: 2; align-self: center; color: var(--muted); }
+.phase-draft__fields label > .required { grid-column: auto; justify-self: end; font-size: 12px; }
+.phase-draft__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.phase-draft__actions button { min-height: 44px; }
+button.secondary { background: transparent; color: var(--text); border-color: var(--border); }
+.field-error { margin: 8px 0 0; color: var(--error); font-size: 13px; }
+
+@media (max-width: 620px) {
+  .phase-draft__fields { grid-template-columns: 1fr; }
+}
 
 .jobs { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
 .jobs th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); }

@@ -44,9 +44,13 @@ export const api = {
     return request('/rigs', { method: 'POST', body: form })
   },
 
-  uploadCapture: (file) => {
+  uploadCapture: (file, phases = null) => {
     const form = new FormData()
     form.append('file', file)
+    if (phases) {
+      form.append('sign_start_seconds', String(phases.signStartSeconds))
+      form.append('sign_end_seconds', String(phases.signEndSeconds))
+    }
     return request('/captures', { method: 'POST', body: form })
   },
 

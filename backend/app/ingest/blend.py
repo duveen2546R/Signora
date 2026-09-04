@@ -915,8 +915,28 @@ def evaluate_transition(
         and np.isfinite(bridge.right_hand).all()
     )
     bone_error = _max_bone_error(skel, bridge)
-    wrist_speed = _max_wrist_speed(bridge)
-    angular_speed = _max_angular_speed(skel, bridge)
+    # The runtime experiences A -> bridge -> B as one stream. Measuring only differences between
+    # bridge frames misses the two most important steps and can approve a visually obvious snap at
+    # either boundary. Include both recorded endpoints in the rate-limit window.
+    seam_track = LandmarkTake(
+        name=f"{a.name}->{b.name}-quality-window",
+        fps=bridge.fps,
+        pose=np.concatenate([
+            a.pose[a_index:a_index + 1], bridge.pose, b.pose[b_index:b_index + 1],
+        ]),
+        left_hand=np.concatenate([
+            a.left_hand[a_index:a_index + 1],
+            bridge.left_hand,
+            b.left_hand[b_index:b_index + 1],
+        ]),
+        right_hand=np.concatenate([
+            a.right_hand[a_index:a_index + 1],
+            bridge.right_hand,
+            b.right_hand[b_index:b_index + 1],
+        ]),
+    )
+    wrist_speed = _max_wrist_speed(seam_track)
+    angular_speed = _max_angular_speed(skel, seam_track)
     acceleration_ratio, jerk_ratio = _seam_dynamics(a, a_index, bridge, b, b_index)
     collisions = _collision_count(bridge, contacts)
     contact_error = _contact_handshape_error(

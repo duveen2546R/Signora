@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,24 +8,12 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.v1 import captures, rigs, signs, translate
 from app.core.config import settings
-from app.core.db import SessionLocal, init_db
-from app.services.ingest_service import sync_upload_directory
-
-logger = logging.getLogger(__name__)
+from app.core.db import init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    with SessionLocal() as session:
-        try:
-            jobs = sync_upload_directory(session)
-            if jobs:
-                logger.info("registered %d capture(s) from the uploads directory", len(jobs))
-        except LookupError as exc:
-            # A fresh installation may have CSVs before its first avatar rig profile. Keep the API
-            # available so the profile can be uploaded, then the next restart will discover them.
-            logger.warning("capture directory sync deferred: %s", exc)
     yield
 
 

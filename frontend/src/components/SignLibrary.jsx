@@ -37,9 +37,13 @@ export default function SignLibrary({ signs, activeGloss, onPlay, disabled = fal
               >
                 <span className="sign__gloss">{sign.gloss}</span>
                 <span className="sign__meta">{(sign.durationMs / 1000).toFixed(1)}s</span>
-                {sign.qc?.warnings?.length > 0 && (
-                  <span className="sign__warn" title={sign.qc.warnings.join('\n')}>!</span>
-                )}
+                {sign.qc?.phases?.reviewed === false ? (
+                  <span className="sign__warn" title={sign.qc.warnings?.join('\n')}>
+                    Review phases
+                  </span>
+                ) : sign.qc?.warnings?.length > 0 ? (
+                  <span className="sign__warn" title={sign.qc.warnings.join('\n')}>Check capture</span>
+                ) : null}
               </button>
             </li>
           ))}

@@ -7,22 +7,33 @@ performer's resting posture as though it were the only word in the sentence.
 The backend composes the whole sentence into **one continuous landmark track** instead:
 
 ```
-neutral -> [transition] -> stroke -> [transition] -> stroke -> [transition] -> neutral
+neutral -> start + sign -> [transition] -> sign -> [transition] -> sign + end -> neutral
 ```
 
 The player streams that single track, so there is no boundary at which the frame stream could pause
 — the runtime starts pulling a channel back toward its bind pose after 0.2 s without frames.
 
-Algorithm version 2 optimizes and validates every boundary. Version 1 remains available through
-`compose(..., algorithm_version=1)` while the new behavior is reviewed.
+Algorithm version 5 adds reviewed position-aware phases, validates every generated boundary, and
+uses the minimum safe amount of neighboring phase context before considering a neutral fallback.
+Version 1 remains available through `compose(..., algorithm_version=1)` for comparison.
 
-## Only the stroke is played
+## Sentence position selects the recorded phases
 
-Each recording contains preparation, the stroke, and retraction. Measured across the library,
-preparation runs **0.20–0.70 s** and retraction **0.03–0.67 s**. Only the stroke carries meaning;
-preparation describes a journey from rest that is wrong once the sign has a neighbour.
+Each recording contains `start` preparation, the meaning-bearing `sign`, and `end` retraction.
+Reviewed upload timestamps divide these into exact half-open frame ranges:
 
-`segment.py` finds it from smoothed wrist speed:
+| Sentence position | Recorded motion retained |
+|---|---|
+| One word | `start + sign + end` |
+| First of several | `start + sign` |
+| Middle | `sign` |
+| Last | `sign + end` |
+
+Adjacent recorded ranges remain contiguous and are never blended with each other. A generated
+transition appears only between retained ranges. Every sign frame is protected and appears once.
+
+For an unreviewed capture, `segment.py` finds a conservative activity envelope from smoothed body,
+wrist, palm, and finger motion:
 
 - The reference is the **90th percentile**, not the maximum. Two of the five recordings end with a
   frame where the whole skeleton teleports; a max-based threshold is dominated by that one sample.
@@ -34,6 +45,10 @@ preparation describes a journey from rest that is wrong once the sign has a neig
 - Boundaries then walk downhill to a velocity minimum so a cut never lands mid-acceleration.
 - If the result is under 0.3 s or under a quarter of the clip, the whole clip is used instead: a
   sign that is mostly a held pose has no velocity peak to find.
+
+Automatic boundaries are QC guidance, not semantic truth. Until a person supplies timestamps,
+composition retains the complete detected activity envelope so an older vocabulary item cannot
+become unplayable merely because a speculative inner cut fails the quality gate.
 
 Corrupt frames are dropped **before** resampling. Smoothing across one smears it over its
 neighbours, where it can no longer be isolated — it survives as a 4 m/s lunge at the end of the sign.
@@ -62,10 +77,10 @@ them, so the two arrays can never disagree about where a knuckle is. Same for th
 
 ## Boundaries are selected, not assumed
 
-The detected stroke is a protected meaning-bearing core. For each neighboring pair, version 2 may
-add up to 150 ms of preparation or retraction while searching for compatible entry and exit frames;
-it can never move a boundary into the protected core. The pair cost includes both wrists, arm and
-palm orientation, handshape, boundary velocity, elbow plane, and whole-body displacement.
+Reviewed sign boundaries are exact and are never expanded or trimmed. Unreviewed clips may add up
+to 150 ms of safe context while selecting compatible entry and exit frames. The pair cost includes
+both wrists, arm and palm orientation, handshape, boundary velocity, elbow plane, and whole-body
+displacement.
 
 This preserves internal holds and contacts while avoiding a needlessly difficult transition when a
 nearby safe frame already has a compatible posture.
@@ -81,8 +96,8 @@ The velocities are differenced *into* each clip — backwards at A's final frame
 first. Getting that direction wrong silently yields zero at both ends, which is exactly the
 discontinuity the transition exists to remove.
 
-Each wrist follows a Cartesian seventh-order boundary spline carrying measured position, velocity,
-acceleration, and jerk into and out of the transition. Analytical two-bone IK places the elbow and
+Each wrist follows a Cartesian minimum-jerk path carrying measured position and velocity into and
+out of the transition. Analytical two-bone IK places the elbow and
 wrist while preserving the measured upper-arm and forearm lengths and a stable interpolated elbow
 plane. Hip, arm, palm, and finger directions use spherical cubic Bézier curves. Exact antiparallel
 directions take a deterministic great-circle route instead of collapsing at midpoint.
@@ -102,11 +117,14 @@ limits, acceleration and jerk relative to adjacent motion, contact readiness, an
 intersections. The translate response includes additive `blendQuality` metadata with one of:
 
 - `direct`: every bridge passed directly.
-- `neutral-fallback`: an unsafe direct pair was replaced by two validated bridges through neutral.
+- `neutral-fallback`: direct blending and the limited phase-context search were both unsafe, so two
+  validated generated bridges through neutral were used. The complete recorded `end` and `start`
+  sections are never replayed merely to make a sentence seam pass.
 - `rejected`: direct and neutral routes both failed, so no track is returned.
 
 Each transition segment also carries `mode` and `qualityScore`. The cache key includes the ordered
-clip content hashes and algorithm version, so an algorithm update cannot reuse stale motion.
+clip content hashes, reviewed phase metadata, and algorithm version, so changing timestamps or the
+algorithm cannot reuse stale motion.
 
 ## Version 1 holds coast, they do not freeze
 

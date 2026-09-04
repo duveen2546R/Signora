@@ -1,9 +1,15 @@
 """The parser must agree with the real export, and reject anything else."""
 import numpy as np
+import pandas as pd
 import pytest
 
 from app.ingest import skeleton as sk
-from app.ingest.rokoko import RokokoFormatError, measure_skeleton, parse_csv
+from app.ingest.rokoko import (
+    RokokoFormatError,
+    measure_skeleton,
+    parse_csv,
+    with_phase_bounds,
+)
 
 
 def test_schema_matches_the_real_export(hello_take):
@@ -59,3 +65,50 @@ def test_rejects_a_missing_timestamp_column(tmp_path):
     bad.write_text("Frame,Foo\n0,1.0\n")
     with pytest.raises(RokokoFormatError, match="Timestamp"):
         parse_csv(bad)
+
+
+def test_reads_contiguous_phase_labels_and_preserves_the_exclusive_end(tmp_path):
+    source = __import__("pathlib").Path(__file__).parent / "fixtures" / "hello.csv"
+    frame = pd.read_csv(source)
+    frame["Phase"] = "end"
+    frame.loc[:9, "Phase"] = "start"
+    frame.loc[10:19, "Phase"] = "sign"
+    path = tmp_path / "phased.csv"
+    frame.to_csv(path, index=False)
+
+    take = parse_csv(path)
+    assert take.phase_source == "authored-csv" and take.phase_reviewed
+    assert take.sign_start_s == pytest.approx(take.times[10])
+    assert take.sign_end_s == pytest.approx(take.times[20])
+
+
+def test_capture_form_bounds_must_agree_with_csv_labels(tmp_path):
+    source = __import__("pathlib").Path(__file__).parent / "fixtures" / "hello.csv"
+    frame = pd.read_csv(source)
+    frame["Phase"] = "sign"
+    path = tmp_path / "phased.csv"
+    frame.to_csv(path, index=False)
+    take = parse_csv(path)
+
+    with pytest.raises(RokokoFormatError, match="conflict"):
+        with_phase_bounds(take, 0.5, 1.0)
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [(0.05, 1.0), (0.5, 0.7), (0.5, 2.65)],
+)
+def test_reviewed_bounds_require_usable_start_sign_and_end(hello_take, start, end):
+    with pytest.raises(RokokoFormatError, match="0.120s of Start"):
+        with_phase_bounds(hello_take, start, end)
+
+
+def test_partial_phase_column_is_rejected(tmp_path):
+    source = __import__("pathlib").Path(__file__).parent / "fixtures" / "hello.csv"
+    frame = pd.read_csv(source)
+    frame["Phase"] = "sign"
+    frame.loc[3, "Phase"] = ""
+    path = tmp_path / "partial.csv"
+    frame.to_csv(path, index=False)
+    with pytest.raises(RokokoFormatError, match="every frame"):
+        parse_csv(path)

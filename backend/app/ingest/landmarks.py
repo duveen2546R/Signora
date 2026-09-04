@@ -99,6 +99,13 @@ class LandmarkTake:
     left_hand: np.ndarray   # (F, 21, 3)
     right_hand: np.ndarray  # (F, 21, 3)
 
+    # Hand-authored phase boundaries in seconds from this track's own first frame. Carried all the
+    # way to composition because it reads the stored .landmarks.json, never the original CSV.
+    sign_start_s: float | None = None
+    sign_end_s: float | None = None
+    phase_source: str | None = None
+    phase_reviewed: bool = False
+
     @property
     def frame_count(self) -> int:
         return len(self.pose)
@@ -107,19 +114,28 @@ class LandmarkTake:
     def duration(self) -> float:
         return self.frame_count / self.fps if self.fps else 0.0
 
+    @property
+    def has_phase_bounds(self) -> bool:
+        return self.sign_start_s is not None and self.sign_end_s is not None
+
     @classmethod
     def from_payload(cls, payload: dict, name: str | None = None) -> "LandmarkTake":
+        # Clip files written before phase annotation existed simply carry no boundaries.
         return cls(
             name=name or payload.get("name", "clip"),
             fps=float(payload["fps"]),
             pose=np.asarray(payload["pose"], dtype=np.float64),
             left_hand=np.asarray(payload["leftHand"], dtype=np.float64),
             right_hand=np.asarray(payload["rightHand"], dtype=np.float64),
+            sign_start_s=payload.get("signStartSeconds"),
+            sign_end_s=payload.get("signEndSeconds"),
+            phase_source=payload.get("phaseSource"),
+            phase_reviewed=bool(payload.get("phaseReviewed", False)),
         )
 
     def to_payload(self, decimals: int = 4) -> dict:
         """Compact JSON for the browser, which assembles the per-frame Unity messages."""
-        return {
+        payload = {
             "name": self.name,
             "fps": self.fps,
             "frameCount": self.frame_count,
@@ -127,6 +143,12 @@ class LandmarkTake:
             "leftHand": np.round(self.left_hand, decimals).tolist(),
             "rightHand": np.round(self.right_hand, decimals).tolist(),
         }
+        if self.has_phase_bounds:
+            payload["signStartSeconds"] = round(float(self.sign_start_s), 4)
+            payload["signEndSeconds"] = round(float(self.sign_end_s), 4)
+            payload["phaseSource"] = self.phase_source or "detected"
+            payload["phaseReviewed"] = self.phase_reviewed
+        return payload
 
 
 def _body_axes(take: Take) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -231,6 +253,10 @@ def to_landmarks(take: Take) -> LandmarkTake:
         pose=pose - origin,
         left_hand=left - origin,
         right_hand=right - origin,
+        sign_start_s=take.sign_start_s,
+        sign_end_s=take.sign_end_s,
+        phase_source=take.phase_source,
+        phase_reviewed=take.phase_reviewed,
     )
 
 
@@ -347,12 +373,30 @@ class LandmarkSkeleton:
 
 
 def slice_frames(take: LandmarkTake, start: int, end: int) -> LandmarkTake:
-    """Half-open [start, end) slice, preserving name and frame rate."""
+    """Half-open [start, end) slice, preserving name, frame rate and authored phase times.
+
+    Phase boundaries are stored relative to the take's own first frame, so slicing shifts them. A
+    boundary falling outside the slice is dropped rather than clamped: a clamped boundary would
+    silently claim the sign begins exactly where the slice does.
+    """
+    shift = start / take.fps if take.fps else 0.0
+    span = (end - start) / take.fps if take.fps else 0.0
+
+    def moved(value: float | None) -> float | None:
+        if value is None:
+            return None
+        shifted = value - shift
+        return shifted if -1e-9 <= shifted <= span + 1e-9 else None
+
     return LandmarkTake(
         name=take.name, fps=take.fps,
         pose=take.pose[start:end],
         left_hand=take.left_hand[start:end],
         right_hand=take.right_hand[start:end],
+        sign_start_s=moved(take.sign_start_s),
+        sign_end_s=moved(take.sign_end_s),
+        phase_source=take.phase_source,
+        phase_reviewed=take.phase_reviewed,
     )
 
 

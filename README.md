@@ -63,6 +63,11 @@ Vite proxies `/api` to the backend on port 8000. Override the API location with
 ## Uploading motion captures
 
 Open the **Capture** tab and upload a Rokoko Studio **biomechanics CSV**. Use one sign per file.
+For each selected file, enter the timestamps where the meaning-bearing sign starts and ends. The
+Capture screen shows the derived `start`, `sign`, and `end` ranges before upload. Both boundaries
+are required; captures without timestamps are rejected. These reviewed
+boundaries let a first word play `start + sign`, a middle word play only `sign`, and a final word
+play `sign + end`.
 The filename determines the gloss and take number:
 
 | Filename | Gloss | Take |
@@ -83,10 +88,9 @@ for the exporter workflow.
 Uploaded CSVs, generated clips, and the local SQLite database live under `backend/data/` and are
 intentionally ignored by Git. The `.gitkeep` files preserve the required empty directories.
 
-CSV files copied directly into `backend/data/uploads/` are discovered when the backend starts. New
-or updated filename/take pairs are ingested automatically when a rig profile is available, so they
-become usable by sentence translation without a separate upload request. Restart the backend after
-copying files into that directory.
+Captures are registered only through the Capture screen/API; copying a CSV directly into
+`backend/data/uploads/` does not import it. Bulk workflows may add a `Phase` column whose every row
+is labelled `start`, `sign`, or `end`; the three runs must be contiguous and ordered.
 
 ## Avatar calibration
 

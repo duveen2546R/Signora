@@ -16,3 +16,16 @@ test('neutral fallback and capture warnings are visible', () => {
   assert.match(notices[0], /neutral-pose bridge/)
   assert.match(notices[1], /skeleton proportions/)
 })
+
+test('legacy automatic-phase messages are grouped into one advisory', () => {
+  const notices = blendNotices({
+    warnings: [
+      'HELLO uses automatically detected phase boundaries; review it.',
+      'NAMASTE uses automatically detected phase boundaries; review it.',
+      'FATHER uses automatically detected phase boundaries; review it.',
+    ],
+  })
+  assert.equal(notices.length, 1)
+  assert.match(notices[0], /HELLO, NAMASTE, FATHER/)
+  assert.match(notices[0], /safe full-motion fallback/)
+})

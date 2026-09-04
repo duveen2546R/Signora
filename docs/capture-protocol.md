@@ -22,6 +22,23 @@ The rest head and tail are what let clips be chained into sentences without a vi
 *not* required: bone orientations are reconstructed from joint positions, which carry no axis
 convention, so there is no calibration pose to key off.
 
+## Marking the sign phase
+
+After selecting a CSV on the Capture screen, enter two timestamps in seconds:
+
+- **Sign starts at**: the first meaning-bearing frame after preparation.
+- **Sign ends at**: the exclusive end of the meaning-bearing range, before retraction.
+
+The application requires at least 0.120 s of `start`, 0.300 s of `sign`, and 0.120 s of `end`.
+These measured edge phases give the blender a natural route through rest when a direct transition
+is unsafe. The application derives all three ranges, so do not enter three redundant durations.
+Review the boundary at normal and half speed: handshape formation and intentional contact belong
+inside `sign`.
+
+For bulk/API uploads, an optional `Phase` CSV column may label every frame `start`, `sign`, or
+`end`. Labels must be contiguous and ordered. Files without UI timestamps or a complete Phase
+column are rejected.
+
 ## Naming
 
 One sign per file, `{gloss}_{take}.csv` — `hello_01.csv`, `good_morning_02.csv`. The gloss and take

@@ -137,9 +137,49 @@ def test_payload_carries_segments_and_neutral(prepared, skeleton):
     assert payload["frameCount"] == len(payload["pose"])
     assert len(payload["leftHand"]) == len(payload["rightHand"]) == payload["frameCount"]
     assert payload["segments"] and payload["neutral"]
-    assert payload["blendQuality"]["algorithmVersion"] == 2
+    assert payload["blendQuality"]["algorithmVersion"] == 5
     assert payload["blendQuality"]["status"] in {"direct", "neutral-fallback"}
     json.dumps(payload)
+
+
+def test_reviewed_phases_follow_sentence_position(prepared, skeleton):
+    from dataclasses import replace
+    from app.ingest.segment import find_stroke
+
+    names = list(prepared)[:3]
+    reviewed = {}
+    spans = {}
+    for name in names:
+        track = prepared[name]
+        stroke = find_stroke(track)
+        spans[name] = stroke
+        reviewed[name] = replace(
+            track,
+            sign_start_s=stroke.start / track.fps,
+            sign_end_s=stroke.end / track.fps,
+            phase_source="authored-ui",
+            phase_reviewed=True,
+        )
+
+    single = compose(skeleton, [(names[0], reviewed[names[0]])])
+    assert [
+        segment.kind for segment in single.segments
+        if segment.kind in {"preparation", "sign", "retraction"}
+    ] == ["preparation", "sign", "retraction"]
+
+    sentence = compose(skeleton, [(name, reviewed[name]) for name in names])
+    retained = [
+        (segment.gloss, segment.kind, segment.end - segment.start)
+        for segment in sentence.segments
+        if segment.kind in {"preparation", "sign", "retraction"}
+    ]
+    assert retained == [
+        (names[0], "preparation", spans[names[0]].start),
+        (names[0], "sign", spans[names[0]].frame_count),
+        (names[1], "sign", spans[names[1]].frame_count),
+        (names[2], "sign", spans[names[2]].frame_count),
+        (names[2], "retraction", reviewed[names[2]].frame_count - spans[names[2]].end),
+    ]
 
 
 def test_failed_direct_seam_uses_a_validated_neutral_bridge(prepared, skeleton, monkeypatch):
@@ -163,6 +203,61 @@ def test_failed_direct_seam_uses_a_validated_neutral_bridge(prepared, skeleton, 
     result = compose(skeleton, [(name, prepared[name]) for name in names])
     assert result.blend_quality["status"] == "neutral-fallback"
     assert any(segment.mode == "neutral-fallback" for segment in result.segments)
+
+
+def test_reviewed_seam_uses_only_minimum_safe_phase_context(
+    prepared, skeleton, monkeypatch,
+):
+    from dataclasses import replace
+
+    from app.ingest import blend as blending
+    from app.ingest.segment import find_stroke
+
+    names = list(prepared)[:2]
+    reviewed = []
+    for name in names:
+        track = prepared[name]
+        stroke = find_stroke(track)
+        reviewed.append(replace(
+            track,
+            sign_start_s=stroke.start / track.fps,
+            sign_end_s=stroke.end / track.fps,
+            phase_source="authored-ui",
+            phase_reviewed=True,
+        ))
+
+    actual = blending.plan_transition
+    rejected_direct = False
+
+    def reject_first_sign_to_sign(*args, **kwargs):
+        nonlocal rejected_direct
+        result = actual(*args, **kwargs)
+        a, b = args[1], args[3]
+        if not rejected_direct and a.name != "neutral" and b.name != "neutral":
+            rejected_direct = True
+            return replace(result, quality=blending.TransitionQuality(
+                40.0, False, result.quality.metrics, ("forced direct rejection",),
+            ))
+        return result
+
+    monkeypatch.setattr(blending, "plan_transition", reject_first_sign_to_sign)
+    result = compose(skeleton, list(zip(names, reviewed, strict=True)))
+
+    assert result.blend_quality["status"] == "direct"
+    middle = result.blend_quality["seams"][1]
+    assert middle["mode"] == "direct"
+    assert middle["passed"] is True
+    assert middle["boundaryAdjustment"]["outgoingFrames"] > 0
+    assert middle["boundaryAdjustment"]["incomingFrames"] > 0
+    assert middle["boundaryAdjustment"]["outgoingFrames"] < (
+        reviewed[0].frame_count - find_stroke(reviewed[0]).end
+    )
+    assert middle["boundaryAdjustment"]["incomingFrames"] < find_stroke(reviewed[1]).start
+    assert not any(
+        segment.kind in {"preparation", "retraction"}
+        and segment.mode == "neutral-fallback"
+        for segment in result.segments
+    )
 
 
 def test_rejects_when_direct_and_neutral_bridges_are_invalid(prepared, skeleton, monkeypatch):
@@ -286,4 +381,7 @@ def test_matched_skeletons_produce_no_warning(prepared, skeleton, tmp_path, monk
     svc._raw.cache_clear()
 
     _composition, warnings = svc.compose_clips([(n, FakeClip(paths[n])) for n in names])
-    assert warnings == []
+    assert len(warnings) == 1
+    assert "safe full-motion fallback" in warnings[0]
+    assert names[0] in warnings[0] and names[1] in warnings[0]
+    assert "different proportions" not in warnings[0]

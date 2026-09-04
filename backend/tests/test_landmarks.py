@@ -5,6 +5,7 @@
 `SignoraAvatarTracking/Assets/Signora/Runtime/` actually enforces.
 """
 import numpy as np
+from dataclasses import replace
 
 from app.ingest.landmarks import (
     HAND_LANDMARK_COUNT,
@@ -103,3 +104,23 @@ def test_hips_are_the_origin(hello_take):
     lt = to_landmarks(hello_take)
     midpoint = (lt.pose[:, 23] + lt.pose[:, 24]) / 2.0
     assert np.abs(midpoint).max() < 1e-9
+
+
+def test_phase_metadata_survives_landmark_preparation(hello_take):
+    from app.ingest.compose import prepare
+    from app.ingest.landmarks import LandmarkSkeleton, LandmarkTake
+
+    authored = replace(
+        to_landmarks(hello_take),
+        sign_start_s=0.8,
+        sign_end_s=1.8,
+        phase_source="authored-ui",
+        phase_reviewed=True,
+    )
+    prepared = prepare(authored, LandmarkSkeleton.from_takes(authored))
+    payload = prepared.to_payload()
+    restored = LandmarkTake.from_payload(payload)
+    assert restored.sign_start_s == prepared.sign_start_s
+    assert restored.sign_end_s == prepared.sign_end_s
+    assert restored.phase_source == "authored-ui"
+    assert restored.phase_reviewed is True

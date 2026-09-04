@@ -251,3 +251,155 @@ def find_stroke(take: LandmarkTake) -> Stroke:
 
     reason = f"{interior} interior defect frames" if interior else ""
     return Stroke(start, end, peak, False, reason, dropped_head, dropped_tail)
+
+
+# --- Three-phase split: start / sign / end -----------------------------------------------------
+#
+# `find_stroke` separates movement from dead time, which is not the same thing as separating the
+# sign from its run-up. Measured on the library, every stroke it returns *begins with the wrist at
+# rest* and travels 50-77 cm up and back down: the reach from rest and the return to rest both sit
+# inside it. Playing that mid-sentence replays the whole rest-to-sign-to-rest arc, which is what
+# makes a sentence read as separate performances rather than one utterance.
+#
+# So the sign proper is located inside that envelope, either from hand-authored `Phase` labels in
+# the CSV or, failing that, from how far the hand travels away from where it was resting.
+
+# Fraction of the peak excursion that counts as "in signing space". Excursion rather than height,
+# because a sign performed at the chest barely rises but still travels.
+SIGN_EXCURSION_FRACTION = 0.55
+
+# A start or end section shorter than this is not worth playing and counts as absent.
+MIN_PHASE_SECONDS = 0.12
+
+# How far either side of the excursion crossing to look for the quietest frame. A sign should be cut
+# where the hand actually pauses: leaving a boundary at speed asks the bridge to depart at a velocity
+# the remaining distance cannot absorb, and the clamp that stops it overshooting then produces a
+# visible step instead. Walking downhill to the first local minimum is not enough - it stops at the
+# first dip, which on real takes is still mid-movement.
+BOUNDARY_SEARCH_SECONDS = 0.25
+
+
+@dataclass(frozen=True)
+class Phases:
+    """Half-open frame ranges for the three phases of one recording."""
+
+    prep_start: int
+    stroke_start: int
+    stroke_end: int
+    retract_end: int
+    fps: float
+    source: str            # "authored" | "detected"
+    reason: str = ""
+
+    @property
+    def preparation(self) -> tuple[int, int]:
+        return self.prep_start, self.stroke_start
+
+    @property
+    def stroke(self) -> tuple[int, int]:
+        return self.stroke_start, self.stroke_end
+
+    @property
+    def retraction(self) -> tuple[int, int]:
+        return self.stroke_end, self.retract_end
+
+    def _long_enough(self, span: tuple[int, int]) -> bool:
+        return self.fps > 0 and (span[1] - span[0]) / self.fps >= MIN_PHASE_SECONDS
+
+    @property
+    def has_preparation(self) -> bool:
+        return self._long_enough(self.preparation)
+
+    @property
+    def has_retraction(self) -> bool:
+        return self._long_enough(self.retraction)
+
+    def as_dict(self) -> dict:
+        def describe(span: tuple[int, int]) -> dict:
+            return {
+                "start": span[0],
+                "end": span[1],
+                "durationSeconds": round((span[1] - span[0]) / self.fps, 3) if self.fps else 0.0,
+            }
+
+        return {
+            "source": self.source,
+            "reason": self.reason,
+            "start": describe(self.preparation),
+            "sign": describe(self.stroke),
+            "end": describe(self.retraction),
+            "hasStart": self.has_preparation,
+            "hasEnd": self.has_retraction,
+        }
+
+
+def _detect_sign_span(take: LandmarkTake, lo: int, hi: int) -> tuple[int, int] | None:
+    """Locate the sign inside the activity envelope by how far the hand leaves its resting place."""
+    speed = activity_speed(take)
+    best: tuple[np.ndarray, float] | None = None
+    for wrist in WRISTS:
+        resting = take.pose[:max(lo, 1), wrist].mean(axis=0)
+        distance = np.linalg.norm(take.pose[:, wrist] - resting, axis=1)
+        peak = float(distance[lo:hi].max()) if hi > lo else 0.0
+        if best is None or peak > best[1]:
+            best = (distance, peak)
+
+    distance, peak = best
+    if peak <= 0.0:
+        return None
+
+    inside = np.where(distance[lo:hi] > SIGN_EXCURSION_FRACTION * peak)[0]
+    if inside.size == 0:
+        return None
+
+    window = max(int(round(BOUNDARY_SEARCH_SECONDS * take.fps)), 1)
+
+    def quietest(centre: int, low: int, high: int) -> int:
+        first = max(centre - window, low)
+        last = min(centre + window, high)
+        if last <= first:
+            return max(min(centre, high), low)
+        return first + int(np.argmin(speed[first:last]))
+
+    limit = min(hi, len(speed))
+    start = quietest(lo + int(inside[0]), lo, limit)
+    end = quietest(lo + int(inside[-1]), max(start + 1, lo), limit) + 1
+    return max(start, lo), min(end, hi)
+
+
+def find_phases(take: LandmarkTake) -> Phases:
+    """Split a recording into start / sign / end.
+
+    Authored `Phase` labels win when present: a person marking the boundary knows where the sign
+    begins, and no kinematic threshold generalises across a whole vocabulary. Detection is the
+    fallback so an unannotated recording still works.
+    """
+    stroke = find_stroke(take)
+    lo, hi = stroke.start, stroke.end
+    head, tail = stroke.start, stroke.end
+
+    if take.has_phase_bounds and take.fps > 0:
+        start = int(round(take.sign_start_s * take.fps))
+        end = int(round(take.sign_end_s * take.fps))
+        start = max(min(start, take.frame_count - 1), 0)
+        end = max(min(end, take.frame_count), start + 1)
+        return Phases(
+            0, start, end, take.frame_count, take.fps,
+            take.phase_source or "detected",
+        )
+
+    if stroke.used_fallback:
+        return Phases(lo, lo, hi, hi, take.fps, "detected",
+                      f"phases not separated: {stroke.reason}")
+
+    span = _detect_sign_span(take, lo, hi)
+    if span is None:
+        return Phases(head, lo, hi, tail, take.fps, "detected",
+                      "no clear excursion; the whole movement is treated as the sign")
+
+    start, end = span
+    if (end - start) / take.fps < MIN_STROKE_SECONDS:
+        return Phases(head, lo, hi, tail, take.fps, "detected",
+                      "detected sign was too short; the whole movement is treated as the sign")
+
+    return Phases(head, start, end, tail, take.fps, "detected")

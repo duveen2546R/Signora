@@ -63,7 +63,14 @@ def _compose_cached(
     shared = LandmarkSkeleton.from_takes([track for _, track in raw])
 
     warnings: list[str] = []
+    unreviewed_glosses: list[str] = []
     for gloss, track in raw:
+        if not track.phase_reviewed:
+            # This is one sentence-level advisory, not one independent blend failure per clip.
+            # Collect it here so the frontend does not look like it emitted the same error log for
+            # every word in the sentence.
+            if gloss not in unreviewed_glosses:
+                unreviewed_glosses.append(gloss)
         gap, where = LandmarkSkeleton.from_takes(track).deviation(shared)
         if gap > SKELETON_TOLERANCE_M:
             warnings.append(
@@ -71,6 +78,15 @@ def _compose_cached(
                 f"({where} differs by {gap * 100:.1f} cm); it will be reshaped to match. "
                 "Re-record it in the same session, or recalibrate the suit consistently."
             )
+
+    if unreviewed_glosses:
+        names = ", ".join(unreviewed_glosses)
+        noun = "capture" if len(unreviewed_glosses) == 1 else "captures"
+        warnings.insert(
+            0,
+            f"Using safe full-motion fallback for unreviewed {noun}: {names}. "
+            "Add sign-start and sign-end timestamps to enable position-aware trimming.",
+        )
 
     prepared = [(gloss, prepare(track, shared, fps=TARGET_FPS)) for gloss, track in raw]
     try:

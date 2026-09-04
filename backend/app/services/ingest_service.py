@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import replace
 import hashlib
 import json
 import re
@@ -16,12 +17,18 @@ from app.core.config import settings
 from app.ingest import clipfmt, rigprofile
 from app.ingest.compose import prepare
 from app.ingest.landmarks import LandmarkSkeleton, to_landmarks
-from app.ingest.segment import find_stroke, usable_range
-from app.ingest.pipeline import ingest_file
-from app.ingest.rokoko import parse_csv
+from app.ingest.segment import find_phases, usable_range
+from app.ingest.pipeline import ingest_take
+from app.ingest.rokoko import parse_csv, with_phase_bounds
 from app.models import Gloss, IngestJob, RigProfileRow, SignClip
 
 _TAKE_SUFFIX = re.compile(r"[_-](\d{1,3})$")
+
+
+def content_hash_for(blob: bytes, phases: dict) -> str:
+    """Content identity includes semantic phase edits as well as the motion bytes."""
+    phase_identity = json.dumps(phases, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(blob + b"\0phases\0" + phase_identity).hexdigest()[:32]
 
 
 def gloss_and_take_from_filename(stem: str) -> tuple[str, int]:
@@ -54,19 +61,19 @@ def run_ingest(session: Session, job_id: str) -> None:
         return
     try:
         rig = active_rig(session)
-        clip, qc = ingest_file(job.source_csv, rig)
+        parsed = parse_csv(job.source_csv)
+        phase_input = (job.qc or {}).get("phaseInput", {})
+        parsed = with_phase_bounds(
+            parsed,
+            phase_input.get("signStartSeconds"),
+            phase_input.get("signEndSeconds"),
+        )
+        clip, qc = ingest_take(parsed, rig)
         blob = clipfmt.encode(clip)
-        content_hash = hashlib.sha256(blob).hexdigest()[:32]
-
-        path = settings.clip_dir / f"{content_hash}.signclip"
-        path.write_bytes(blob)
 
         # Landmark frames for the Signora Unity runtime, which retargets in-engine from
         # MediaPipe-style points rather than consuming baked bone rotations.
-        landmarks = to_landmarks(parse_csv(job.source_csv))
-        (settings.clip_dir / f"{content_hash}.landmarks.json").write_text(
-            json.dumps(landmarks.to_payload())
-        )
+        landmarks = to_landmarks(parsed)
 
         # Record where the sign itself starts and ends. Sentences play only the stroke, so a bad
         # detection here silently truncates a word - it belongs in the QC panel, not a log line.
@@ -75,25 +82,57 @@ def run_ingest(session: Session, job_id: str) -> None:
         # the stroke is found there is nothing left to report.
         head, tail, _interior = usable_range(landmarks)
         corrupt = head + (landmarks.frame_count - tail)
-        stroke = find_stroke(prepare(landmarks, skeleton))
+        prepared = prepare(landmarks, skeleton)
+        phases = find_phases(prepared)
+
+        # Persist detected bounds too, so reloading this content-addressed landmark asset reproduces
+        # the reviewed composition exactly. Prepared timestamps are relative to the usable slice;
+        # translate them back to the original take before storing them.
+        if not landmarks.has_phase_bounds:
+            offset = head / landmarks.fps if landmarks.fps else 0.0
+            landmarks = replace(
+                landmarks,
+                sign_start_s=offset + phases.stroke_start / prepared.fps,
+                sign_end_s=offset + phases.stroke_end / prepared.fps,
+                phase_source="detected",
+                phase_reviewed=False,
+            )
+
+        phase_qc = phases.as_dict()
+        phase_qc.update({
+            "signStartSeconds": round(float(landmarks.sign_start_s), 4),
+            "signEndSeconds": round(float(landmarks.sign_end_s), 4),
+            "source": landmarks.phase_source or phases.source,
+            "reviewed": landmarks.phase_reviewed,
+        })
+        qc.phases = phase_qc
         qc.stroke = {
-            "start": stroke.start,
-            "end": stroke.end,
-            "durationSeconds": round(stroke.frame_count / 60.0, 3),
-            "usedFallback": stroke.used_fallback,
+            "start": phases.stroke_start,
+            "end": phases.stroke_end,
+            "durationSeconds": round(
+                (phases.stroke_end - phases.stroke_start) / prepared.fps, 3
+            ),
+            "usedFallback": bool(phases.reason),
             "droppedCorruptFrames": corrupt,
-            "reason": stroke.reason,
+            "reason": phases.reason,
         }
-        if stroke.used_fallback:
+        if not landmarks.phase_reviewed:
             qc.warnings.append(
-                f"could not isolate the sign within this take ({stroke.reason}); "
-                "it will play in full, including its run-up from rest"
+                "phase boundaries were detected automatically and need review; "
+                "enter sign-start and sign-end timestamps when uploading this capture"
             )
         if corrupt:
             qc.warnings.append(
                 f"dropped {corrupt} corrupt frame(s) where the whole skeleton jumped; "
                 "the recording is truncated at that end"
             )
+
+        content_hash = content_hash_for(blob, phase_qc)
+        path = settings.clip_dir / f"{content_hash}.signclip"
+        path.write_bytes(blob)
+        (settings.clip_dir / f"{content_hash}.landmarks.json").write_text(
+            json.dumps(landmarks.to_payload())
+        )
 
         gloss_name, take = gloss_and_take_from_filename(Path(job.source_csv).stem)
         gloss = session.scalars(select(Gloss).where(Gloss.name == gloss_name)).first()
@@ -133,51 +172,23 @@ def run_ingest(session: Session, job_id: str) -> None:
         session.commit()
 
 
-def create_job(session: Session, csv_path: Path) -> IngestJob:
+def create_job(
+    session: Session,
+    csv_path: Path,
+    sign_start_s: float | None = None,
+    sign_end_s: float | None = None,
+) -> IngestJob:
     gloss_name, _ = gloss_and_take_from_filename(csv_path.stem)
-    job = IngestJob(id=str(uuid.uuid4()), gloss_name=gloss_name, source_csv=str(csv_path))
+    phase_input = {}
+    if sign_start_s is not None or sign_end_s is not None:
+        phase_input = {
+            "signStartSeconds": sign_start_s,
+            "signEndSeconds": sign_end_s,
+        }
+    job = IngestJob(
+        id=str(uuid.uuid4()), gloss_name=gloss_name, source_csv=str(csv_path),
+        qc={"phaseInput": phase_input} if phase_input else {},
+    )
     session.add(job)
     session.commit()
     return job
-
-
-def uploads_needing_ingest(session: Session, directory: Path | None = None) -> list[Path]:
-    """CSV files present on disk that are new or newer than their registered sign take."""
-    directory = directory or settings.upload_dir
-    pending: list[Path] = []
-    for path in sorted(directory.glob("*.csv")):
-        gloss_name, take = gloss_and_take_from_filename(path.stem)
-        existing = session.scalars(
-            select(SignClip)
-            .join(Gloss)
-            .where(Gloss.name == gloss_name, SignClip.take == take)
-            .order_by(SignClip.created_at.desc())
-        ).first()
-        if existing is None:
-            pending.append(path)
-            continue
-        same_source = Path(existing.source_csv).resolve() == path.resolve()
-        modified = dt.datetime.fromtimestamp(path.stat().st_mtime, dt.UTC).replace(tzinfo=None)
-        created = existing.created_at.replace(tzinfo=None)
-        if not same_source or modified > created:
-            pending.append(path)
-    return pending
-
-
-def sync_upload_directory(session: Session, directory: Path | None = None) -> list[str]:
-    """Register captures dropped directly into the uploads directory.
-
-    Uploading through the API remains supported, but a sentence should not ignore a valid CSV just
-    because it arrived through Finder, Git LFS, or a deployment volume. Sync is idempotent: existing
-    takes are re-ingested only when their source file is newer than the database row.
-    """
-    paths = uploads_needing_ingest(session, directory)
-    if not paths:
-        return []
-    active_rig(session)  # fail once with an actionable message before creating partial jobs
-    job_ids: list[str] = []
-    for path in paths:
-        job = create_job(session, path)
-        job_ids.append(job.id)
-        run_ingest(session, job.id)
-    return job_ids
