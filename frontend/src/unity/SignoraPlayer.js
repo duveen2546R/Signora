@@ -3,7 +3,7 @@ import { assertPayloadShape, buildFrame } from './canonicalFrame.js'
 const RUNTIME_OBJECT = 'SignoraTrackingRuntime'
 
 // The driver blends a channel back to its bind pose once frames are older than 0.2s, so the stream
-// must never pause mid-sentence - between signs we keep resending the current pose.
+// must never pause - when nothing is playing we keep resending the last pose.
 const KEEPALIVE = true
 
 // The runtime reports 'failed-body' when it could not sample enough frames; retry rather than
@@ -24,8 +24,11 @@ export default class SignoraPlayer {
   constructor(sendMessage) {
     this.send = sendMessage
     this.sequence = 0
-    this.queue = []
-    this.current = null
+    this.track = null
+    this.segments = []
+    this.segmentIndex = -1
+    this.idlePose = null
+    this.lastPose = null
     this.frameIndex = 0
     this.startedAt = 0
     this.raf = null
@@ -36,7 +39,7 @@ export default class SignoraPlayer {
     this.visibilityBound = false
     this.calibrationPose = null
     this.onSignStart = null
-    this.onQueueEmpty = null
+    this.onFinished = null
     this.onCalibrated = null
     this.onCalibrationFailed = null
   }
@@ -124,15 +127,38 @@ export default class SignoraPlayer {
     document.addEventListener('visibilitychange', this.onVisibilityChange)
   }
 
-  enqueue(payload, gloss) {
+  /**
+   * Play a composed sentence - one continuous track, not a queue of clips.
+   *
+   * The backend already stitched the signs together and generated the movement between them, so
+   * there is nothing to schedule here and, more importantly, no boundary at which the stream could
+   * pause. Segments only say which sign is on screen.
+   */
+  play(payload) {
     assertPayloadShape(payload)
-    this.queue.push({ payload, gloss })
+    if (!this.calibrated) {
+      throw new Error('Avatar calibration must complete before playback starts.')
+    }
+    this.track = payload
+    this.segments = payload.segments ?? []
+    this.segmentIndex = -1
+    this.startedAt = performance.now()
+    this.frameIndex = 0
+    if (payload.neutral) this.setIdlePose(payload.neutral)
     this.#ensureLoop()
   }
 
+  /** Where the avatar rests between sentences, in the performer's proportions. */
+  setIdlePose(frame) {
+    this.idlePose = {
+      pose: frame.pose, leftHand: frame.leftHand, rightHand: frame.rightHand,
+    }
+  }
+
   clear() {
-    this.queue = []
-    this.current = null
+    this.track = null
+    this.segments = []
+    this.segmentIndex = -1
   }
 
   stop() {
@@ -159,6 +185,38 @@ export default class SignoraPlayer {
     }))
   }
 
+  /** Linear blend between the two frames bracketing a time, so playback is not quantised to rAF. */
+  #sample(time) {
+    const { pose, leftHand, rightHand, frameCount, fps } = this.track
+    const exact = Math.max(time * fps, 0)
+    const i = Math.min(Math.floor(exact), frameCount - 1)
+    const j = Math.min(i + 1, frameCount - 1)
+    const f = exact - i
+
+    // Neighbouring frames are 1/60s apart, so this cannot meaningfully bend the skeleton the way
+    // interpolating between two *different* signs would; the composed track already did that work.
+    const mix = (a, b) => (f <= 0 || i === j ? a : a.map((p, k) => [
+      p[0] + (b[k][0] - p[0]) * f,
+      p[1] + (b[k][1] - p[1]) * f,
+      p[2] + (b[k][2] - p[2]) * f,
+    ]))
+
+    return {
+      index: i,
+      pose: mix(pose[i], pose[j]),
+      leftHand: mix(leftHand[i], leftHand[j]),
+      rightHand: mix(rightHand[i], rightHand[j]),
+    }
+  }
+
+  #announce(index) {
+    const at = this.segments.findIndex((s) => index >= s.startFrame && index < s.endFrame)
+    if (at === this.segmentIndex) return
+    this.segmentIndex = at
+    const segment = this.segments[at]
+    if (segment?.kind === 'sign') this.onSignStart?.(segment.gloss)
+  }
+
   #tick = () => {
     this.raf = requestAnimationFrame(this.#tick)
     const now = performance.now()
@@ -170,33 +228,27 @@ export default class SignoraPlayer {
       return
     }
 
-    if (!this.current) {
-      const next = this.queue.shift()
-      if (next) {
-        this.current = next
-        this.startedAt = now
-        this.frameIndex = 0
-        this.onSignStart?.(next.gloss)
-      } else if (KEEPALIVE) {
-        // Nothing to play: keep the last pose alive so the avatar holds instead of snapping back.
-        const { pose, leftHand, rightHand } = this.calibrationPose
-        this.#emit(pose, leftHand, rightHand, 'idle')
-        return
-      } else {
+    if (this.track) {
+      const elapsed = (now - this.startedAt) / 1000
+      if (elapsed * this.track.fps < this.track.frameCount) {
+        const frame = this.#sample(elapsed)
+        this.frameIndex = frame.index
+        this.#announce(frame.index)
+        this.lastPose = frame
+        this.#emit(frame.pose, frame.leftHand, frame.rightHand, 'playing')
         return
       }
+      this.track = null
+      this.segments = []
+      this.segmentIndex = -1
+      this.onFinished?.()
     }
 
-    const { payload, gloss } = this.current
-    const index = Math.floor(((now - this.startedAt) / 1000) * payload.fps)
+    if (!KEEPALIVE) return
 
-    if (index >= payload.frameCount) {
-      this.current = null
-      if (this.queue.length === 0) this.onQueueEmpty?.(gloss)
-      return
-    }
-
-    this.frameIndex = index
-    this.#emit(payload.pose[index], payload.leftHand[index], payload.rightHand[index], 'playing')
+    // Nothing playing. Hold the pose the avatar actually reached - resending the calibration pose
+    // here would snap it back to the avatar's T-pose the moment a sentence ended.
+    const resting = this.lastPose ?? this.idlePose ?? this.calibrationPose
+    this.#emit(resting.pose, resting.leftHand, resting.rightHand, 'idle')
   }
 }

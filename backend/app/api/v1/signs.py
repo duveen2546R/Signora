@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_session
 from app.models import Gloss, SignClip
+from app.services.compose_service import ComposeError, compose_clips
 
 router = APIRouter(tags=["signs"])
 
@@ -42,6 +43,22 @@ def list_signs(
     total = len(session.scalars(stmt).all())
     rows = session.scalars(stmt.order_by(Gloss.name).limit(limit).offset(offset)).all()
     return {"total": total, "items": [_serialise(c) for c in rows]}
+
+
+@router.get("/signs/{clip_id}/track")
+def sign_track(clip_id: int, session: Session = Depends(get_session)):
+    """One sign as a playable track: rest, transition in, the stroke, transition back to rest.
+
+    The same composition a sentence uses, so previewing a sign shows what it will look like in one.
+    """
+    clip = session.get(SignClip, clip_id)
+    if clip is None:
+        raise HTTPException(404, "no such clip")
+    try:
+        composition, _warnings = compose_clips([(clip.gloss.name, clip)])
+        return composition.to_payload()
+    except ComposeError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.post("/signs/{clip_id}/canonical")

@@ -35,6 +35,7 @@ class QcMetrics:
     dominant_hand: str
     hand_travel_cm: dict[str, float] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    stroke: dict = field(default_factory=dict)
 
 
 def _bone_length_spread_mm(take: Take) -> float:

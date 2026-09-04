@@ -53,7 +53,7 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
     const player = new SignoraPlayer(sendMessage)
     playerRef.current = player
     player.onSignStart = (gloss) => handlers.current.onSignStart?.(gloss)
-    player.onQueueEmpty = () => handlers.current.onIdle?.()
+    player.onFinished = () => handlers.current.onIdle?.()
     player.onCalibrated = (state) => report(`calibrated:${state}`)
     player.onCalibrationFailed = (message) => report(`error:${message}`)
 
@@ -62,7 +62,7 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
         player.setCalibrationPose(payload)
         player.calibrate()
       },
-      play: (payload, gloss) => player.enqueue(payload, gloss),
+      play: (track) => player.play(track),
       clear: () => player.clear(),
       isCalibrated: () => player.calibrated,
     }
@@ -88,7 +88,13 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
 
   return (
     <div className="stage">
-      <Unity unityProvider={unityProvider} className="stage__canvas" tabIndex={0} />
+      <Unity
+        unityProvider={unityProvider}
+        className="stage__canvas"
+        // The avatar has no keyboard controls. Keeping its canvas out of the tab order prevents
+        // it from retaining focus while the user types a sentence in the HTML form.
+        tabIndex={-1}
+      />
       {!isLoaded && (
         <div className="stage__overlay">
           <p>Loading avatar… {Math.round(loadingProgression * 100)}%</p>

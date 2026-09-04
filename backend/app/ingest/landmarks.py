@@ -107,6 +107,16 @@ class LandmarkTake:
     def duration(self) -> float:
         return self.frame_count / self.fps if self.fps else 0.0
 
+    @classmethod
+    def from_payload(cls, payload: dict, name: str | None = None) -> "LandmarkTake":
+        return cls(
+            name=name or payload.get("name", "clip"),
+            fps=float(payload["fps"]),
+            pose=np.asarray(payload["pose"], dtype=np.float64),
+            left_hand=np.asarray(payload["leftHand"], dtype=np.float64),
+            right_hand=np.asarray(payload["rightHand"], dtype=np.float64),
+        )
+
     def to_payload(self, decimals: int = 4) -> dict:
         """Compact JSON for the browser, which assembles the per-frame Unity messages."""
         return {
@@ -221,4 +231,140 @@ def to_landmarks(take: Take) -> LandmarkTake:
         pose=pose - origin,
         left_hand=left - origin,
         right_hand=right - origin,
+    )
+
+
+# --- Landmark-space skeleton -------------------------------------------------------------------
+#
+# Blending must not interpolate landmark positions directly. Blending two real takes shortens the
+# forearm by up to 28% at the midpoint. Unity reads only normalised directions, so the avatar does
+# not visibly stretch - but the joint sweeps a distorted arc at uneven angular velocity, which is
+# the artefact blending exists to remove.
+#
+# What is constrained here is only what was *measured* to be constant across the library, and
+# everything else is left free because it is a real degree of freedom:
+#
+#   hip width              0.00 mm spread   -> constrained
+#   wrist -> each knuckle  0.00 mm          -> constrained (five independent spokes)
+#   arm and finger bones   0.00 mm          -> constrained
+#   head landmarks 0..10   0.07 mm residual -> rigid as a group
+#   shoulder width        41.64 mm          -> FREE, this is shoulder-girdle motion
+#   palm as a whole       32.48 mm residual -> FREE, the metacarpal arch genuinely flexes
+
+# Articulated chains, rebuilt from blended directions at constant length.
+POSE_CHAINS: tuple[tuple[int, ...], ...] = ((11, 13, 15), (12, 14, 16))
+HAND_CHAINS: tuple[tuple[int, ...], ...] = (
+    (1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16), (17, 18, 19, 20),
+)
+
+# Wrist -> metacarpal base. Each spoke has its own constant length; together they are not rigid,
+# which is why they are five separate constraints rather than one rigid palm.
+PALM_SPOKES: tuple[int, ...] = (1, 5, 9, 13, 17)
+
+HIP_PAIR: tuple[int, int] = (23, 24)          # constant width, symmetric about the origin
+POSE_HEAD_GROUP: tuple[int, ...] = tuple(range(0, 11))
+
+# Genuine degrees of freedom, interpolated directly.
+POSE_SOFT: tuple[int, ...] = (11, 12)         # shoulder girdle
+POSE_FREE: tuple[int, ...] = tuple(range(25, 33))   # legs; drive no Unity binding
+
+# The wrist appears in both arrays and must stay identical, or the palm detaches from the forearm.
+WRIST_IN_POSE: dict[str, int] = {"left": 15, "right": 16}
+
+# Six more pose landmarks are the same joints as entries in the hand arrays, so they are derived
+# rather than interpolated - otherwise the two arrays can disagree about where a knuckle is.
+# Note the thumb: hand index 1 is the metacarpal, so the proximal phalanx the pose array wants is 2.
+POSE_FROM_HAND: dict[int, tuple[str, int]] = {
+    17: ("left", 17), 18: ("right", 17),    # pinky knuckles
+    19: ("left", 5), 20: ("right", 5),      # index knuckles
+    21: ("left", 2), 22: ("right", 2),      # thumb proximal phalanx
+}
+
+
+def _pairs(chain: tuple[int, ...]) -> list[tuple[int, int]]:
+    return [(chain[i], chain[i + 1]) for i in range(len(chain) - 1)]
+
+
+POSE_BONES: tuple[tuple[int, int], ...] = tuple(
+    pair for chain in POSE_CHAINS for pair in _pairs(chain)
+)
+HAND_BONES: tuple[tuple[int, int], ...] = tuple(
+    pair for chain in HAND_CHAINS for pair in _pairs(chain)
+)
+HAND_SPOKES: tuple[tuple[int, int], ...] = tuple((0, k) for k in PALM_SPOKES)
+
+
+@dataclass(frozen=True)
+class LandmarkSkeleton:
+    """Constant measurements of the performer, taken once from the library.
+
+    Bone lengths are identical across takes (same performer, same suit), so these are properties of
+    the library rather than of any single clip.
+    """
+
+    head_shape: np.ndarray                      # (11, 3) centroid-relative, rigid
+    hip_half_width: float
+    pose_lengths: dict[tuple[int, int], float]
+    hand_lengths: dict[tuple[int, int], float]  # bones and spokes, shared by both hands
+
+    @classmethod
+    def from_takes(cls, takes: "list[LandmarkTake] | LandmarkTake") -> "LandmarkSkeleton":
+        if isinstance(takes, LandmarkTake):
+            takes = [takes]
+        pose = np.concatenate([t.pose for t in takes], axis=0)
+        hands = np.concatenate([t.left_hand for t in takes] + [t.right_hand for t in takes], axis=0)
+
+        head = pose[:, POSE_HEAD_GROUP, :]
+        head_shape = (head - head.mean(axis=1, keepdims=True)).mean(axis=0)
+
+        def lengths(track: np.ndarray, pairs) -> dict[tuple[int, int], float]:
+            return {
+                pair: float(np.linalg.norm(track[:, pair[1]] - track[:, pair[0]], axis=1).mean())
+                for pair in pairs
+            }
+
+        a, b = HIP_PAIR
+        return cls(
+            head_shape=head_shape,
+            hip_half_width=float(np.linalg.norm(pose[:, b] - pose[:, a], axis=1).mean() / 2.0),
+            pose_lengths=lengths(pose, POSE_BONES),
+            hand_lengths={**lengths(hands, HAND_BONES), **lengths(hands, HAND_SPOKES)},
+        )
+
+
+    def deviation(self, other: "LandmarkSkeleton") -> tuple[float, str]:
+        """Largest disagreement between two measured skeletons, in metres, and where."""
+        worst, where = abs(self.hip_half_width - other.hip_half_width) * 2, "hip width"
+        for label, mine, theirs in (
+            ("arm", self.pose_lengths, other.pose_lengths),
+            ("hand", self.hand_lengths, other.hand_lengths),
+        ):
+            for key, length in mine.items():
+                gap = abs(length - theirs.get(key, length))
+                if gap > worst:
+                    worst, where = gap, f"{label} segment {key[0]}->{key[1]}"
+        return worst, where
+
+
+def slice_frames(take: LandmarkTake, start: int, end: int) -> LandmarkTake:
+    """Half-open [start, end) slice, preserving name and frame rate."""
+    return LandmarkTake(
+        name=take.name, fps=take.fps,
+        pose=take.pose[start:end],
+        left_hand=take.left_hand[start:end],
+        right_hand=take.right_hand[start:end],
+    )
+
+
+def concat(takes: list[LandmarkTake], name: str = "sentence") -> LandmarkTake:
+    if not takes:
+        raise ValueError("nothing to concatenate")
+    fps = takes[0].fps
+    if any(t.fps != fps for t in takes):
+        raise ValueError("cannot concatenate tracks recorded at different frame rates")
+    return LandmarkTake(
+        name=name, fps=fps,
+        pose=np.concatenate([t.pose for t in takes], axis=0),
+        left_hand=np.concatenate([t.left_hand for t in takes], axis=0),
+        right_hand=np.concatenate([t.right_hand for t in takes], axis=0),
     )

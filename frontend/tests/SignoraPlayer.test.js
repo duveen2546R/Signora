@@ -63,3 +63,14 @@ test('only a terminal success state unlocks playback', () => {
     player.stop()
   })
 })
+
+test('playback cannot start while calibration is in progress', () => {
+  withBrowserStubs(() => {
+    const player = new SignoraPlayer(() => {})
+    player.setCalibrationPose(payload())
+    player.calibrate()
+
+    assert.throws(() => player.play(payload()), /calibration must complete/i)
+    player.stop()
+  })
+})

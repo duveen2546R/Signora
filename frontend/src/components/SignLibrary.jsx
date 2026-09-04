@@ -32,7 +32,7 @@ export default function SignLibrary({ signs, activeGloss, onPlay, disabled = fal
               <button
                 type="button"
                 className={sign.gloss === activeGloss ? 'sign sign--active' : 'sign'}
-                onClick={() => onPlay([{ sign }])}
+                onClick={() => onPlay(sign)}
                 disabled={disabled}
               >
                 <span className="sign__gloss">{sign.gloss}</span>

@@ -23,6 +23,9 @@ export const api = {
 
   setCanonical: (clipId) => request(`/signs/${clipId}/canonical`, { method: 'POST' }),
 
+  // One sign, composed the same way a sentence is.
+  signTrack: (clipId) => request(`/signs/${clipId}/track`),
+
   translate: (text) =>
     request('/translate', {
       method: 'POST',

@@ -12,6 +12,13 @@ namespace Signora.Tracking
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // This avatar does not use keyboard controls. Unity WebGL captures every key on the
+            // host page by default, which prevents React inputs from receiving physical-keyboard
+            // text in some browsers. Limit keyboard handling to the Unity canvas instead.
+            WebGLInput.captureAllKeyboardInput = false;
+#endif
+
             if (GameObject.Find(RuntimeObjectName) != null) return;
             var avatar = GameObject.Find(AvatarObjectName);
             if (avatar == null)
@@ -43,4 +50,3 @@ namespace Signora.Tracking
 #endif
     }
 }
-

@@ -14,6 +14,11 @@ Rokoko biomechanics CSV exports are converted into MediaPipe-style body and hand
 React application streams those frames to the Unity runtime, which retargets them onto the avatar.
 See [docs/signora-integration.md](docs/signora-integration.md) for the browser/Unity protocol.
 
+Sentences are composed as one quality-gated motion track. The backend selects compatible stroke
+boundaries, generates minimum-jerk/IK transitions, and uses a neutral-pose bridge when a direct join
+is unsafe. See [docs/sentence-blending.md](docs/sentence-blending.md) for the algorithm and preview
+workflow.
+
 ## Requirements
 
 - Python 3.11 or newer
@@ -77,6 +82,11 @@ for the exporter workflow.
 
 Uploaded CSVs, generated clips, and the local SQLite database live under `backend/data/` and are
 intentionally ignored by Git. The `.gitkeep` files preserve the required empty directories.
+
+CSV files copied directly into `backend/data/uploads/` are discovered when the backend starts. New
+or updated filename/take pairs are ingested automatically when a rig profile is available, so they
+become usable by sentence translation without a separate upload request. Restart the backend after
+copying files into that directory.
 
 ## Avatar calibration
 

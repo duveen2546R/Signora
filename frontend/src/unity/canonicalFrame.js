@@ -51,6 +51,14 @@ export function buildFrame({ sequence, timeMs, pose, leftHand, rightHand, state 
 export function assertPayloadShape(payload) {
   const problems = []
   if (!payload || !Array.isArray(payload.pose)) problems.push('missing pose track')
+  const counts = ['pose', 'leftHand', 'rightHand'].map((k) => payload?.[k]?.length)
+  if (new Set(counts).size > 1) {
+    problems.push(`tracks disagree on length: pose ${counts[0]}, left ${counts[1]}, right ${counts[2]}`)
+  }
+  if (payload?.frameCount !== undefined && payload.frameCount !== counts[0]) {
+    problems.push(`frameCount ${payload.frameCount} does not match ${counts[0]} frames`)
+  }
+  if (payload?.fps !== undefined && !(payload.fps > 0)) problems.push(`invalid fps ${payload?.fps}`)
   if (payload?.pose?.[0]?.length !== POSE_LANDMARK_COUNT) {
     problems.push(`pose has ${payload?.pose?.[0]?.length} landmarks, expected ${POSE_LANDMARK_COUNT}`)
   }

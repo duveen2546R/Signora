@@ -22,29 +22,30 @@ export default function App() {
 
   useEffect(refresh, [refresh])
 
-  const loadLandmarks = useCallback(async (sign) => {
-    if (cache.current.has(sign.id)) return cache.current.get(sign.id)
-    const payload = await api.landmarks(sign.landmarksUrl)
-    cache.current.set(sign.id, payload)
-    return payload
+  const avatarReady = status.startsWith('calibrated:') && window.signsure?.isCalibrated() === true
+
+  const playTrack = useCallback((track) => {
+    setError(null)
+    if (!window.signsure?.isCalibrated()) {
+      setError('Wait for avatar calibration to finish before playing a sentence.')
+      return
+    }
+    window.signsure.play(track)
   }, [])
 
-  const playSigns = useCallback(async (items) => {
+  const playSign = useCallback(async (sign) => {
     setError(null)
     try {
-      const player = window.signsure
-      if (!player?.isCalibrated()) {
-        throw new Error('The avatar is still preparing. Wait for calibration to complete.')
+      const cached = cache.current.get(sign.id) ?? await api.signTrack(sign.id)
+      cache.current.set(sign.id, cached)
+      if (!window.signsure?.isCalibrated()) {
+        throw new Error('Wait for avatar calibration to finish before playing a sign.')
       }
-      for (const { sign, gloss } of items) {
-        player.play(await loadLandmarks(sign), gloss ?? sign.gloss)
-      }
+      window.signsure.play(cached)
     } catch (e) {
       setError(e.message)
     }
-  }, [loadLandmarks])
-
-  const avatarReady = status.startsWith('calibrated:')
+  }, [])
 
   return (
     <div className="app">
@@ -70,15 +71,14 @@ export default function App() {
           <aside className="app__side">
             {error && <p className="error">{error}</p>}
             <SignComposer
-              signs={signs}
               activeGloss={activeGloss}
-              onPlay={playSigns}
+              onPlay={playTrack}
               disabled={!avatarReady}
             />
             <SignLibrary
               signs={signs}
               activeGloss={activeGloss}
-              onPlay={playSigns}
+              onPlay={playSign}
               disabled={!avatarReady}
             />
           </aside>

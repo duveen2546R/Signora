@@ -145,6 +145,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .plan { margin-top: 12px; }
+.warning { color: var(--warn); font-size: 13px; margin: 0 0 10px; }
 .plan__glosses { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 
 .chip {
