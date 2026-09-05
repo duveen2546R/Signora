@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 
 /** Browse the recorded vocabulary and play any single sign. */
-export default function SignLibrary({ signs, activeGloss, onPlay, disabled = false }) {
+export default function SignLibrary({ signs, activeGloss, onPlay, onEditPhases, disabled = false }) {
   const [query, setQuery] = useState('')
 
   const visible = useMemo(() => {
@@ -50,6 +50,7 @@ export default function SignLibrary({ signs, activeGloss, onPlay, disabled = fal
                 ) : null}
                 <span className="sign-row__meta mono">{(sign.durationMs / 1000).toFixed(1)}s</span>
               </button>
+              <button type="button" className="library__edit" onClick={() => onEditPhases(sign)} aria-label={`Edit ${sign.gloss} phase timestamps`}>Edit timestamps</button>
             </li>
           ))}
         </ul>

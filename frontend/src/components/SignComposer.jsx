@@ -4,7 +4,7 @@ import { blendNotices, playableTrack } from './blendQuality'
 import { applyPhysicalTextKey } from './physicalTextInput'
 
 /** Type a sentence, see which signs it resolves to, and play it on the avatar. */
-export default function SignComposer({ activeGloss, onPlay, disabled }) {
+export default function SignComposer({ activeOccurrence, onPlay, onClear, disabled }) {
   const [text, setText] = useState('')
   const [plan, setPlan] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -30,12 +30,15 @@ export default function SignComposer({ activeGloss, onPlay, disabled }) {
     if (!text.trim()) return
     setBusy(true)
     setError(null)
+    setPlan(null)
+    onClear?.()
     try {
       const result = await api.translate(text)
       setPlan(result)
       const track = playableTrack(result)
       if (track) onPlay(track)
       else if (result.error) setError(result.error)
+      else if (result.translationStatus === 'ready') setError('The sentence did not return a validated animation.')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -67,6 +70,8 @@ export default function SignComposer({ activeGloss, onPlay, disabled }) {
         </div>
       </form>
 
+      <p className="hint">Recorded signs are joined automatically using each capture’s Start, Sign and End timestamps. Sentence meaning is resolved separately through reviewed ISL patterns; transitions need no pair-specific setup.</p>
+
       {error && <p className="notice notice--bad">{error}</p>}
 
       {plan && (
@@ -81,7 +86,7 @@ export default function SignComposer({ activeGloss, onPlay, disabled }) {
                 className={[
                   'chip',
                   item.fingerspelled ? 'chip--spelled' : '',
-                  item.gloss === activeGloss ? 'chip--active' : '',
+                  item.occurrenceIndex === activeOccurrence ? 'chip--active' : '',
                 ].join(' ').trim()}
               >
                 {item.gloss}
@@ -90,8 +95,7 @@ export default function SignComposer({ activeGloss, onPlay, disabled }) {
           </ol>
           {plan.unmapped.length > 0 && (
             <p className="notice notice--warn">
-              No sign recorded for: {plan.unmapped.join(', ')}. Record these, or add the manual
-              alphabet so they can be fingerspelled.
+              No sign recorded for: {plan.unmapped.join(', ')}. Add the missing recordings. Fingerspelling is available only where the sentence pattern permits it.
             </p>
           )}
         </div>

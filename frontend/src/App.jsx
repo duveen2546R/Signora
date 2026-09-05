@@ -3,8 +3,6 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import SignPage from './pages/SignPage'
 import Capture from './pages/Capture'
-import Login from './pages/Login'
-import Register from './pages/Register'
 import './App.css'
 
 export default function App() {
@@ -15,8 +13,6 @@ export default function App() {
           <Route index element={<Landing />} />
           <Route path="sign" element={<SignPage />} />
           <Route path="capture" element={<Capture />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
         </Route>
       </Routes>
     </BrowserRouter>

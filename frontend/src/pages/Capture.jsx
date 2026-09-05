@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
+import MotionPhaseEditor from '../components/MotionPhaseEditor'
 import { inspectCaptureDuration, phaseDurations, validatePhaseDraft } from '../capturePhases'
 
 /** Upload rig profiles and motion captures, and watch ingest results come back. */
@@ -39,10 +40,12 @@ export default function Capture({ onLibraryChanged }) {
     const files = Array.from(event.target.files ?? [])
     const inspected = await Promise.all(files.map(async (file) => {
       try {
-        const duration = await inspectCaptureDuration(file)
+        await inspectCaptureDuration(file)
+        const track = await api.previewCapture(file)
+        const duration = track.durationSeconds ?? track.frameCount / track.fps
         return {
           id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
-          file, duration, signStart: '', signEnd: '',
+          file, track, duration, signStart: track.signStartSeconds ?? '', signEnd: track.signEndSeconds ?? '',
           touched: false, error: null, uploading: false,
         }
       } catch (e) {
@@ -57,12 +60,6 @@ export default function Capture({ onLibraryChanged }) {
     setDrafts((previous) => previous.map((draft) => (
       draft.id === id ? { ...draft, ...update } : draft
     )))
-  }
-
-  function validateDraft(id) {
-    setDrafts((previous) => previous.map((draft) => draft.id === id
-      ? { ...draft, touched: true, error: draft.invalid ? draft.error : validatePhaseDraft(draft) }
-      : draft))
   }
 
   async function uploadDraft(id) {
@@ -146,34 +143,11 @@ export default function Capture({ onLibraryChanged }) {
                       <p className="hint">
                         Split the capture into three sections by entering the two boundary timestamps.
                       </p>
-                      <div className="phase-draft__fields">
-                        <label>
-                          Start → Sign boundary <span className="required">(required)</span>
-                          <input
-                            type="number" min="0" max={draft.duration} step="0.001"
-                            required
-                            value={draft.signStart}
-                            onChange={(event) => updateDraft(draft.id, { signStart: event.target.value, error: null })}
-                            onBlur={() => validateDraft(draft.id)}
-                            aria-describedby={`${draft.id}-error`}
-                            aria-invalid={Boolean(draft.error)}
-                          />
-                          <span>seconds</span>
-                        </label>
-                        <label>
-                          Sign → End boundary <span className="required">(required)</span>
-                          <input
-                            type="number" min="0" max={draft.duration} step="0.001"
-                            required
-                            value={draft.signEnd}
-                            onChange={(event) => updateDraft(draft.id, { signEnd: event.target.value, error: null })}
-                            onBlur={() => validateDraft(draft.id)}
-                            aria-describedby={`${draft.id}-error`}
-                            aria-invalid={Boolean(draft.error)}
-                          />
-                          <span>seconds</span>
-                        </label>
-                      </div>
+                      <MotionPhaseEditor
+                        track={draft.track} signStart={draft.signStart} signEnd={draft.signEnd}
+                        disabled={draft.uploading}
+                        onChange={(change) => updateDraft(draft.id, { ...change, error: null })}
+                      />
                       {durations && (
                         <p className="phase-draft__summary">
                           Start: 0.000–{durations.start.toFixed(3)}s · Sign: {durations.start.toFixed(3)}–{Number(draft.signEnd).toFixed(3)}s · End: {Number(draft.signEnd).toFixed(3)}–{draft.duration.toFixed(3)}s

@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from app.ingest.compose import TARGET_FPS, compose, neutral_pose, prepare
+from app.ingest.compose import ALGORITHM_VERSION, BlendRejected, TARGET_FPS, compose, neutral_pose, prepare
 from tests.test_blend import segment_errors
 
 WRIST = 16
@@ -32,6 +32,18 @@ def test_prepare_puts_clips_on_the_playback_timebase(library, skeleton):
     assert out.fps == TARGET_FPS
     assert out.frame_count > take.frame_count      # 30 fps source, 60 fps target
     assert segment_errors(skeleton, out) < 5e-4    # resampling and smoothing must not stretch limbs
+
+
+def test_resampling_preserves_last_csv_sample_interval(library, skeleton):
+    from dataclasses import replace
+
+    source = next(iter(library.values()))
+    # Fixed source clock with intact rest bookends. The final row is an interval,
+    # not an instantaneous clip end that can remove half a frame during upsampling.
+    source = replace(source, timestamps=np.arange(source.frame_count) / 30.0)
+    result = prepare(source, skeleton, fps=60.0, smooth=False)
+    assert result.frame_count == 2 * source.frame_count
+    assert result.duration == pytest.approx(source.duration)
 
 
 def test_prepare_removes_the_corrupt_tail(library, skeleton):
@@ -137,8 +149,8 @@ def test_payload_carries_segments_and_neutral(prepared, skeleton):
     assert payload["frameCount"] == len(payload["pose"])
     assert len(payload["leftHand"]) == len(payload["rightHand"]) == payload["frameCount"]
     assert payload["segments"] and payload["neutral"]
-    assert payload["blendQuality"]["algorithmVersion"] == 5
-    assert payload["blendQuality"]["status"] in {"direct", "neutral-fallback"}
+    assert payload["blendQuality"]["algorithmVersion"] == ALGORITHM_VERSION
+    assert payload["blendQuality"]["status"] == "direct"
     json.dumps(payload)
 
 
@@ -168,6 +180,15 @@ def test_reviewed_phases_follow_sentence_position(prepared, skeleton):
     ] == ["preparation", "sign", "retraction"]
 
     sentence = compose(skeleton, [(name, reviewed[name]) for name in names])
+    for segment in sentence.segments:
+        if segment.kind == "sign":
+            source = reviewed[segment.gloss]
+            span = spans[segment.gloss]
+            for channel in ("pose", "left_hand", "right_hand"):
+                np.testing.assert_array_equal(
+                    getattr(sentence.track, channel)[segment.start:segment.end],
+                    getattr(source, channel)[span.start:span.end],
+                )
     retained = [
         (segment.gloss, segment.kind, segment.end - segment.start)
         for segment in sentence.segments
@@ -182,7 +203,7 @@ def test_reviewed_phases_follow_sentence_position(prepared, skeleton):
     ]
 
 
-def test_failed_direct_seam_uses_a_validated_neutral_bridge(prepared, skeleton, monkeypatch):
+def test_all_failed_seam_strategies_are_rejected_without_neutral(prepared, skeleton, monkeypatch):
     from dataclasses import replace
 
     from app.ingest import blend as blending
@@ -199,13 +220,17 @@ def test_failed_direct_seam_uses_a_validated_neutral_bridge(prepared, skeleton, 
         return result
 
     monkeypatch.setattr(blending, "plan_transition", reject_only_sign_to_sign)
+    monkeypatch.setattr(blending, "plan_phase_overlap", reject_only_sign_to_sign)
     names = list(prepared)[:2]
-    result = compose(skeleton, [(name, prepared[name]) for name in names])
-    assert result.blend_quality["status"] == "neutral-fallback"
-    assert any(segment.mode == "neutral-fallback" for segment in result.segments)
+    with pytest.raises(BlendRejected) as failure:
+        compose(skeleton, [(name, prepared[name]) for name in names])
+    quality = failure.value.blend_quality
+    assert quality["status"] == "rejected"
+    assert quality["seams"][-1]["fromGloss"] == names[0]
+    assert "forced direct rejection" in quality["seams"][-1]["reasons"]
 
 
-def test_reviewed_seam_uses_only_minimum_safe_phase_context(
+def test_authored_phases_automatically_blend_without_pair_configuration(
     prepared, skeleton, monkeypatch,
 ):
     from dataclasses import replace
@@ -247,27 +272,22 @@ def test_reviewed_seam_uses_only_minimum_safe_phase_context(
     middle = result.blend_quality["seams"][1]
     assert middle["mode"] == "direct"
     assert middle["passed"] is True
-    assert middle["boundaryAdjustment"]["outgoingFrames"] > 0
-    assert middle["boundaryAdjustment"]["incomingFrames"] > 0
-    assert middle["boundaryAdjustment"]["outgoingFrames"] < (
-        reviewed[0].frame_count - find_stroke(reviewed[0]).end
-    )
-    assert middle["boundaryAdjustment"]["incomingFrames"] < find_stroke(reviewed[1]).start
-    assert not any(
-        segment.kind in {"preparation", "retraction"}
-        and segment.mode == "neutral-fallback"
-        for segment in result.segments
-    )
+    assert middle["strategy"] == "phase-overlap"
+    sign_segments = [segment for segment in result.segments if segment.kind == "sign"]
+    for source, segment in zip(reviewed, sign_segments, strict=True):
+        span = find_stroke(source)
+        for channel in ("pose", "left_hand", "right_hand"):
+            np.testing.assert_array_equal(
+                getattr(result.track, channel)[segment.start:segment.end],
+                getattr(source, channel)[span.start:span.end],
+            )
+    between = result.segments[result.segments.index(sign_segments[0]) + 1:
+                              result.segments.index(sign_segments[1])]
+    assert between and all(segment.kind == "transition" for segment in between)
+    assert all(segment.mode == "direct" for segment in between)
 
 
-def test_a_sentence_always_plays_even_when_every_bridge_fails(prepared, skeleton, monkeypatch):
-    """No input may leave the avatar standing in its bind pose with an error.
-
-    An imperfect transition is worth far more than no motion: refusing to compose shows a blank
-    T-posed avatar and a red message where a sentence should be. When nothing clears the envelope
-    the best available bridge plays anyway, and the shortfall is reported through blendQuality so it
-    is still visible for review.
-    """
+def test_failed_opening_bridge_blocks_the_entire_sentence(prepared, skeleton, monkeypatch):
     from dataclasses import replace
 
     from app.ingest import blend as blending
@@ -282,19 +302,12 @@ def test_a_sentence_always_plays_even_when_every_bridge_fails(prepared, skeleton
 
     monkeypatch.setattr(blending, "plan_transition", reject_everything)
     names = list(prepared)[:2]
-    result = compose(skeleton, [(name, prepared[name]) for name in names])
-
-    assert result.track.frame_count > 0
-    assert result.blend_quality["status"] == "degraded"
-    assert all(
-        segment.mode is None or segment.mode.startswith(("direct", "neutral", "degraded"))
-        for segment in result.segments
-    )
-    assert any(seam["mode"].startswith("degraded") for seam in result.blend_quality["seams"])
-    # The reason a viewer would need is still carried, not swallowed.
-    assert any("forced hard failure" in seam.get("reasons", []) for seam in result.blend_quality["seams"])
-    # And it is still a physically valid pose sequence, not a fallback that skips the constraints.
-    assert segment_errors(skeleton, result.track) < 5e-4
+    with pytest.raises(BlendRejected) as failure:
+        compose(skeleton, [(name, prepared[name]) for name in names])
+    assert failure.value.blend_quality["status"] == "rejected"
+    seam = failure.value.blend_quality["seams"][-1]
+    assert seam["fromGloss"] == ""
+    assert "forced hard failure" in seam["reasons"]
 
 
 def test_transitions_stay_within_the_avatar_rate_limit(prepared, skeleton):
@@ -402,3 +415,46 @@ def test_matched_skeletons_produce_no_warning(prepared, skeleton, tmp_path, monk
     assert "safe full-motion fallback" in warnings[0]
     assert names[0] in warnings[0] and names[1] in warnings[0]
     assert "different proportions" not in warnings[0]
+
+
+def test_occurrences_and_no_inter_sign_holds(prepared, skeleton):
+    name, track = next(iter(prepared.items()))
+    result = compose(skeleton, [(name, track), (name, track), (name, track)])
+    signs = [s for s in result.segments if s.kind == "sign"]
+    assert [s.occurrence_index for s in signs] == [0, 1, 2]
+    interior = [s for s in result.segments if s.start >= signs[0].end and s.end <= signs[-1].start]
+    assert all(s.kind != "hold" and s.mode in {None, "direct"} for s in interior)
+
+
+def test_failed_closing_bridge_is_rejected(prepared, skeleton, monkeypatch):
+    from dataclasses import replace
+    from app.ingest import blend
+    actual = blend.plan_transition
+    def reject_closing(*args, **kwargs):
+        result = actual(*args, **kwargs)
+        if args[3].name == "neutral":
+            return replace(result, quality=blend.TransitionQuality(0, False, {}, ("closing failed",)))
+        return result
+    monkeypatch.setattr(blend, "plan_transition", reject_closing)
+    name, track = next(iter(prepared.items()))
+    with pytest.raises(BlendRejected, match="closing failed"):
+        compose(skeleton, [(name, track)])
+
+
+def test_preparation_uses_csv_timebase_for_resampling(library, skeleton):
+    from dataclasses import replace
+    from app.ingest import compose as module
+    from app.ingest import resample
+    source = next(iter(library.values()))
+    times = np.arange(source.frame_count) / source.fps
+    times[30] += 0.004
+    raw = replace(source, timestamps=times)
+    seen = []
+    original = resample.resample_positions
+    def capture_times(input_times, values, target):
+        seen.append(input_times.copy())
+        return original(input_times, values, target)
+    from unittest.mock import patch
+    with patch.object(module.resample, "resample_positions", capture_times):
+        prepare(raw, skeleton)
+    assert seen and any(np.any(np.abs(np.diff(t) - 1 / source.fps) > 0.001) for t in seen)

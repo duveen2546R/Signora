@@ -124,3 +124,15 @@ def test_phase_metadata_survives_landmark_preparation(hello_take):
     assert restored.sign_end_s == prepared.sign_end_s
     assert restored.phase_source == "authored-ui"
     assert restored.phase_reviewed is True
+
+
+def test_original_csv_clock_survives_payload_and_slicing(hello_take):
+    from dataclasses import replace
+    from app.ingest.landmarks import LandmarkTake, to_landmarks, slice_frames
+    times = hello_take.times.copy()
+    times[10] += 0.003
+    raw = to_landmarks(replace(hello_take, times=times))
+    restored = LandmarkTake.from_payload(raw.to_payload())
+    np.testing.assert_array_equal(restored.times, times)
+    cropped = slice_frames(restored, 10, 40)
+    np.testing.assert_array_equal(cropped.times, times[10:40] - times[10])

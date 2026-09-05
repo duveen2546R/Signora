@@ -5,6 +5,7 @@ and the two landmark arrays keep agreeing about the joints they share. Interpola
 directly fails this - it shortens the forearm by 28% at the midpoint of a real blend.
 """
 import numpy as np
+import pytest
 
 from app.ingest import landmarks as lm
 from app.ingest.blend import (
@@ -136,6 +137,32 @@ def test_contact_detector_requires_stable_slow_proximity(library):
     left[:] = pose[:, 0:1]  # stationary hand on the head envelope for all three samples
     contact = LandmarkTake("contact", source.fps, pose, left, right)
     assert _stable_contact(contact, 2, forward=False).left
+
+
+@pytest.mark.parametrize("release,approach", [(True, False), (False, True), (True, True)])
+def test_phase_overlap_preserves_contact_shapes_during_release_and_approach(
+    prepared, skeleton, monkeypatch, release, approach,
+):
+    from app.ingest import blend as blending
+    from app.ingest.segment import find_stroke
+
+    a, b = list(prepared.values())[:2]
+    end, start = find_stroke(a).end - 1, find_stroke(b).start
+    # Isolate the planner from detection (tested above). The same contact states
+    # must work for arbitrary recording identities, including contact at both ends.
+    monkeypatch.setattr(blending, "_stable_contact", lambda _take, _index, forward:
+                        blending.ContactState(hand_to_hand=approach if forward else release))
+    result = blending.plan_phase_overlap(skeleton, a, end, b, start, 60.0)
+    assert result.quality.metrics["contactHandshapeErrorDeg"] < 0.01
+    assert segment_errors(skeleton, result.track) < 5e-4
+    for active, reference, at in [(release, Pose.at(a, end), 0.25),
+                                   (approach, Pose.at(b, start), 0.75)]:
+        if active:
+            source = decompose(skeleton, reference)
+            sample = decompose(skeleton, Pose.at(result.track, int(at * result.track.frame_count)))
+            np.testing.assert_allclose(sample.left_dirs, source.left_dirs, atol=1e-8)
+            np.testing.assert_allclose(sample.right_dirs, source.right_dirs, atol=1e-8)
+    assert np.linalg.norm(np.diff(result.track.pose[:, 16], axis=0), axis=1).max() > 0.001
 
 
 def test_quality_gate_rejects_unintended_body_intersection(library, skeleton):

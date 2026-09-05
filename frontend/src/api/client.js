@@ -1,22 +1,5 @@
 const BASE = import.meta.env.VITE_API_BASE ?? '/api/v1'
 
-async function auth(path, body) {
-  try {
-    return await request(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  } catch (error) {
-    if (/not found/i.test(error.message)) {
-      throw new Error('Accounts are not switched on yet. Signing works without one.', {
-        cause: error,
-      })
-    }
-    throw error
-  }
-}
-
 async function request(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, options)
   if (!response.ok) {
@@ -33,12 +16,6 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // Authentication. The backend does not expose these yet, so a 404 is reported as the missing
-  // service it is rather than as a wrong password - telling somebody their credentials are bad
-  // when the server was never asked is the worst possible failure message.
-  login: (credentials) => auth('/auth/login', credentials),
-  register: (details) => auth('/auth/register', details),
-
   health: () => request('/health'),
 
   listSigns: ({ q = '', limit = 200 } = {}) =>
@@ -48,6 +25,22 @@ export const api = {
 
   // One sign, composed the same way a sentence is.
   signTrack: (clipId) => request(`/signs/${clipId}/track`),
+
+  previewSequence: (clipIds) => request('/signs/preview-sequence', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clipIds }),
+  }),
+
+  patterns: () => request('/translate/patterns'),
+
+  updatePhases: (clipId, phases) => request(`/signs/${clipId}/phases`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(phases),
+  }),
+
+  previewCapture: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request('/captures/preview', { method: 'POST', body: form })
+  },
 
   translate: (text) =>
     request('/translate', {

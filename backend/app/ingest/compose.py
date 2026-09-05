@@ -24,19 +24,25 @@ from .landmarks import LandmarkSkeleton, LandmarkTake, concat, slice_frames
 from .segment import Phases, Stroke, boundary_candidates, find_phases, find_stroke, usable_range
 
 TARGET_FPS = 60.0
-ALGORITHM_VERSION = 5
+ALGORITHM_VERSION = 7
 
 # Stillness after each sign so one word reads as finished before the next begins.
 HOLD_SECONDS = 0.10
 FINAL_HOLD_SECONDS = 0.35
-NEUTRAL_FALLBACK_HOLD_SECONDS = 0.08
 PHASE_ASSIST_OUTGOING_SECONDS = 0.40
 PHASE_ASSIST_INCOMING_SECONDS = 0.15
 PHASE_ASSIST_STEP_SECONDS = 0.05
 
 
 class BlendRejected(ValueError):
-    """Neither a direct nor a neutral bridge met the hard motion-quality constraints."""
+    """A generated bridge failed the motion-quality constraints."""
+
+    def __init__(self, message: str, seams: list[dict] | None = None):
+        super().__init__(message)
+        self.blend_quality = {
+            "status": "rejected", "score": 0.0,
+            "algorithmVersion": ALGORITHM_VERSION, "seams": seams or [],
+        }
 
 
 @dataclass(frozen=True)
@@ -49,10 +55,13 @@ class Segment:
     kind: str          # "sign" | "transition" | "hold"
     mode: str | None = None
     quality_score: float | None = None
+    occurrence_index: int | None = None
 
     def as_dict(self) -> dict:
         payload = {"gloss": self.gloss, "startFrame": self.start,
                    "endFrame": self.end, "kind": self.kind}
+        if self.occurrence_index is not None:
+            payload["occurrenceIndex"] = self.occurrence_index
         if self.mode is not None:
             payload["mode"] = self.mode
         if self.quality_score is not None:
@@ -105,6 +114,7 @@ def enforce_track(skel: LandmarkSkeleton, take: LandmarkTake) -> LandmarkTake:
         sign_end_s=take.sign_end_s,
         phase_source=take.phase_source,
         phase_reviewed=take.phase_reviewed,
+        timestamps=take.timestamps,
     )
 
 
@@ -128,10 +138,17 @@ def prepare(
     it can no longer be isolated afterwards - it survives as a 4 m/s lunge at the end of the sign.
     """
     head, tail, _interior = usable_range(take)
+    retained_start = float(take.times[head])
+    retained_end = float(take.times[tail]) if tail < take.frame_count else take.duration
+    if take.phase_reviewed and take.has_phase_bounds:
+        if take.sign_start_s < retained_start - 1e-6 or take.sign_end_s > retained_end + 1e-6:
+            raise ValueError("Reviewed sign overlaps corrupt frames; adjust timestamps or re-record.")
     take = slice_frames(take, head, tail)
 
-    times = np.arange(take.frame_count) / take.fps
-    target = resample.uniform_times(times, fps)
+    times = take.times
+    # A CSV row occupies an interval, including the last row. Sampling only through
+    # times[-1] loses half a 30-fps interval when exporting at 60 fps.
+    target = np.arange(max(int(np.ceil(take.duration * fps - 1e-9)), 1)) / fps
 
     tracks = [
         resample.resample_positions(times, track, target)
@@ -140,7 +157,7 @@ def prepare(
     if smooth:
         tracks = [filters.smooth_positions(t) for t in tracks]
 
-    return enforce_track(skel, LandmarkTake(
+    result = enforce_track(skel, LandmarkTake(
         name=take.name, fps=fps,
         pose=tracks[0], left_hand=tracks[1], right_hand=tracks[2],
         sign_start_s=take.sign_start_s,
@@ -148,6 +165,13 @@ def prepare(
         phase_source=take.phase_source,
         phase_reviewed=take.phase_reviewed,
     ))
+    if result.phase_reviewed and result.has_phase_bounds:
+        if result.sign_end_s > result.frame_count / fps + 1e-6:
+            raise ValueError("Resampling would truncate the reviewed sign; review phases.")
+        phase = find_phases(result)
+        if (phase.stroke_end - phase.stroke_start) / fps < 0.30 - 1e-6:
+            raise ValueError("Retained sign must include at least 0.300s of meaning-bearing motion.")
+    return result
 
 
 def neutral_pose(skel: LandmarkSkeleton, takes: list[LandmarkTake]) -> Pose:
@@ -250,11 +274,11 @@ def compose(
     # only when it closes one. Everywhere else those phases describe a journey to and from rest
     # that is wrong once the word has a neighbour, and the bridge replaces them.
     preparations = [
-        slice_frames(clip, *phase.preparation) if phase.has_preparation else None
+        slice_frames(clip, *phase.preparation) if phase.stroke_start > phase.prep_start else None
         for (_gloss, clip), phase in zip(clips, phases, strict=True)
     ]
     retractions = [
-        slice_frames(clip, *phase.retraction) if phase.has_retraction else None
+        slice_frames(clip, *phase.retraction) if phase.retract_end > phase.stroke_end else None
         for (_gloss, clip), phase in zip(clips, phases, strict=True)
     ]
     lead_in = preparations[0]
@@ -310,6 +334,7 @@ def compose(
     segments: list[Segment] = []
     seams: list[dict] = []
     cursor = 0
+    occurrence_index = None
 
     def add(
         track: LandmarkTake,
@@ -323,7 +348,7 @@ def compose(
             return
         pieces.append(track)
         segments.append(Segment(
-            gloss, cursor, cursor + track.frame_count, kind, mode, quality_score,
+            gloss, cursor, cursor + track.frame_count, kind, mode, quality_score, occurrence_index,
         ))
         cursor += track.frame_count
 
@@ -336,7 +361,6 @@ def compose(
         to_gloss: str,
         from_frame: int,
         to_frame: int,
-        allow_neutral: bool,
         phase_outgoing: tuple[LandmarkTake, Phases] | None = None,
         phase_incoming: tuple[LandmarkTake, Phases] | None = None,
     ) -> str:
@@ -365,20 +389,27 @@ def compose(
             seams.append(seam)
             return "direct"
 
-        if not allow_neutral:
-            # Nothing to fall back to at a sentence edge, and refusing here would leave the avatar
-            # standing in its bind pose with an error where a sentence should be. A bridge that
-            # misses the envelope is still far better than no motion at all, so it plays and the
-            # shortfall is reported instead.
-            seam["mode"] = "degraded"
-            seams.append(seam)
-            add(direct.track, to_gloss, "transition", "degraded", direct.quality.score)
-            return "degraded"
+        if phase_outgoing is not None and phase_incoming is not None:
+            outgoing_take, outgoing_phase = phase_outgoing
+            incoming_take, incoming_phase = phase_incoming
+            overlap = blend.plan_phase_overlap(
+                skel, outgoing_take, outgoing_phase.stroke_end - 1,
+                incoming_take, incoming_phase.stroke_start, fps,
+            )
+            seam["phaseOverlapAttempt"] = {
+                **overlap.quality.as_dict(),
+                "durationMs": int(round(overlap.duration * 1000)),
+            }
+            if overlap.quality.passed:
+                seam.update(overlap.quality.as_dict())
+                seam.update(strategy="phase-overlap", durationMs=int(round(overlap.duration * 1000)))
+                add(overlap.track, to_gloss, "transition", "direct", overlap.quality.score)
+                seams.append(seam)
+                return "direct"
 
-        # A reviewed capture provides safe transition material immediately outside the semantic
-        # sign range. Search a small amount of that material before falling all the way back to
-        # neutral. Only the minimum passing tail/head is retained, so this cannot replay both full
-        # standalone clips as the old neutral fallback did.
+        # Authored phases provide transition material outside the protected Sign. If overlap
+        # fails, search a bounded amount of this context before rejecting the join. No strategy
+        # restores the standalone neutral bookends.
         if phase_outgoing is not None and phase_incoming is not None:
             outgoing_take, outgoing_phase = phase_outgoing
             incoming_take, incoming_phase = phase_incoming
@@ -414,8 +445,19 @@ def compose(
                         incoming_at,
                         fps,
                     )
+                    context = [
+                        Pose.at(outgoing_take, at)
+                        for at in range(outgoing_phase.stroke_end, outgoing_at + 1)
+                    ] + [
+                        Pose.at(incoming_take, at)
+                        for at in range(incoming_at, incoming_phase.stroke_start)
+                    ]
+                    returns_to_rest = any(
+                        max(np.linalg.norm(p.pose[w] - rest.pose[w]) for w in (15, 16)) < 0.04
+                        for p in context
+                    )
                     if (
-                        candidate.quality.passed
+                        not returns_to_rest and candidate.quality.passed
                         and float(candidate.quality.metrics["maxWristSpeedCmS"])
                         <= blend.MAX_WRIST_SPEED_CM_S
                         and float(candidate.quality.metrics["maxAngularSpeedDegS"])
@@ -459,85 +501,38 @@ def compose(
                 add(incoming_context, to_gloss, "transition", "direct", score)
                 return "direct"
 
-        into_rest = blend.plan_transition(
-            skel, previous, previous_index, rest_track, 0, fps,
-        )
-        out_of_rest = blend.plan_transition(
-            skel, rest_track, 0, following, following_index, fps,
-        )
-        fallback_passed = into_rest.quality.passed and out_of_rest.quality.passed
-        seam.update({
-            "mode": "neutral-fallback",
-            "passed": fallback_passed,
-            "score": round(min(into_rest.quality.score, out_of_rest.quality.score), 1),
-            "durationMs": int(round((
-                into_rest.duration + out_of_rest.duration + NEUTRAL_FALLBACK_HOLD_SECONDS
-            ) * 1000)),
-            "reasons": list(direct.quality.reasons),
-            "fallback": {
-                "intoNeutral": into_rest.quality.as_dict(),
-                "outOfNeutral": out_of_rest.quality.as_dict(),
-            },
-        })
-        if not fallback_passed:
-            # Neither route cleared the envelope. Play whichever scored better rather than dropping
-            # the sentence: the neutral route is two long bridges through rest, so a direct bridge
-            # that merely exceeds the envelope usually reads better than routing the hands down and
-            # back up. The seam records what fell short.
-            neutral_score = min(into_rest.quality.score, out_of_rest.quality.score)
-            if direct.quality.score >= neutral_score:
-                seam["mode"] = "degraded"
-                seam["score"] = round(direct.quality.score, 1)
-                seam["durationMs"] = int(round(direct.duration * 1000))
-                seam["reasons"] = list(direct.quality.reasons)
-                seams.append(seam)
-                add(direct.track, to_gloss, "transition", "degraded", direct.quality.score)
-                return "degraded"
-
-            seam["mode"] = "degraded-neutral"
-            seams.append(seam)
-            add(into_rest.track, to_gloss, "transition", "degraded-neutral", neutral_score)
-            add(_hold(
-                rest_track, 0, int(round(NEUTRAL_FALLBACK_HOLD_SECONDS * fps)), fps,
-            ), "", "hold", "degraded-neutral", neutral_score)
-            add(out_of_rest.track, to_gloss, "transition", "degraded-neutral", neutral_score)
-            return "degraded-neutral"
-
+        seam["mode"] = "rejected"
         seams.append(seam)
-
-        score = min(into_rest.quality.score, out_of_rest.quality.score)
-        add(into_rest.track, to_gloss, "transition", "neutral-fallback", score)
-        add(_hold(
-            rest_track, 0, int(round(NEUTRAL_FALLBACK_HOLD_SECONDS * fps)), fps,
-        ), "", "hold", "neutral-fallback", score)
-        add(out_of_rest.track, to_gloss, "transition", "neutral-fallback", score)
-        return "neutral-fallback"
+        raise BlendRejected(
+            f"Cannot blend {from_gloss or 'rest'} to {to_gloss or 'rest'}: "
+            + "; ".join(direct.quality.reasons)
+            + ". Review phase boundaries or record another take.",
+            seams,
+        )
 
     add(rest_track, "", "hold")
 
     previous: LandmarkTake | None = rest_track
     previous_index = 0
     previous_gloss = ""
-    used_fallback = False
 
     for position, (gloss, stroke_track) in enumerate(trimmed):
+        occurrence_index = position
         # The opening word plays its recorded run-up. Preparation and sign are contiguous frames of
         # one recording, so the join happens before the preparation and nothing bridges the two.
         target, target_index = (
             (lead_in, 0) if position == 0 and lead_in is not None else (stroke_track, 0)
         )
-        mode = join(
+        join(
             previous, previous_index, target, target_index,
             previous_gloss, gloss,
             exits[position - 1] if position else 0,
             entries[position],
-            allow_neutral=position > 0,
             phase_outgoing=(clips[position - 1][1], phases[position - 1])
             if position > 0 else None,
             phase_incoming=(clips[position][1], phases[position])
             if position > 0 else None,
         )
-        used_fallback = used_fallback or mode == "neutral-fallback"
 
         if position == 0 and lead_in is not None:
             add(lead_in, gloss, "preparation")
@@ -558,14 +553,13 @@ def compose(
 
     join(
         previous, previous_index, rest_track, 0,
-        previous_gloss, "", exits[-1], 0, allow_neutral=False,
+        previous_gloss, "", exits[-1], 0,
     )
     add(_hold(rest_track, 0, int(round(FINAL_HOLD_SECONDS * fps)), fps), "", "hold")
 
     score = min((float(seam["score"]) for seam in seams), default=100.0)
-    degraded = any(seam.get("mode", "").startswith("degraded") for seam in seams)
     quality = {
-        "status": "degraded" if degraded else ("neutral-fallback" if used_fallback else "direct"),
+        "status": "direct",
         "score": round(score, 1),
         "algorithmVersion": ALGORITHM_VERSION,
         "seams": seams,

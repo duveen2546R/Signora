@@ -105,6 +105,16 @@ class LandmarkTake:
     sign_end_s: float | None = None
     phase_source: str | None = None
     phase_reviewed: bool = False
+    timestamps: np.ndarray | None = None
+
+    @property
+    def times(self) -> np.ndarray:
+        if self.timestamps is None:
+            return np.arange(self.frame_count) / self.fps
+        if (len(self.timestamps) != self.frame_count or not np.all(np.isfinite(self.timestamps))
+                or (len(self.timestamps) > 1 and np.any(np.diff(self.timestamps) <= 0))):
+            raise ValueError("Raw motion timestamps must match every frame and increase strictly.")
+        return self.timestamps
 
     @property
     def frame_count(self) -> int:
@@ -112,6 +122,9 @@ class LandmarkTake:
 
     @property
     def duration(self) -> float:
+        if self.timestamps is not None:
+            times = self.times
+            return float(times[-1] + np.median(np.diff(times))) if len(times) > 1 else 0.0
         return self.frame_count / self.fps if self.fps else 0.0
 
     @property
@@ -131,6 +144,7 @@ class LandmarkTake:
             sign_end_s=payload.get("signEndSeconds"),
             phase_source=payload.get("phaseSource"),
             phase_reviewed=bool(payload.get("phaseReviewed", False)),
+            timestamps=np.asarray(payload["timestampsSeconds"], dtype=float) if "timestampsSeconds" in payload else None,
         )
 
     def to_payload(self, decimals: int = 4) -> dict:
@@ -143,6 +157,9 @@ class LandmarkTake:
             "leftHand": np.round(self.left_hand, decimals).tolist(),
             "rightHand": np.round(self.right_hand, decimals).tolist(),
         }
+        if self.timestamps is not None:
+            payload["timestampsSeconds"] = self.times.tolist()
+            payload["durationSeconds"] = self.duration
         if self.has_phase_bounds:
             payload["signStartSeconds"] = round(float(self.sign_start_s), 4)
             payload["signEndSeconds"] = round(float(self.sign_end_s), 4)
@@ -257,6 +274,7 @@ def to_landmarks(take: Take) -> LandmarkTake:
         sign_end_s=take.sign_end_s,
         phase_source=take.phase_source,
         phase_reviewed=take.phase_reviewed,
+        timestamps=take.times.copy(),
     )
 
 
@@ -379,8 +397,10 @@ def slice_frames(take: LandmarkTake, start: int, end: int) -> LandmarkTake:
     boundary falling outside the slice is dropped rather than clamped: a clamped boundary would
     silently claim the sign begins exactly where the slice does.
     """
-    shift = start / take.fps if take.fps else 0.0
-    span = (end - start) / take.fps if take.fps else 0.0
+    times = take.times
+    shift = float(times[start]) if start < len(times) else take.duration
+    stop = float(times[end]) if end < len(times) else take.duration
+    span = stop - shift
 
     def moved(value: float | None) -> float | None:
         if value is None:
@@ -397,6 +417,7 @@ def slice_frames(take: LandmarkTake, start: int, end: int) -> LandmarkTake:
         sign_end_s=moved(take.sign_end_s),
         phase_source=take.phase_source,
         phase_reviewed=take.phase_reviewed,
+        timestamps=times[start:end] - shift if take.timestamps is not None else None,
     )
 
 

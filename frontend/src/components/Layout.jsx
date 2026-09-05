@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
+// The header mixes routed destinations with in-page sections of the landing page, the way the
+// reference marketing navigation does. Section links jump to the landing page first when the
+// visitor is somewhere else, so the target always exists by the time we scroll.
 const NAV = [
-  { to: '/sign', label: 'Sign' },
-  { to: '/capture', label: 'Capture' },
+  { label: 'Product', to: '/sign' },
+  { label: 'Technology', section: 'technology' },
+  { label: 'Process', section: 'process' },
+  { label: 'Library', to: '/capture' },
+  { label: 'About', section: 'about' },
+  { label: 'Contact', section: 'contact' },
 ]
 
 function useScrolled(threshold = 4) {
@@ -19,6 +26,7 @@ function useScrolled(threshold = 4) {
 
 export default function Layout() {
   const scrolled = useScrolled()
+  const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const isLanding = pathname === '/'
@@ -32,48 +40,63 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [menuOpen])
 
+  const goToSection = (section) => (event) => {
+    event.preventDefault()
+    setMenuOpen(false)
+    const scroll = () => document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (isLanding) {
+      scroll()
+    } else {
+      navigate('/')
+      // The landing page has to mount before the anchor exists.
+      window.setTimeout(scroll, 80)
+    }
+  }
+
   return (
     <div className={`shell ${isLanding ? 'shell--landing' : ''}`}>
       <a className="skip-link" href="#main-content">Skip to content</a>
       <header className={`shell__head ${scrolled ? 'shell__head--scrolled' : ''}`}>
-        <NavLink to="/" className="wordmark" aria-label="SignSure home" onClick={() => setMenuOpen(false)}>signsure</NavLink>
+        <div className="shell__head-inner">
+          <NavLink to="/" className="wordmark" aria-label="SignSure home" onClick={() => setMenuOpen(false)}>SignSure</NavLink>
 
-        <button
-          type="button"
-          className="shell__menu-button"
-          aria-expanded={menuOpen}
-          aria-controls="primary-navigation"
-          aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span>{menuOpen ? 'Close' : 'Menu'}</span>
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            {menuOpen
-              ? <path d="M4 4l12 12M16 4 4 16" />
-              : <path d="M3 6h14M3 14h14" />}
-          </svg>
-        </button>
+          <button
+            type="button"
+            className="shell__menu-button"
+            aria-expanded={menuOpen}
+            aria-controls="primary-navigation"
+            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span>{menuOpen ? 'Close' : 'Menu'}</span>
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              {menuOpen
+                ? <path d="M4 4l12 12M16 4 4 16" />
+                : <path d="M3 6h14M3 14h14" />}
+            </svg>
+          </button>
 
-        <nav id="primary-navigation" className={`shell__nav ${menuOpen ? 'shell__nav--open' : ''}`}>
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `link ${isActive ? 'link--active' : ''}`}
-              onClick={() => setMenuOpen(false)}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <NavLink to="/login" className="link shell__nav-mobile" onClick={() => setMenuOpen(false)}>Login</NavLink>
-          <NavLink to="/register" className="link shell__nav-mobile" onClick={() => setMenuOpen(false)}>Join SignSure ↗</NavLink>
-        </nav>
+          <nav id="primary-navigation" className={`shell__nav ${menuOpen ? 'shell__nav--open' : ''}`}>
+            {NAV.map((item) => (item.section ? (
+              <a key={item.label} href={`#${item.section}`} className="link" onClick={goToSection(item.section)}>
+                {item.label}
+              </a>
+            ) : (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                className={({ isActive }) => `link ${isActive ? 'link--active' : ''}`}
+                onClick={() => setMenuOpen(false)}
+              >
+                {item.label}
+              </NavLink>
+            )))}
+            <NavLink to="/sign" className="link shell__nav-mobile" onClick={() => setMenuOpen(false)}>Open studio ↗</NavLink>
+          </nav>
 
-        <div className="shell__actions">
-          <NavLink to="/login" className="link link--muted">Login</NavLink>
-          <NavLink to="/register" className="link">Join</NavLink>
-          <span className="shell__locale" aria-label="Language: English">EN</span>
+          <div className="shell__actions">
+            <NavLink to="/sign" className="link">Open studio ↗</NavLink>
+          </div>
         </div>
       </header>
 
@@ -81,7 +104,7 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <footer className="shell__foot">
+      <footer className="shell__foot" id="contact">
         <div className="shell__foot-statement">
           <h3>Movement in.</h3>
           <h3>Language out.</h3>
@@ -95,7 +118,6 @@ export default function Layout() {
         <div>
           <ul>
             <li><NavLink to="/capture" className="link link--muted">Capture library</NavLink></li>
-            <li><NavLink to="/register" className="link link--muted">Create account</NavLink></li>
           </ul>
         </div>
         <div className="foot__col--end">

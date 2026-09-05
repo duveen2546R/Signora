@@ -1,0 +1,3370 @@
+{
+  "algorithmVersion": 7,
+  "generatedAt": "2026-09-05T08:06:12.551821+00:00",
+  "purpose": "Motion audit only; not ISL sentence approval.",
+  "clipCount": 5,
+  "pairCount": 25,
+  "passing": 25,
+  "rejected": 0,
+  "pairs": [
+    {
+      "signs": [
+        "FATHER",
+        "FATHER"
+      ],
+      "contentHashes": [
+        "4dfe08ea775a66f3feea3e92126285e4",
+        "4dfe08ea775a66f3feea3e92126285e4"
+      ],
+      "status": "direct",
+      "frameCount": 414,
+      "quality": {
+        "status": "direct",
+        "score": 77.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "FATHER",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 97.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 0.33,
+              "maxAngularSpeedDegS": 4.87,
+              "seamAccelerationRatio": 0.052,
+              "seamJerkRatio": 0.272,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "FATHER",
+            "fromFrame": 181,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 200,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 125.76,
+              "maxAngularSpeedDegS": 717.05,
+              "seamAccelerationRatio": 0.616,
+              "seamJerkRatio": 1.053,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 77.3,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 125.76,
+                "maxAngularSpeedDegS": 717.05,
+                "seamAccelerationRatio": 0.616,
+                "seamJerkRatio": 1.053,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 200
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "",
+            "fromFrame": 181,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 299,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 83.7,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 69.33,
+              "maxAngularSpeedDegS": 303.52,
+              "seamAccelerationRatio": 0.45,
+              "seamJerkRatio": 1.219,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "FATHER",
+        "GOOD_MORNING"
+      ],
+      "contentHashes": [
+        "4dfe08ea775a66f3feea3e92126285e4",
+        "10dc704c7d399d48db15039158d74aa1"
+      ],
+      "status": "direct",
+      "frameCount": 464,
+      "quality": {
+        "status": "direct",
+        "score": 79.5,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "FATHER",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 183,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.0,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 28.34,
+              "maxAngularSpeedDegS": 163.92,
+              "seamAccelerationRatio": 0.43,
+              "seamJerkRatio": 1.175,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 181,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 300,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 84.2,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 69.6,
+              "maxAngularSpeedDegS": 329.27,
+              "seamAccelerationRatio": 0.569,
+              "seamJerkRatio": 0.985,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 84.2,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 69.6,
+                "maxAngularSpeedDegS": 329.27,
+                "seamAccelerationRatio": 0.569,
+                "seamJerkRatio": 0.985,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 300
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "",
+            "fromFrame": 229,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 274,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 133.94,
+              "maxAngularSpeedDegS": 279.23,
+              "seamAccelerationRatio": 0.936,
+              "seamJerkRatio": 1.117,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "FATHER",
+        "HELLO"
+      ],
+      "contentHashes": [
+        "4dfe08ea775a66f3feea3e92126285e4",
+        "2a0c2094c83b9a5bdbce828397f1731b"
+      ],
+      "status": "direct",
+      "frameCount": 395,
+      "quality": {
+        "status": "direct",
+        "score": 82.9,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "FATHER",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 187,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 25.35,
+              "maxAngularSpeedDegS": 120.12,
+              "seamAccelerationRatio": 0.385,
+              "seamJerkRatio": 1.073,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "HELLO",
+            "fromFrame": 181,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 300,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 82.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 72.52,
+              "maxAngularSpeedDegS": 304.34,
+              "seamAccelerationRatio": 0.821,
+              "seamJerkRatio": 0.955,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 82.9,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 72.52,
+                "maxAngularSpeedDegS": 304.34,
+                "seamAccelerationRatio": 0.821,
+                "seamJerkRatio": 0.955,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 300
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "",
+            "fromFrame": 121,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 213,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 86.7,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 36.29,
+              "maxAngularSpeedDegS": 174.54,
+              "seamAccelerationRatio": 0.468,
+              "seamJerkRatio": 1.129,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "FATHER",
+        "NAMASTE"
+      ],
+      "contentHashes": [
+        "4dfe08ea775a66f3feea3e92126285e4",
+        "80da277e3f91928bd1681a9b47d7da18"
+      ],
+      "status": "direct",
+      "frameCount": 528,
+      "quality": {
+        "status": "direct",
+        "score": 80.9,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "FATHER",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 143,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.8,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 20.51,
+              "maxAngularSpeedDegS": 115.43,
+              "seamAccelerationRatio": 0.362,
+              "seamJerkRatio": 1.084,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "NAMASTE",
+            "fromFrame": 181,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 400,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 80.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 73.69,
+              "maxAngularSpeedDegS": 414.33,
+              "seamAccelerationRatio": 0.659,
+              "seamJerkRatio": 1.231,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 80.9,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 73.69,
+                "maxAngularSpeedDegS": 414.33,
+                "seamAccelerationRatio": 0.659,
+                "seamJerkRatio": 1.231,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 400
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "",
+            "fromFrame": 231,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 539,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 89.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 23.55,
+              "maxAngularSpeedDegS": 358.43,
+              "seamAccelerationRatio": 0.198,
+              "seamJerkRatio": 0.72,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "FATHER",
+        "THANKYOU"
+      ],
+      "contentHashes": [
+        "4dfe08ea775a66f3feea3e92126285e4",
+        "6398af86dedcdb7d6e41d61589856776"
+      ],
+      "status": "direct",
+      "frameCount": 373,
+      "quality": {
+        "status": "direct",
+        "score": 73.1,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "FATHER",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 89.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 13.37,
+              "maxAngularSpeedDegS": 160.88,
+              "seamAccelerationRatio": 0.307,
+              "seamJerkRatio": 0.984,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "THANKYOU",
+            "fromFrame": 181,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 73.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 239.71,
+              "maxAngularSpeedDegS": 712.18,
+              "seamAccelerationRatio": 0.663,
+              "seamJerkRatio": 1.109,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 73.1,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 239.71,
+                "maxAngularSpeedDegS": 712.18,
+                "seamAccelerationRatio": 0.663,
+                "seamJerkRatio": 1.109,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "",
+            "fromFrame": 161,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 412,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 233.92,
+              "maxAngularSpeedDegS": 463.62,
+              "seamAccelerationRatio": 0.494,
+              "seamJerkRatio": 1.07,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "GOOD_MORNING",
+        "FATHER"
+      ],
+      "contentHashes": [
+        "10dc704c7d399d48db15039158d74aa1",
+        "4dfe08ea775a66f3feea3e92126285e4"
+      ],
+      "status": "direct",
+      "frameCount": 488,
+      "quality": {
+        "status": "direct",
+        "score": 77.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 180,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.0,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 28.18,
+              "maxAngularSpeedDegS": 163.7,
+              "seamAccelerationRatio": 0.428,
+              "seamJerkRatio": 1.17,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "FATHER",
+            "fromFrame": 229,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 245.16,
+              "maxAngularSpeedDegS": 575.57,
+              "seamAccelerationRatio": 0.426,
+              "seamJerkRatio": 0.895,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 77.3,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 245.16,
+                "maxAngularSpeedDegS": 575.57,
+                "seamAccelerationRatio": 0.426,
+                "seamJerkRatio": 0.895,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "",
+            "fromFrame": 181,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 273,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 84.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 58.52,
+              "maxAngularSpeedDegS": 275.58,
+              "seamAccelerationRatio": 0.487,
+              "seamJerkRatio": 1.234,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "GOOD_MORNING",
+        "GOOD_MORNING"
+      ],
+      "contentHashes": [
+        "10dc704c7d399d48db15039158d74aa1",
+        "10dc704c7d399d48db15039158d74aa1"
+      ],
+      "status": "direct",
+      "frameCount": 525,
+      "quality": {
+        "status": "direct",
+        "score": 77.9,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 99.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 0.08,
+              "maxAngularSpeedDegS": 30.75,
+              "seamAccelerationRatio": 0.014,
+              "seamJerkRatio": 0.077,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 229,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 246.83,
+              "maxAngularSpeedDegS": 552.54,
+              "seamAccelerationRatio": 0.496,
+              "seamJerkRatio": 0.764,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 77.9,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 246.83,
+                "maxAngularSpeedDegS": 552.54,
+                "seamAccelerationRatio": 0.496,
+                "seamJerkRatio": 0.764,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "",
+            "fromFrame": 229,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 247,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 122.13,
+              "maxAngularSpeedDegS": 214.63,
+              "seamAccelerationRatio": 0.936,
+              "seamJerkRatio": 1.226,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "GOOD_MORNING",
+        "HELLO"
+      ],
+      "contentHashes": [
+        "10dc704c7d399d48db15039158d74aa1",
+        "2a0c2094c83b9a5bdbce828397f1731b"
+      ],
+      "status": "direct",
+      "frameCount": 455,
+      "quality": {
+        "status": "direct",
+        "score": 73.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 134,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.6,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 18.8,
+              "maxAngularSpeedDegS": 166.0,
+              "seamAccelerationRatio": 0.4,
+              "seamJerkRatio": 1.16,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "HELLO",
+            "fromFrame": 229,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 73.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 253.85,
+              "maxAngularSpeedDegS": 552.54,
+              "seamAccelerationRatio": 0.821,
+              "seamJerkRatio": 1.122,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 73.3,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 253.85,
+                "maxAngularSpeedDegS": 552.54,
+                "seamAccelerationRatio": 0.821,
+                "seamJerkRatio": 1.122,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "",
+            "fromFrame": 121,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 159,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 21.93,
+              "maxAngularSpeedDegS": 187.03,
+              "seamAccelerationRatio": 0.389,
+              "seamJerkRatio": 1.07,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "GOOD_MORNING",
+        "NAMASTE"
+      ],
+      "contentHashes": [
+        "10dc704c7d399d48db15039158d74aa1",
+        "80da277e3f91928bd1681a9b47d7da18"
+      ],
+      "status": "direct",
+      "frameCount": 589,
+      "quality": {
+        "status": "direct",
+        "score": 78.0,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 195,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 86.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 32.63,
+              "maxAngularSpeedDegS": 125.64,
+              "seamAccelerationRatio": 0.458,
+              "seamJerkRatio": 1.207,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "NAMASTE",
+            "fromFrame": 229,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 78.0,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 225.31,
+              "maxAngularSpeedDegS": 575.55,
+              "seamAccelerationRatio": 0.379,
+              "seamJerkRatio": 0.933,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 78.0,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 225.31,
+                "maxAngularSpeedDegS": 575.55,
+                "seamAccelerationRatio": 0.379,
+                "seamJerkRatio": 0.933,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "",
+            "fromFrame": 231,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 496,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 90.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 16.55,
+              "maxAngularSpeedDegS": 349.85,
+              "seamAccelerationRatio": 0.182,
+              "seamJerkRatio": 0.678,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "GOOD_MORNING",
+        "THANKYOU"
+      ],
+      "contentHashes": [
+        "10dc704c7d399d48db15039158d74aa1",
+        "6398af86dedcdb7d6e41d61589856776"
+      ],
+      "status": "direct",
+      "frameCount": 412,
+      "quality": {
+        "status": "direct",
+        "score": 75.6,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 0,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 193,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 29.14,
+              "maxAngularSpeedDegS": 97.74,
+              "seamAccelerationRatio": 0.409,
+              "seamJerkRatio": 1.074,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "THANKYOU",
+            "fromFrame": 229,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 400,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 128.0,
+              "maxAngularSpeedDegS": 575.57,
+              "seamAccelerationRatio": 0.431,
+              "seamJerkRatio": 1.195,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 79.1,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 128.0,
+                "maxAngularSpeedDegS": 575.57,
+                "seamAccelerationRatio": 0.431,
+                "seamJerkRatio": 1.195,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 400
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "",
+            "fromFrame": 161,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 387,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 75.6,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 243.26,
+              "maxAngularSpeedDegS": 480.88,
+              "seamAccelerationRatio": 0.6,
+              "seamJerkRatio": 1.161,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "HELLO",
+        "FATHER"
+      ],
+      "contentHashes": [
+        "2a0c2094c83b9a5bdbce828397f1731b",
+        "4dfe08ea775a66f3feea3e92126285e4"
+      ],
+      "status": "direct",
+      "frameCount": 375,
+      "quality": {
+        "status": "direct",
+        "score": 79.1,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "HELLO",
+            "fromFrame": 0,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 175,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 25.8,
+              "maxAngularSpeedDegS": 123.46,
+              "seamAccelerationRatio": 0.392,
+              "seamJerkRatio": 1.072,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "FATHER",
+            "fromFrame": 121,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 486,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 240.9,
+              "maxAngularSpeedDegS": 372.81,
+              "seamAccelerationRatio": 0.497,
+              "seamJerkRatio": 0.917,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "",
+            "fromFrame": 181,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 296,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 86.2,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 60.4,
+              "maxAngularSpeedDegS": 235.37,
+              "seamAccelerationRatio": 0.391,
+              "seamJerkRatio": 1.059,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "HELLO",
+        "GOOD_MORNING"
+      ],
+      "contentHashes": [
+        "2a0c2094c83b9a5bdbce828397f1731b",
+        "10dc704c7d399d48db15039158d74aa1"
+      ],
+      "status": "direct",
+      "frameCount": 412,
+      "quality": {
+        "status": "direct",
+        "score": 76.8,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "HELLO",
+            "fromFrame": 0,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 134,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 18.77,
+              "maxAngularSpeedDegS": 167.85,
+              "seamAccelerationRatio": 0.4,
+              "seamJerkRatio": 1.184,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 121,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 459,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 76.8,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 242.16,
+              "maxAngularSpeedDegS": 370.71,
+              "seamAccelerationRatio": 0.583,
+              "seamJerkRatio": 1.188,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "",
+            "fromFrame": 229,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 282,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 80.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 117.77,
+              "maxAngularSpeedDegS": 213.77,
+              "seamAccelerationRatio": 0.936,
+              "seamJerkRatio": 1.21,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "HELLO",
+        "HELLO"
+      ],
+      "contentHashes": [
+        "2a0c2094c83b9a5bdbce828397f1731b",
+        "2a0c2094c83b9a5bdbce828397f1731b"
+      ],
+      "status": "direct",
+      "frameCount": 347,
+      "quality": {
+        "status": "direct",
+        "score": 77.0,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "HELLO",
+            "fromFrame": 0,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 99.1,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 0.18,
+              "maxAngularSpeedDegS": 9.74,
+              "seamAccelerationRatio": 0.022,
+              "seamJerkRatio": 0.104,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "HELLO",
+            "fromFrame": 121,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.0,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 216.68,
+              "maxAngularSpeedDegS": 338.58,
+              "seamAccelerationRatio": 0.821,
+              "seamJerkRatio": 1.098,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 77.0,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 216.68,
+                "maxAngularSpeedDegS": 338.58,
+                "seamAccelerationRatio": 0.821,
+                "seamJerkRatio": 1.098,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "",
+            "fromFrame": 121,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 182,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.7,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 25.47,
+              "maxAngularSpeedDegS": 196.43,
+              "seamAccelerationRatio": 0.405,
+              "seamJerkRatio": 1.054,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "HELLO",
+        "NAMASTE"
+      ],
+      "contentHashes": [
+        "2a0c2094c83b9a5bdbce828397f1731b",
+        "80da277e3f91928bd1681a9b47d7da18"
+      ],
+      "status": "direct",
+      "frameCount": 476,
+      "quality": {
+        "status": "direct",
+        "score": 79.5,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "HELLO",
+            "fromFrame": 0,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 206,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 30.04,
+              "maxAngularSpeedDegS": 73.45,
+              "seamAccelerationRatio": 0.422,
+              "seamJerkRatio": 1.107,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "NAMASTE",
+            "fromFrame": 121,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 500,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 240.39,
+              "maxAngularSpeedDegS": 336.51,
+              "seamAccelerationRatio": 0.509,
+              "seamJerkRatio": 0.905,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 79.5,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 240.39,
+                "maxAngularSpeedDegS": 336.51,
+                "seamAccelerationRatio": 0.509,
+                "seamJerkRatio": 0.905,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 500
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "",
+            "fromFrame": 231,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 509,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 90.0,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 19.16,
+              "maxAngularSpeedDegS": 347.82,
+              "seamAccelerationRatio": 0.184,
+              "seamJerkRatio": 0.68,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "HELLO",
+        "THANKYOU"
+      ],
+      "contentHashes": [
+        "2a0c2094c83b9a5bdbce828397f1731b",
+        "6398af86dedcdb7d6e41d61589856776"
+      ],
+      "status": "direct",
+      "frameCount": 310,
+      "quality": {
+        "status": "direct",
+        "score": 76.9,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "HELLO",
+            "fromFrame": 0,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 178,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 27.04,
+              "maxAngularSpeedDegS": 77.56,
+              "seamAccelerationRatio": 0.411,
+              "seamJerkRatio": 1.124,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "THANKYOU",
+            "fromFrame": 121,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 500,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 81.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 161.91,
+              "maxAngularSpeedDegS": 471.02,
+              "seamAccelerationRatio": 0.404,
+              "seamJerkRatio": 0.794,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 81.9,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 161.91,
+                "maxAngularSpeedDegS": 471.02,
+                "seamAccelerationRatio": 0.404,
+                "seamJerkRatio": 0.794,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 500
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "",
+            "fromFrame": 161,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 394,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 76.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 239.68,
+              "maxAngularSpeedDegS": 467.86,
+              "seamAccelerationRatio": 0.528,
+              "seamJerkRatio": 1.075,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "NAMASTE",
+        "FATHER"
+      ],
+      "contentHashes": [
+        "80da277e3f91928bd1681a9b47d7da18",
+        "4dfe08ea775a66f3feea3e92126285e4"
+      ],
+      "status": "direct",
+      "frameCount": 491,
+      "quality": {
+        "status": "direct",
+        "score": 74.9,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "NAMASTE",
+            "fromFrame": 0,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 152,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 89.0,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 20.31,
+              "maxAngularSpeedDegS": 114.97,
+              "seamAccelerationRatio": 0.35,
+              "seamJerkRatio": 1.072,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "FATHER",
+            "fromFrame": 231,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 600,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": true
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 74.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 215.04,
+              "maxAngularSpeedDegS": 707.0,
+              "seamAccelerationRatio": 0.426,
+              "seamJerkRatio": 1.187,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 74.9,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 215.04,
+                "maxAngularSpeedDegS": 707.0,
+                "seamAccelerationRatio": 0.426,
+                "seamJerkRatio": 1.187,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 600
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "",
+            "fromFrame": 181,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 317,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 85.2,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 69.57,
+              "maxAngularSpeedDegS": 260.43,
+              "seamAccelerationRatio": 0.395,
+              "seamJerkRatio": 1.111,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "NAMASTE",
+        "GOOD_MORNING"
+      ],
+      "contentHashes": [
+        "80da277e3f91928bd1681a9b47d7da18",
+        "10dc704c7d399d48db15039158d74aa1"
+      ],
+      "status": "direct",
+      "frameCount": 539,
+      "quality": {
+        "status": "direct",
+        "score": 76.8,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "NAMASTE",
+            "fromFrame": 0,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 197,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 86.8,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 33.04,
+              "maxAngularSpeedDegS": 126.82,
+              "seamAccelerationRatio": 0.464,
+              "seamJerkRatio": 1.216,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 231,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 700,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": true
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 76.8,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 174.09,
+              "maxAngularSpeedDegS": 636.65,
+              "seamAccelerationRatio": 0.496,
+              "seamJerkRatio": 1.153,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 76.8,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 174.09,
+                "maxAngularSpeedDegS": 636.65,
+                "seamAccelerationRatio": 0.496,
+                "seamJerkRatio": 1.153,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 700
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "",
+            "fromFrame": 229,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 274,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 138.29,
+              "maxAngularSpeedDegS": 258.5,
+              "seamAccelerationRatio": 0.936,
+              "seamJerkRatio": 1.151,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "NAMASTE",
+        "HELLO"
+      ],
+      "contentHashes": [
+        "80da277e3f91928bd1681a9b47d7da18",
+        "2a0c2094c83b9a5bdbce828397f1731b"
+      ],
+      "status": "direct",
+      "frameCount": 471,
+      "quality": {
+        "status": "direct",
+        "score": 74.5,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "NAMASTE",
+            "fromFrame": 0,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 192,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 30.28,
+              "maxAngularSpeedDegS": 70.09,
+              "seamAccelerationRatio": 0.425,
+              "seamJerkRatio": 1.115,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "HELLO",
+            "fromFrame": 231,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 700,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": true
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 74.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 169.52,
+              "maxAngularSpeedDegS": 631.25,
+              "seamAccelerationRatio": 0.821,
+              "seamJerkRatio": 1.214,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 74.5,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 169.52,
+                "maxAngularSpeedDegS": 631.25,
+                "seamAccelerationRatio": 0.821,
+                "seamJerkRatio": 1.214,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 700
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "",
+            "fromFrame": 121,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 239,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 85.7,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 43.25,
+              "maxAngularSpeedDegS": 191.72,
+              "seamAccelerationRatio": 0.503,
+              "seamJerkRatio": 1.179,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "NAMASTE",
+        "NAMASTE"
+      ],
+      "contentHashes": [
+        "80da277e3f91928bd1681a9b47d7da18",
+        "80da277e3f91928bd1681a9b47d7da18"
+      ],
+      "status": "direct",
+      "frameCount": 582,
+      "quality": {
+        "status": "direct",
+        "score": 77.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "NAMASTE",
+            "fromFrame": 0,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 98.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 0.13,
+              "maxAngularSpeedDegS": 4.04,
+              "seamAccelerationRatio": 0.026,
+              "seamJerkRatio": 0.142,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "NAMASTE",
+            "fromFrame": 231,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 531,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": true
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 203.4,
+              "maxAngularSpeedDegS": 554.3,
+              "seamAccelerationRatio": 0.511,
+              "seamJerkRatio": 1.059,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "",
+            "fromFrame": 231,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 507,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 89.2,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 26.3,
+              "maxAngularSpeedDegS": 358.83,
+              "seamAccelerationRatio": 0.206,
+              "seamJerkRatio": 0.731,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "NAMASTE",
+        "THANKYOU"
+      ],
+      "contentHashes": [
+        "80da277e3f91928bd1681a9b47d7da18",
+        "6398af86dedcdb7d6e41d61589856776"
+      ],
+      "status": "direct",
+      "frameCount": 418,
+      "quality": {
+        "status": "direct",
+        "score": 77.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "NAMASTE",
+            "fromFrame": 0,
+            "toFrame": 46,
+            "mode": "direct",
+            "durationMs": 131,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 89.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 17.67,
+              "maxAngularSpeedDegS": 68.82,
+              "seamAccelerationRatio": 0.375,
+              "seamJerkRatio": 1.096,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "THANKYOU",
+            "fromFrame": 231,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 500,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": true
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 80.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 121.82,
+              "maxAngularSpeedDegS": 594.15,
+              "seamAccelerationRatio": 0.454,
+              "seamJerkRatio": 0.946,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 80.5,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 121.82,
+                "maxAngularSpeedDegS": 594.15,
+                "seamAccelerationRatio": 0.454,
+                "seamJerkRatio": 0.946,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 500
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "",
+            "fromFrame": 161,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 413,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 77.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 236.98,
+              "maxAngularSpeedDegS": 463.65,
+              "seamAccelerationRatio": 0.494,
+              "seamJerkRatio": 1.066,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "THANKYOU",
+        "FATHER"
+      ],
+      "contentHashes": [
+        "6398af86dedcdb7d6e41d61589856776",
+        "4dfe08ea775a66f3feea3e92126285e4"
+      ],
+      "status": "direct",
+      "frameCount": 417,
+      "quality": {
+        "status": "direct",
+        "score": 79.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "THANKYOU",
+            "fromFrame": 0,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 90.2,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 12.78,
+              "maxAngularSpeedDegS": 160.76,
+              "seamAccelerationRatio": 0.293,
+              "seamJerkRatio": 0.894,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "FATHER",
+            "fromFrame": 161,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 548,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 186.21,
+              "maxAngularSpeedDegS": 369.15,
+              "seamAccelerationRatio": 0.468,
+              "seamJerkRatio": 1.192,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "FATHER",
+            "toGloss": "",
+            "fromFrame": 181,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 332,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 87.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 64.93,
+              "maxAngularSpeedDegS": 223.47,
+              "seamAccelerationRatio": 0.328,
+              "seamJerkRatio": 0.942,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "THANKYOU",
+        "GOOD_MORNING"
+      ],
+      "contentHashes": [
+        "6398af86dedcdb7d6e41d61589856776",
+        "10dc704c7d399d48db15039158d74aa1"
+      ],
+      "status": "direct",
+      "frameCount": 462,
+      "quality": {
+        "status": "direct",
+        "score": 78.9,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "THANKYOU",
+            "fromFrame": 0,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 197,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 27.58,
+              "maxAngularSpeedDegS": 98.33,
+              "seamAccelerationRatio": 0.387,
+              "seamJerkRatio": 1.037,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "GOOD_MORNING",
+            "fromFrame": 161,
+            "toFrame": 40,
+            "mode": "direct",
+            "durationMs": 583,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 79.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 171.52,
+              "maxAngularSpeedDegS": 337.14,
+              "seamAccelerationRatio": 0.521,
+              "seamJerkRatio": 1.183,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "GOOD_MORNING",
+            "toGloss": "",
+            "fromFrame": 229,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 262,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 78.9,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 136.82,
+              "maxAngularSpeedDegS": 249.86,
+              "seamAccelerationRatio": 0.936,
+              "seamJerkRatio": 1.246,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "THANKYOU",
+        "HELLO"
+      ],
+      "contentHashes": [
+        "6398af86dedcdb7d6e41d61589856776",
+        "2a0c2094c83b9a5bdbce828397f1731b"
+      ],
+      "status": "direct",
+      "frameCount": 399,
+      "quality": {
+        "status": "direct",
+        "score": 75.5,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "THANKYOU",
+            "fromFrame": 0,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 175,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 88.4,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 27.05,
+              "maxAngularSpeedDegS": 72.71,
+              "seamAccelerationRatio": 0.412,
+              "seamJerkRatio": 1.139,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "HELLO",
+            "fromFrame": 161,
+            "toFrame": 12,
+            "mode": "direct",
+            "durationMs": 700,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 75.5,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 143.42,
+              "maxAngularSpeedDegS": 599.21,
+              "seamAccelerationRatio": 0.821,
+              "seamJerkRatio": 1.248,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 75.5,
+              "passed": true,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 143.42,
+                "maxAngularSpeedDegS": 599.21,
+                "seamAccelerationRatio": 0.821,
+                "seamJerkRatio": 1.248,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [],
+              "durationMs": 700
+            },
+            "strategy": "phase-overlap"
+          },
+          {
+            "fromGloss": "HELLO",
+            "toGloss": "",
+            "fromFrame": 121,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 218,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 85.8,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 38.85,
+              "maxAngularSpeedDegS": 184.28,
+              "seamAccelerationRatio": 0.501,
+              "seamJerkRatio": 1.208,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "THANKYOU",
+        "NAMASTE"
+      ],
+      "contentHashes": [
+        "6398af86dedcdb7d6e41d61589856776",
+        "80da277e3f91928bd1681a9b47d7da18"
+      ],
+      "status": "direct",
+      "frameCount": 518,
+      "quality": {
+        "status": "direct",
+        "score": 78.3,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "THANKYOU",
+            "fromFrame": 0,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 130,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 90.2,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 16.71,
+              "maxAngularSpeedDegS": 66.36,
+              "seamAccelerationRatio": 0.347,
+              "seamJerkRatio": 0.988,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "NAMASTE",
+            "fromFrame": 168,
+            "toFrame": 42,
+            "mode": "direct",
+            "durationMs": 597,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 78.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 213.99,
+              "maxAngularSpeedDegS": 420.4,
+              "seamAccelerationRatio": 0.599,
+              "seamJerkRatio": 0.984,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 76.2,
+              "passed": false,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 70.13,
+                "maxAngularSpeedDegS": 599.21,
+                "seamAccelerationRatio": 0.593,
+                "seamJerkRatio": 1.729,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [
+                "seam jerk exceeds the adjacent-motion envelope"
+              ],
+              "durationMs": 1600
+            },
+            "directAttempt": {
+              "score": 72.0,
+              "passed": false,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 167.23,
+                "maxAngularSpeedDegS": 333.42,
+                "seamAccelerationRatio": 1.087,
+                "seamJerkRatio": 5.533,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [
+                "seam jerk exceeds the adjacent-motion envelope"
+              ]
+            },
+            "boundaryAdjustment": {
+              "outgoingFrames": 7,
+              "incomingFrames": 4
+            }
+          },
+          {
+            "fromGloss": "NAMASTE",
+            "toGloss": "",
+            "fromFrame": 231,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 525,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 89.3,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 24.61,
+              "maxAngularSpeedDegS": 359.24,
+              "seamAccelerationRatio": 0.202,
+              "seamJerkRatio": 0.728,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    },
+    {
+      "signs": [
+        "THANKYOU",
+        "THANKYOU"
+      ],
+      "contentHashes": [
+        "6398af86dedcdb7d6e41d61589856776",
+        "6398af86dedcdb7d6e41d61589856776"
+      ],
+      "status": "direct",
+      "frameCount": 358,
+      "quality": {
+        "status": "direct",
+        "score": 76.6,
+        "algorithmVersion": 7,
+        "seams": [
+          {
+            "fromGloss": "",
+            "toGloss": "THANKYOU",
+            "fromFrame": 0,
+            "toFrame": 66,
+            "mode": "direct",
+            "durationMs": 120,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 91.8,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 1.0,
+              "maxAngularSpeedDegS": 19.53,
+              "seamAccelerationRatio": 0.194,
+              "seamJerkRatio": 1.043,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "THANKYOU",
+            "fromFrame": 168,
+            "toFrame": 62,
+            "mode": "direct",
+            "durationMs": 694,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 81.7,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 122.08,
+              "maxAngularSpeedDegS": 284.36,
+              "seamAccelerationRatio": 0.926,
+              "seamJerkRatio": 0.832,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": [],
+            "phaseOverlapAttempt": {
+              "score": 76.6,
+              "passed": false,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 61.81,
+                "maxAngularSpeedDegS": 599.21,
+                "seamAccelerationRatio": 0.592,
+                "seamJerkRatio": 1.722,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [
+                "seam jerk exceeds the adjacent-motion envelope"
+              ],
+              "durationMs": 900
+            },
+            "directAttempt": {
+              "score": 75.7,
+              "passed": false,
+              "metrics": {
+                "finite": true,
+                "maxBoneErrorMm": 0.0,
+                "maxWristSpeedCmS": 71.47,
+                "maxAngularSpeedDegS": 252.2,
+                "seamAccelerationRatio": 1.124,
+                "seamJerkRatio": 4.063,
+                "collisionFrames": 0,
+                "contactHandshapeErrorDeg": 0.0
+              },
+              "reasons": [
+                "seam jerk exceeds the adjacent-motion envelope"
+              ]
+            },
+            "boundaryAdjustment": {
+              "outgoingFrames": 7,
+              "incomingFrames": 4
+            }
+          },
+          {
+            "fromGloss": "THANKYOU",
+            "toGloss": "",
+            "fromFrame": 161,
+            "toFrame": 0,
+            "mode": "direct",
+            "durationMs": 407,
+            "contacts": {
+              "outgoing": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              },
+              "incoming": {
+                "left": false,
+                "right": false,
+                "handToHand": false
+              }
+            },
+            "score": 76.6,
+            "passed": true,
+            "metrics": {
+              "finite": true,
+              "maxBoneErrorMm": 0.0,
+              "maxWristSpeedCmS": 247.4,
+              "maxAngularSpeedDegS": 482.71,
+              "seamAccelerationRatio": 0.548,
+              "seamJerkRatio": 1.04,
+              "collisionFrames": 0,
+              "contactHandshapeErrorDeg": 0.0
+            },
+            "reasons": []
+          }
+        ]
+      },
+      "warnings": []
+    }
+  ]
+}

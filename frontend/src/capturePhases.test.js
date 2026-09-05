@@ -27,3 +27,11 @@ test('requires usable start, sign, and end sections for seamless fallback', () =
   assert.match(validatePhaseDraft({ duration: 4, signStart: '1', signEnd: '1.2' }), /0\.300s of Sign/)
   assert.match(validatePhaseDraft({ duration: 4, signStart: '1', signEnd: '3.95' }), /0\.120s of End/)
 })
+
+test('phase input must agree with actual CSV times and authored Phase boundaries', () => {
+  const track = { timestampsSeconds: [0, 0.133, 0.301, 0.667, 1, 1.333, 1.667, 2], csvPhaseBounds: { signStartSeconds: 0.301, signEndSeconds: 1.667 } }
+  const draft = { duration: 2.333, signStart: 0.301, signEnd: 1.667, track }
+  assert.equal(validatePhaseDraft(draft), null)
+  assert.match(validatePhaseDraft({ ...draft, signStart: 0.310 }), /CSV Timestamp/)
+  assert.match(validatePhaseDraft({ ...draft, signStart: 0.667 }), /conflict with the CSV Phase/)
+})

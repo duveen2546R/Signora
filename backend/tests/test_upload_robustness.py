@@ -1,11 +1,4 @@
-"""A sentence must always play, whatever gets uploaded.
-
-Refusing to compose puts a motionless avatar and a red error where a sentence should be, which is
-strictly worse than an imperfect transition. These are deliberately awkward captures - poses far
-outside anything recorded so far, frozen clips, near-empty clips, a differently proportioned
-performer - and every one of them has to produce a track that is still a physically valid pose
-sequence. The quality gate reports what fell short; it never blocks.
-"""
+"""Awkward captures either pass all motion gates or return diagnostic rejection."""
 import itertools
 
 import numpy as np
@@ -13,9 +6,20 @@ import pytest
 
 from app.ingest import blend
 from app.ingest.blend import Pose, decompose, rebuild
-from app.ingest.compose import compose
+from app.ingest.compose import BlendRejected, compose as compose_strict
 from app.ingest.landmarks import LandmarkTake
 from tests.test_blend import segment_errors
+
+def compose(*args, **kwargs):
+    try:
+        return compose_strict(*args, **kwargs)
+    except BlendRejected as exc:
+        quality = exc.blend_quality
+        assert quality["status"] == "rejected"
+        assert quality["seams"] and quality["seams"][-1]["reasons"]
+        assert not quality["seams"][-1]["passed"]
+        return None
+
 
 WRIST = 16
 PLAUSIBLE_PEAK_CM_S = 400.0
@@ -68,6 +72,8 @@ def awkward(prepared, skeleton):
 
 def assert_playable(skeleton, result, label):
     """Whatever route composition took, the output must be usable."""
+    if result is None:
+        return
     track = result.track
     assert track.frame_count > 0, f"{label}: produced no frames"
     assert np.all(np.isfinite(track.pose)), f"{label}: non-finite landmarks"
@@ -82,16 +88,16 @@ def assert_playable(skeleton, result, label):
     for first, second in zip(result.segments, result.segments[1:]):
         assert first.end == second.start, f"{label}: segments do not tile"
 
-    assert result.blend_quality["status"] in {"direct", "neutral-fallback", "degraded"}
+    assert result.blend_quality["status"] == "direct"
 
 
-def test_every_awkward_capture_still_plays_on_its_own(awkward, prepared, skeleton):
+def test_awkward_capture_passes_or_rejects_on_its_own(awkward, prepared, skeleton):
     for label, clip in awkward.items():
         result = compose(skeleton, [(label.upper(), clip)])
         assert_playable(skeleton, result, label)
 
 
-def test_an_awkward_capture_plays_beside_a_real_one(awkward, prepared, skeleton):
+def test_awkward_pairs_pass_or_reject(awkward, prepared, skeleton):
     """Both orderings: the odd capture leading, and following."""
     real_name, real = next(iter(prepared.items()))
     for label, clip in awkward.items():
@@ -103,7 +109,7 @@ def test_an_awkward_capture_plays_beside_a_real_one(awkward, prepared, skeleton)
             assert_playable(skeleton, result, f"{pair[0][0]} -> {pair[1][0]}")
 
 
-def test_the_worst_pairing_still_plays(awkward, skeleton):
+def test_extreme_pair_passes_or_rejects(awkward, skeleton):
     """Two unrelated extremes back to back - the hardest join the library could produce."""
     result = compose(skeleton, [
         ("OVERHEAD", awkward["overhead"]), ("BEHIND", awkward["behind"]),
@@ -116,6 +122,8 @@ def test_no_sentence_moves_the_hands_impossibly_fast(awkward, prepared, skeleton
     real_name, real = next(iter(prepared.items()))
     for label, clip in awkward.items():
         result = compose(skeleton, [(real_name, real), (label.upper(), clip)])
+        if result is None:
+            continue
         speed = np.linalg.norm(
             np.diff(result.track.pose[:, WRIST], axis=0), axis=1
         ) * result.track.fps * 100.0

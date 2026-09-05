@@ -18,7 +18,7 @@ transitions are quintic Hermites carrying the measured boundary velocities.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 from scipy.spatial.transform import Rotation, Slerp
@@ -590,6 +590,79 @@ def plan_transition(
             requires_neutral=requires_neutral,
         )
     return TransitionResult(bridge, quality, span, requires_neutral, contacts)
+
+
+def plan_phase_overlap(
+    skel: LandmarkSkeleton, a: LandmarkTake, a_index: int,
+    b: LandmarkTake, b_index: int, fps: float,
+) -> TransitionResult:
+    """Automatically overlap A's End and B's Start, never replaying either neutral bookend.
+
+    Continue each recorded trajectory near its semantic boundary. A smooth weight
+    transfers control between them; its first three derivatives vanish at each end.
+    All samples are rebuilt on the measured skeleton, and every candidate is gated.
+    No pair-specific settings or changes to the protected Sign frames are used.
+    """
+    contacts = {"outgoing": _stable_contact(a, a_index, forward=False),
+                "incoming": _stable_contact(b, b_index, forward=True)}
+    ga, gb = decompose(skel, Pose.at(a, a_index)), decompose(skel, Pose.at(b, b_index))
+    best = None
+    def sample(take, index):
+        index = float(np.clip(index, 0, take.frame_count - 1))
+        lo = int(np.floor(index))
+        hi = min(lo + 1, take.frame_count - 1)
+        if lo == hi or index == lo:
+            return Pose.at(take, lo)
+        return blend(skel, Pose.at(take, lo), Pose.at(take, hi), index - lo)
+
+    # Search shortest motion first. Context is per-sign material, shared by every
+    # possible neighbour, and cannot include a core frame from either Sign.
+    for ticks in range(max(int(round(0.20 * fps)), 2), int(round(1.60 * fps)) + 1, max(int(round(0.10 * fps)), 1)):
+        duration = ticks / fps
+        taus = np.arange(1, ticks) / ticks
+        contact_shapes = {}
+        for side in ("left", "right"):
+            release = contacts["outgoing"].hand_to_hand or getattr(contacts["outgoing"], side)
+            approach = contacts["incoming"].hand_to_hand or getattr(contacts["incoming"], side)
+            if release or approach:
+                low, high = (0.30 if release else 0.0), (0.70 if approach else 1.0)
+                shape_t = np.clip((taus - low) / (high - low), 0.0, 1.0)
+                shape_t = 6 * shape_t ** 5 - 15 * shape_t ** 4 + 10 * shape_t ** 3
+                field_name = f"{side}_dirs"
+                contact_shapes[field_name] = [
+                    slerp_vectors(getattr(ga, field_name), getattr(gb, field_name), float(t))
+                    for t in shape_t
+                ]
+        for context_seconds in (0.10, 0.20, 0.35):
+            outgoing = min(context_seconds * fps, a.frame_count - 1 - a_index)
+            incoming = min(context_seconds * fps, b_index)
+            frames = []
+            for tick in range(1, ticks):
+                tau = tick / ticks
+                weight = 35 * tau ** 4 - 84 * tau ** 5 + 70 * tau ** 6 - 20 * tau ** 7
+                # Exponential easing starts at unit source speed and coasts before
+                # the context cap, avoiding a derivative jump caused by hard clamping.
+                out_at = a_index + outgoing * (1 - np.exp(-tick / max(outgoing, 1e-9)))
+                in_at = b_index - incoming * (1 - np.exp(-(ticks - tick) / max(incoming, 1e-9)))
+                frame = blend(skel, sample(a, out_at), sample(b, in_at), float(weight))
+                if contact_shapes:
+                    frame = rebuild(skel, replace(decompose(skel, frame), **{
+                        key: values[tick - 1] for key, values in contact_shapes.items()
+                    }))
+                frames.append(frame)
+            bridge = LandmarkTake(
+                name=f"{a.name}->{b.name}-phase-overlap", fps=fps,
+                pose=np.stack([frame.pose for frame in frames]),
+                left_hand=np.stack([frame.left_hand for frame in frames]),
+                right_hand=np.stack([frame.right_hand for frame in frames]),
+            )
+            quality = evaluate_transition(skel, a, a_index, bridge, b, b_index, contacts)
+            candidate = TransitionResult(bridge, quality, duration, False, contacts)
+            if quality.passed:
+                return candidate
+            if best is None or quality.score > best.quality.score:
+                best = candidate
+    return best
 
 
 def _elbow_plane(frame: Pose, shoulder: int, elbow: int, wrist: int) -> np.ndarray:

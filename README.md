@@ -14,10 +14,17 @@ Rokoko biomechanics CSV exports are converted into MediaPipe-style body and hand
 React application streams those frames to the Unity runtime, which retargets them onto the avatar.
 See [docs/signora-integration.md](docs/signora-integration.md) for the browser/Unity protocol.
 
-Sentences are composed as one quality-gated motion track. The backend selects compatible stroke
-boundaries, generates minimum-jerk/IK transitions, and uses a neutral-pose bridge when a direct join
-is unsafe. See [docs/sentence-blending.md](docs/sentence-blending.md) for the algorithm and preview
+Annotate Start/Sign/End once per recording. The backend retains phases by sentence position and
+automatically blends neighbouring signs into one quality-gated motion track. There are no
+pair-specific settings or required pair approvals. Unsafe joins are rejected with diagnostics;
+sentences never fall back through neutral or play degraded motion. See [docs/sentence-blending.md](docs/sentence-blending.md) for the algorithm and preview
 workflow.
+
+English sentence signing uses a versioned registry of reviewed ISL patterns. The bundled patterns
+are candidates awaiting fluent ISL review; they are not automatically approved translations.
+Missing signs or unsupported sentences never play partially. Use individual recording previews,
+**Edit timestamps**, and **Preview automatic transitions** to prepare recordings for review. See
+[ISL review and release workflow](docs/isl-review.md) for approval and validation steps.
 
 ## Requirements
 
@@ -65,9 +72,11 @@ Vite proxies `/api` to the backend on port 8000. Override the API location with
 Open the **Capture** tab and upload a Rokoko Studio **biomechanics CSV**. Use one sign per file.
 For each selected file, enter the timestamps where the meaning-bearing sign starts and ends. The
 Capture screen shows the derived `start`, `sign`, and `end` ranges before upload. Both boundaries
-are required; captures without timestamps are rejected. These reviewed
+are required; captures without timestamps are rejected. These authored
 boundaries let a first word play `start + sign`, a middle word play only `sign`, and a final word
-play `sign + end`.
+play `sign + end`. A single sign plays all three phases. Boundaries must match actual CSV
+Timestamp rows and, when present, the CSV Phase labels. Existing recordings can be inspected and
+edited through **Edit timestamps**; no re-upload is needed unless the source CSV itself is wrong.
 The filename determines the gloss and take number:
 
 | Filename | Gloss | Take |

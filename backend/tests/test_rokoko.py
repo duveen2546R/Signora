@@ -112,3 +112,28 @@ def test_partial_phase_column_is_rejected(tmp_path):
     frame.to_csv(path, index=False)
     with pytest.raises(RokokoFormatError, match="every frame"):
         parse_csv(path)
+
+
+def test_boundaries_are_real_csv_timestamps_not_nominal_fps(hello_take):
+    from dataclasses import replace
+    from app.ingest.rokoko import with_phase_bounds, RokokoFormatError
+    times = hello_take.times.copy()
+    times[10] += 0.003
+    jittered = replace(hello_take, times=times)
+    result = with_phase_bounds(jittered, float(times[10]), float(times[40]))
+    assert result.sign_start_s == times[10]
+    with pytest.raises(RokokoFormatError, match="not a CSV Timestamp"):
+        with_phase_bounds(jittered, float(times[10] + 0.005), float(times[40]))
+
+
+def test_parser_rejects_nonfinite_timestamps(tmp_path):
+    import pandas as pd
+    from app.ingest.rokoko import parse_csv, RokokoFormatError
+    from pathlib import Path
+    source = Path(__file__).parent / "fixtures" / "hello.csv"
+    frame = pd.read_csv(source)
+    frame.loc[2, "Timestamp"] = float('nan')
+    path = tmp_path / "bad-time.csv"
+    frame.to_csv(path, index=False)
+    with pytest.raises(RokokoFormatError, match="timestamps"):
+        parse_csv(path)

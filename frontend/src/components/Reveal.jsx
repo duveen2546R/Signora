@@ -7,14 +7,15 @@ import { useEffect, useRef, useState } from 'react'
 const SAFETY_MS = 900
 
 /**
- * Fades and lifts its children into place once, when they first reach the viewport.
+ * Lifts its children out of depth — a slight rotation on the X axis, a push back along Z and a
+ * short blur resolving into place — as they reach the viewport.
  *
- * The reference site animates almost everything on a one-second expo curve; this is that motion
- * applied to page content, so arriving at a section feels continuous with hovering a link. The
- * hidden start state is applied by CSS only once JavaScript has marked the document, so without
- * scripting the content is simply there.
+ * The animation replays every time the element enters view, in either scroll direction, so a
+ * visitor coming back up the page sees the same motion rather than a static block. Pass
+ * `once` to freeze an element after its first reveal. The hidden start state is applied by CSS
+ * only once JavaScript has marked the document, so without scripting the content is simply there.
  */
-export default function Reveal({ as: Tag = 'div', delay = 0, className = '', children, ...rest }) {
+export default function Reveal({ as: Tag = 'div', delay = 0, once = false, className = '', children, ...rest }) {
   const ref = useRef(null)
   const [shown, setShown] = useState(false)
 
@@ -27,9 +28,15 @@ export default function Reveal({ as: Tag = 'div', delay = 0, className = '', chi
     if (node && typeof IntersectionObserver === 'function') {
       observer = new IntersectionObserver(
         ([entry]) => {
-          if (!entry.isIntersecting) return
-          setShown(true)
-          observer.disconnect()
+          if (entry.isIntersecting) {
+            clearTimeout(safety)
+            setShown(true)
+            if (once) observer.disconnect()
+          } else if (!once) {
+            // Re-arm only once the element is fully clear of the viewport, so an element that is
+            // merely clipped at an edge does not flicker while the reader scrolls past it.
+            setShown(false)
+          }
         },
         { threshold: 0.08, rootMargin: '0px 0px -40px' },
       )
@@ -42,7 +49,7 @@ export default function Reveal({ as: Tag = 'div', delay = 0, className = '', chi
       clearTimeout(safety)
       observer?.disconnect()
     }
-  }, [delay])
+  }, [delay, once])
 
   return (
     <Tag

@@ -1,162 +1,179 @@
-"""English text -> a sequence of signs the avatar can perform.
-
-Deliberately rule-based to start with: deterministic, inspectable, and it fails in ways you can see
-and fix by adding a gloss. Sign languages are not word-for-word English, so this does three things:
-normalise the words, look each one up, and fingerspell whatever is left over.
-
-The reordering here is minimal on purpose. Real grammar (topic-comment ordering, time markers first,
-non-manual markers) depends on which sign language the vocabulary is being recorded in - see the open
-question in the plan - so it is kept in one small, swappable function.
-"""
-
+"""Resolve reviewed ISL meanings to canonical clips; motion composition is independent."""
 from __future__ import annotations
 
+import json
 import re
-from dataclasses import dataclass
+import unicodedata
+from dataclasses import dataclass, field
+from datetime import date
+from pathlib import Path
 
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Gloss, SignClip
 
-# Words English needs but signed languages generally drop.
-_DROP = {
-    "a", "an", "the", "is", "am", "are", "was", "were", "be", "been", "being",
-    "do", "does", "did", "of", "to", "will", "would", "shall",
-}
-# Fronting a time marker is a robust feature across signed languages, but only for words that are
-# unambiguously temporal. "morning", "evening" and "night" are excluded on purpose: they appear far
-# more often inside greetings ("good morning") than as time markers, and fronting them there
-# reverses the sign order of the greeting.
-_TIME_WORDS = {"yesterday", "today", "tomorrow", "now", "later", "before", "after"}
-
-_SUFFIXES = (("ies", "y"), ("es", ""), ("s", ""), ("ing", ""), ("ed", ""))
+REGISTRY_PATH = Path(__file__).with_name("isl_patterns.json")
 
 
-def lemmatise(word: str) -> str:
-    for suffix, replacement in _SUFFIXES:
-        if len(word) > len(suffix) + 2 and word.endswith(suffix):
-            return word[: -len(suffix)] + replacement
-    return word
+def normalise(text: str) -> str:
+    # Preserve apostrophes, numbers, question marks and negation. Punctuation that can
+    # change intent is not erased just to make an input match a supported statement.
+    text = unicodedata.normalize("NFKC", text).lower().replace("’", "'")
+    text = re.sub(r"[,;.!]+", " ", text)
+    return " ".join(text.split())
 
 
-def normalise(text: str) -> list[str]:
-    words = re.findall(r"[A-Za-z']+", text.lower())
-    return [w for w in words if w not in _DROP]
+class Pattern(BaseModel):
+    id: str
+    forms: list[str] = Field(min_length=1)
+    glosses: list[str] = Field(min_length=1)
+    reviewStatus: str = "candidate"
+    reviewedBy: str = ""
+    reviewedAt: str = ""
+    reviewEvidence: str = ""
+    reviewedClipHashes: dict[str, str] = Field(default_factory=dict)
+    requiresUnavailableFeatures: bool = False
+    # Only these explicitly named slots may expand to recorded alphabet clips.
+    fingerspellSlots: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_review(self):
+        if self.reviewStatus not in {"candidate", "approved", "rejected"}:
+            raise ValueError("invalid pattern review status")
+        if self.reviewStatus == "approved" and not all(
+            value.strip() for value in (self.reviewedBy, self.reviewedAt, self.reviewEvidence)
+        ):
+            raise ValueError("approved patterns require reviewer, date and evidence")
+        if self.reviewStatus == "approved":
+            date.fromisoformat(self.reviewedAt)
+            literals = {g for g in self.glosses if not g.startswith("{")}
+            if not literals.issubset(self.reviewedClipHashes):
+                raise ValueError("approved patterns must pin the reviewed recording hashes")
+        slots = set(self.fingerspellSlots)
+        if any(not re.fullmatch(r"[a-z]+", slot) for slot in slots):
+            raise ValueError("slot names must contain lowercase letters")
+        for form in self.forms:
+            if set(re.findall(r"\{([a-z]+)\}", form)) != slots:
+                raise ValueError("each form must declare exactly the permitted slots")
+        if {g[1:-1] for g in self.glosses if g.startswith("{")} != slots:
+            raise ValueError("gloss placeholders must match permitted slots")
+        return self
 
 
-# Longest phrase we will try to match as a single sign. "good morning" and "thank you" are single
-# signs, not sequences of their parts, and most multi-word glosses are two or three words.
-MAX_PHRASE_WORDS = 4
+class Registry(BaseModel):
+    language: str = "ISL"
+    version: int = Field(ge=1)
+    patterns: list[Pattern]
+
+    @model_validator(mode="after")
+    def validate_registry(self):
+        if self.language != "ISL":
+            raise ValueError("this registry must describe ISL")
+        if len({p.id for p in self.patterns}) != len(self.patterns):
+            raise ValueError("pattern IDs must be unique")
+        return self
 
 
-def gloss_variants(words: list[str]) -> list[str]:
-    """Candidate gloss names for a run of words, most specific spelling first."""
-    joined = "_".join(words).upper()
-    variants = [joined]
-    if len(words) > 1:
-        variants.append("".join(words).upper())   # THANKYOU
-    else:
-        variants.append(lemmatise(words[0]).upper())
-    # De-duplicate, preserving order.
-    seen, out = set(), []
-    for v in variants:
-        if v not in seen:
-            seen.add(v)
-            out.append(v)
-    return out
-
-
-def reorder(units: list[list[str]]) -> list[list[str]]:
-    """Time markers lead the sentence in most signed languages."""
-    lead = [u for u in units if any(w in _TIME_WORDS for w in u)]
-    rest = [u for u in units if u not in lead]
-    return lead + rest
+def load_registry() -> Registry:
+    return Registry.model_validate(json.loads(REGISTRY_PATH.read_text()))
 
 
 @dataclass
 class PlaylistItem:
     gloss: str
-    clip_id: int | None
+    clip_id: int
     duration_ms: int
-    transition_ms: int
+    transition_ms: int = 0  # Actual durations live on the composed transition segments.
     fingerspelled: bool = False
     source_word: str = ""
+    occurrence_index: int = 0
 
 
-# A transition shorter than this reads as a jump cut; longer than this and the sentence drags.
-MIN_TRANSITION_MS = 120
-MAX_TRANSITION_MS = 300
+@dataclass
+class Interpretation:
+    status: str
+    version: int
+    pattern_id: str | None = None
+    items: list[PlaylistItem] = field(default_factory=list)
+    unmapped: list[str] = field(default_factory=list)
+    issues: list[dict] = field(default_factory=list)
 
 
-def _canonical_clip(session: Session, gloss_name: str) -> SignClip | None:
-    stmt = (
-        select(SignClip)
-        .join(Gloss)
-        .where(Gloss.name == gloss_name.upper())
-        .order_by(SignClip.is_canonical.desc(), SignClip.created_at.desc())
-    )
-    return session.scalars(stmt).first()
+def _match(pattern: Pattern, text: str) -> dict | None:
+    for form in pattern.forms:
+        expression = re.escape(normalise(form))
+        for slot in pattern.fingerspellSlots:
+            expression = expression.replace(re.escape("{" + slot + "}"), f"(?P<{slot}>[a-z]+)")
+        match = re.fullmatch(expression, text)
+        if match:
+            return match.groupdict()
+    return None
+
+
+def interpret(session: Session, text: str, registry: Registry | None = None) -> Interpretation:
+    registry = registry or load_registry()
+    normalised = normalise(text)
+    matches = [(p, _match(p, normalised)) for p in registry.patterns]
+    candidates = [(p, slots) for p, slots in matches if slots is not None]
+    approved = [(p, slots) for p, slots in candidates
+                if p.reviewStatus == "approved" and not p.requiresUnavailableFeatures]
+    # An exact reviewed phrase has precedence over a generic reviewed spelling slot.
+    exact = [(p, slots) for p, slots in approved if not p.fingerspellSlots]
+    approved = exact or approved
+    if len(approved) != 1:
+        pending = any(p.reviewStatus == "candidate" for p, _ in candidates)
+        code = "ambiguous-pattern" if len(approved) > 1 else (
+            "review-required" if pending else "unsupported-pattern"
+        )
+        return Interpretation("unsupported", registry.version, issues=[{
+            "code": code,
+            "message": "This sentence is awaiting ISL review." if pending else
+                       "This sentence does not have one supported, reviewed ISL interpretation.",
+        }])
+
+    pattern, slots = approved[0]
+    result = Interpretation("ready", registry.version, pattern.id)
+    recordings = session.scalars(
+        select(SignClip).join(Gloss).where(SignClip.is_canonical.is_(True))
+        .order_by(SignClip.created_at.desc(), SignClip.id.desc())
+    ).all()
+    by_gloss = {}
+    for clip in recordings:
+        by_gloss.setdefault(clip.gloss.name, clip)
+    for gloss in pattern.glosses:
+        spelling = gloss.startswith("{")
+        source = slots[gloss[1:-1]] if spelling else normalised
+        names = list(source.upper()) if spelling else [gloss]
+        missing = [name for name in names if name not in by_gloss]
+        if missing:
+            result.unmapped.append(source if spelling else gloss)
+            result.issues.append({
+                "code": "missing-alphabet" if spelling else "missing-sign",
+                "sourceWord": source, "glosses": list(dict.fromkeys(missing)),
+                "message": "Record canonical signs for: " + ", ".join(dict.fromkeys(missing)),
+            })
+            continue
+        for name in names:
+            clip = by_gloss[name]
+            if pattern.reviewedClipHashes.get(name) != clip.content_hash:
+                result.issues.append({
+                    "code": "recording-review-required", "clipId": clip.id,
+                    "message": f"The current {name} recording needs ISL review for this pattern.",
+                })
+            result.items.append(PlaylistItem(
+                gloss=name, clip_id=clip.id, duration_ms=int(clip.duration * 1000),
+                fingerspelled=spelling, source_word=source,
+                occurrence_index=len(result.items),
+            ))
+    if result.issues:
+        result.status = "missing-signs" if result.unmapped else "unsupported"
+    return result
 
 
 def build_playlist(session: Session, text: str) -> tuple[list[PlaylistItem], list[str]]:
-    """Resolve `text` into clips, matching the longest phrase that has a recorded sign.
+    """Compatibility helper; callers deciding playback must use interpret()."""
+    result = interpret(session, text)
+    return result.items, result.unmapped
 
-    Greedy longest-match matters: "good morning" is one sign, not GOOD followed by MORNING, and
-    looking words up one at a time would miss every multi-word gloss in the vocabulary.
-    """
-    words = normalise(text)
-
-    # First pass: segment the sentence into the longest runs that have a recorded sign.
-    units: list[tuple[list[str], SignClip | None]] = []
-    i = 0
-    while i < len(words):
-        for span in range(min(MAX_PHRASE_WORDS, len(words) - i), 0, -1):
-            phrase = words[i:i + span]
-            clip = next(
-                (c for c in (_canonical_clip(session, v) for v in gloss_variants(phrase)) if c),
-                None,
-            )
-            if clip is not None:
-                units.append((phrase, clip))
-                i += span
-                break
-        else:
-            units.append(([words[i]], None))
-            i += 1
-
-    # Second pass: order the resolved units, then expand into playable items.
-    ordered = reorder([u for u, _ in units])
-    lookup = {tuple(u): c for u, c in units}
-
-    items: list[PlaylistItem] = []
-    unmapped: list[str] = []
-
-    for unit in ordered:
-        clip = lookup[tuple(unit)]
-        word = " ".join(unit)
-
-        if clip is not None:
-            items.append(PlaylistItem(
-                gloss=clip.gloss.name, clip_id=clip.id,
-                duration_ms=int(clip.duration * 1000), transition_ms=MIN_TRANSITION_MS,
-                source_word=word,
-            ))
-            continue
-
-        # Fall back to fingerspelling, which needs the alphabet recorded as its own glosses.
-        letters = [_canonical_clip(session, ch) for ch in word.upper() if ch.isalpha()]
-        if letters and all(letters):
-            for ch, letter_clip in zip(
-                [c for c in word.upper() if c.isalpha()], letters, strict=True
-            ):
-                items.append(PlaylistItem(
-                    gloss=ch, clip_id=letter_clip.id,
-                    duration_ms=int(letter_clip.duration * 1000),
-                    transition_ms=MIN_TRANSITION_MS // 2,
-                    fingerspelled=True, source_word=word,
-                ))
-        else:
-            unmapped.append(word)
-
-    return items, unmapped

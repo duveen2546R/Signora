@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+import tempfile
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -8,6 +10,8 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import SessionLocal, get_session
 from app.models import IngestJob
+from app.ingest.landmarks import to_landmarks
+from app.services.source_motion import raw_payload
 from app.ingest.rokoko import RokokoFormatError, parse_csv, with_phase_bounds
 from app.services.ingest_service import active_rig, create_job, run_ingest
 
@@ -35,7 +39,9 @@ async def upload_capture(
     except LookupError as exc:
         raise HTTPException(409, str(exc)) from exc
 
-    dest = settings.upload_dir / file.filename
+    source_dir = settings.upload_dir / uuid.uuid4().hex
+    source_dir.mkdir(parents=True, exist_ok=True)
+    dest = source_dir / Path(file.filename).name
     temporary = dest.with_name(f".{dest.name}.{uuid.uuid4().hex}.uploading")
     temporary.write_bytes(await file.read())
     try:
@@ -57,6 +63,22 @@ async def upload_capture(
     job = create_job(session, dest, sign_start_seconds, sign_end_seconds)
     background.add_task(_ingest_in_background, job.id)
     return {"jobId": job.id, "status": job.status, "gloss": job.gloss_name}
+
+
+@router.post("/preview")
+async def preview_capture(file: UploadFile):
+    """Inspect raw body/hand motion without creating a capture or requiring a rig."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(400, "expected a .csv export from Rokoko Studio")
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".csv") as temporary:
+            temporary.write(await file.read())
+            temporary.flush()
+            source = parse_csv(temporary.name, name=Path(file.filename).stem)
+            raw = to_landmarks(source)
+        return raw_payload(raw, source)
+    except (ValueError, IndexError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/{job_id}")

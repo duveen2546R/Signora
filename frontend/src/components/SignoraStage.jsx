@@ -52,7 +52,7 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
 
     const player = new SignoraPlayer(sendMessage)
     playerRef.current = player
-    player.onSignStart = (gloss) => handlers.current.onSignStart?.(gloss)
+    player.onSignStart = (gloss, occurrence) => handlers.current.onSignStart?.(gloss, occurrence)
     player.onFinished = () => handlers.current.onIdle?.()
     player.onCalibrated = (state) => report(`calibrated:${state}`)
     player.onCalibrationFailed = (message) => report(`error:${message}`)

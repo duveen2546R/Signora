@@ -74,3 +74,61 @@ test('playback cannot start while calibration is in progress', () => {
     player.stop()
   })
 })
+
+function simulatedBrowser(run) {
+  const saved = Object.fromEntries(['performance', 'document', 'requestAnimationFrame', 'cancelAnimationFrame'].map((key) => [key, globalThis[key]]))
+  let now = 0
+  let callback
+  let visibility
+  globalThis.performance = { now: () => now }
+  globalThis.document = { hidden: false, addEventListener: (_, fn) => { visibility = fn }, removeEventListener: () => {} }
+  globalThis.requestAnimationFrame = (fn) => { callback = fn; return 1 }
+  globalThis.cancelAnimationFrame = () => {}
+  try {
+    run({ tick: (ms) => { now = ms; callback() }, hide: (hidden, ms) => { now = ms; document.hidden = hidden; visibility() } })
+  } finally { Object.assign(globalThis, saved) }
+}
+function sentence() {
+  const single = payload()
+  const repeat = (channel) => Array.from({ length: 60 }, (_, index) => single[channel][0].map(() => [index / 100, 0, 0]))
+  return { fps: 30, frameCount: 60, pose: repeat('pose'), leftHand: repeat('leftHand'), rightHand: repeat('rightHand'),
+    blendQuality: { status: 'direct' }, segments: [
+      { kind: 'sign', gloss: 'HELLO', occurrenceIndex: 0, startFrame: 0, endFrame: 30 },
+      { kind: 'sign', gloss: 'HELLO', occurrenceIndex: 1, startFrame: 30, endFrame: 60 },
+    ] }
+}
+test('background time does not skip signing and repeated occurrences announce separately', () => {
+  simulatedBrowser(({ tick, hide }) => {
+    const messages = []
+    const occurrences = []
+    const player = new SignoraPlayer((...args) => messages.push(args))
+    player.calibrated = true
+    player.onSignStart = (gloss, index) => occurrences.push([gloss, index])
+    player.play(sentence())
+    tick(500)
+    assert.equal(player.frameIndex, 15)
+    hide(true, 500)
+    tick(5500)
+    assert.equal(player.frameIndex, 15)
+    hide(false, 10500)
+    tick(11000)
+    assert.equal(player.frameIndex, 30)
+    assert.deepEqual(occurrences, [['HELLO', 0], ['HELLO', 1]])
+    tick(12500)
+    assert.equal(player.track, null)
+    assert.equal(player.lastPose.index, 59)
+    const sequences = messages.filter((args) => args[1] === 'ReceiveFrame').map((args) => JSON.parse(args[2]).sequence)
+    assert.ok(sequences.every((sequence, index) => index === 0 || sequence > sequences[index - 1]))
+    player.play(sentence())
+    tick(12500)
+    assert.equal(player.frameIndex, 0)
+    player.stop()
+  })
+})
+test('a rejected track cannot reach the runtime', () => {
+  withBrowserStubs(() => {
+    const player = new SignoraPlayer(() => { throw new Error('should not emit') })
+    player.calibrated = true
+    assert.throws(() => player.play({ ...sentence(), blendQuality: { status: 'degraded' } }), /failed transition validation/)
+  })
+})

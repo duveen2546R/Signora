@@ -9,6 +9,7 @@ frames are more than 0.2s old, which is exactly what a stitching gap produces.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 from functools import lru_cache
 from pathlib import Path
@@ -23,10 +24,16 @@ from app.ingest.compose import (
 )
 from app.ingest.landmarks import LandmarkSkeleton, LandmarkTake
 from app.models import SignClip
+from app.services.source_motion import load_source_motion
 
 
 class ComposeError(ValueError):
-    pass
+    def __init__(self, message: str, blend_quality: dict | None = None):
+        super().__init__(message)
+        self.blend_quality = blend_quality or {
+            "status": "rejected", "score": 0.0,
+            "algorithmVersion": ALGORITHM_VERSION, "seams": [],
+        }
 
 
 logger = logging.getLogger(__name__)
@@ -44,8 +51,10 @@ SKELETON_TOLERANCE_M = 0.004
 
 
 @lru_cache(maxsize=64)
-def _raw(clip_path: str) -> LandmarkTake:
+def _raw(clip_path: str, source_csv: str = "", source_hash: str = "") -> LandmarkTake:
     """Clip files are content-addressed, so this is safe to cache for the process lifetime."""
+    if source_csv:
+        return load_source_motion(Path(clip_path), source_csv)[0]
     return _load(clip_path)
 
 
@@ -55,11 +64,16 @@ def landmark_path(clip: SignClip) -> Path:
 
 @lru_cache(maxsize=128)
 def _compose_cached(
-    key: tuple[tuple[str, str, str], ...],
+    key: tuple[tuple[str, str, str, str, str], ...],
     algorithm_version: int,
 ) -> tuple[Composition, tuple[str, ...]]:
     """Cache immutable compositions by ordered content hashes and algorithm version."""
-    raw = [(gloss, _raw(path)) for gloss, path, _content_hash in key]
+    raw = []
+    for gloss, path, _content_hash, source_csv, source_hash in key:
+        try:
+            raw.append((gloss, _raw(path, source_csv, source_hash)))
+        except (ValueError, OSError) as exc:
+            raise ComposeError(f"{gloss}: {exc}") from exc
     shared = LandmarkSkeleton.from_takes([track for _, track in raw])
 
     warnings: list[str] = []
@@ -88,12 +102,19 @@ def _compose_cached(
             "Add sign-start and sign-end timestamps to enable position-aware trimming.",
         )
 
-    prepared = [(gloss, prepare(track, shared, fps=TARGET_FPS)) for gloss, track in raw]
+    prepared = []
+    for gloss, track in raw:
+        try:
+            prepared.append((gloss, prepare(track, shared, fps=TARGET_FPS)))
+        except ValueError as exc:
+            raise ComposeError(f"{gloss}: {exc}") from exc
     try:
         composition = compose(
             shared, prepared, fps=TARGET_FPS, algorithm_version=algorithm_version,
         )
     except BlendRejected as exc:
+        raise ComposeError(str(exc), exc.blend_quality) from exc
+    except ValueError as exc:
         raise ComposeError(str(exc)) from exc
     return composition, tuple(warnings)
 
@@ -109,14 +130,19 @@ def compose_clips(clips: list[tuple[str, SignClip]]) -> tuple[Composition, list[
     if not clips:
         raise ComposeError("a sentence needs at least one sign with a recording")
 
-    key: list[tuple[str, str, str]] = []
+    key: list[tuple[str, str, str, str, str]] = []
     for gloss, clip in clips:
         path = landmark_path(clip)
         if not path.exists():
             raise ComposeError(
                 f"{gloss} has no landmark frames; re-ingest the capture for that sign"
             )
-        key.append((gloss, str(path), clip.content_hash))
+        source_csv = getattr(clip, "source_csv", "")
+        try:
+            source_hash = hashlib.sha256(Path(source_csv).read_bytes()).hexdigest() if source_csv else ""
+        except OSError as exc:
+            raise ComposeError(f"{gloss}: source CSV is missing; re-ingest the capture.") from exc
+        key.append((gloss, str(path), clip.content_hash, source_csv, source_hash))
 
     try:
         composition, warnings = _compose_cached(tuple(key), ALGORITHM_VERSION)

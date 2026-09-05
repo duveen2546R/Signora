@@ -104,7 +104,7 @@ def parse_csv(path: str | Path, name: str | None = None) -> Take:
     # Timestamps are integer milliseconds in this export; normalise to seconds from zero.
     times = df["Timestamp"].to_numpy(dtype=np.float64) / 1000.0
     times = times - times[0]
-    if np.any(np.diff(times) <= 0):
+    if len(times) < 2 or not np.all(np.isfinite(times)) or np.any(np.diff(times) <= 0):
         raise RokokoFormatError(f"{path.name}: timestamps are not strictly increasing.")
 
     segment_index = {seg: i for i, seg in enumerate(sk.SEGMENTS)}
@@ -133,24 +133,10 @@ def parse_csv(path: str | Path, name: str | None = None) -> Take:
     )
 
 
-def with_phase_bounds(
-    take: Take,
-    sign_start_s: float | None,
-    sign_end_s: float | None,
-    *,
-    source: str = "authored-ui",
-) -> Take:
-    """Validate user-authored sign boundaries and attach them to a parsed take."""
-    if (sign_start_s is None) != (sign_end_s is None):
-        raise RokokoFormatError("sign start and sign end timestamps must be supplied together")
-    if sign_start_s is None:
-        return take
-
-    start, end = float(sign_start_s), float(sign_end_s)
+def validate_phase_seconds(start: float, end: float, clip_end: float) -> None:
+    """Shared validation for upload and stored-motion annotation."""
     if not np.isfinite(start) or not np.isfinite(end):
         raise RokokoFormatError("sign timestamps must be finite numbers")
-    step = float(np.median(np.diff(take.times))) if take.frame_count > 1 else 0.0
-    clip_end = float(take.times[-1] + step) if take.frame_count else 0.0
     if start < 0 or end <= start or end > clip_end + 1e-9:
         raise RokokoFormatError(
             f"sign timestamps must satisfy 0 <= start < end <= {clip_end:.3f}s"
@@ -165,12 +151,47 @@ def with_phase_bounds(
             "and 0.120s of End motion"
         )
 
+
+def align_csv_boundary(times: np.ndarray, value: float) -> float:
+    """Accept a CSV row timestamp (allow sub-millisecond display rounding), never invent a cut."""
+    if not np.isfinite(value):
+        raise RokokoFormatError("sign timestamps must be finite numbers")
+    nearest = float(times[int(np.argmin(np.abs(times - value)))])
+    if abs(nearest - value) > 0.00051:
+        raise RokokoFormatError(
+            f"Boundary {value:.6f}s is not a CSV Timestamp. "
+            f"Choose a captured frame (nearest: {nearest:.6f}s)."
+        )
+    return nearest
+
+
+def with_phase_bounds(
+    take: Take,
+    sign_start_s: float | None,
+    sign_end_s: float | None,
+    *,
+    source: str = "authored-ui",
+) -> Take:
+    """Validate user-authored sign boundaries and attach them to a parsed take."""
+    if (sign_start_s is None) != (sign_end_s is None):
+        raise RokokoFormatError("sign start and sign end timestamps must be supplied together")
+    if sign_start_s is None:
+        return take
+
+    start, end = float(sign_start_s), float(sign_end_s)
+    step = float(np.median(np.diff(take.times))) if take.frame_count > 1 else 0.0
+    clip_end = float(take.times[-1] + step) if take.frame_count else 0.0
+    validate_phase_seconds(start, end, clip_end)
+    start = align_csv_boundary(take.times, start)
+    end = align_csv_boundary(take.times, end)
+    validate_phase_seconds(start, end, clip_end)
+
     if take.has_phase_bounds:
-        tolerance = max(step / 2.0, 1e-6)
+        tolerance = 1e-6
         if abs(start - take.sign_start_s) > tolerance or abs(end - take.sign_end_s) > tolerance:
             raise RokokoFormatError(
                 "capture-form timestamps conflict with the CSV Phase column; "
-                "remove one source or make the boundaries agree"
+                "use the CSV boundaries, or correct the CSV Phase column and upload a new take"
             )
 
     return replace(

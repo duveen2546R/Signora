@@ -17,7 +17,7 @@ html, body, #root { min-height: 100%; }
 body {
   margin: 0;
   overflow-x: hidden;
-  background: var(--black);
+  background: var(--cream);
   color: var(--charcoal);
   font-family: Arial, Helvetica, sans-serif;
   font-size: 16px;
@@ -35,5 +35,5 @@ button, a, label { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
-  .has-js .reveal { opacity: 1; transform: none; }
+  .has-js .reveal { opacity: 1; filter: none; transform: none; }
 }

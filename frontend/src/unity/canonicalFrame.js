@@ -58,7 +58,7 @@ export function assertPayloadShape(payload) {
   if (payload?.frameCount !== undefined && payload.frameCount !== counts[0]) {
     problems.push(`frameCount ${payload.frameCount} does not match ${counts[0]} frames`)
   }
-  if (payload?.fps !== undefined && !(payload.fps > 0)) problems.push(`invalid fps ${payload?.fps}`)
+  if (!Number.isFinite(payload?.fps) || !(payload.fps > 0)) problems.push(`invalid fps ${payload?.fps}`)
   if (payload?.pose?.[0]?.length !== POSE_LANDMARK_COUNT) {
     problems.push(`pose has ${payload?.pose?.[0]?.length} landmarks, expected ${POSE_LANDMARK_COUNT}`)
   }
@@ -66,6 +66,23 @@ export function assertPayloadShape(payload) {
     if (payload?.[side]?.[0]?.length !== HAND_LANDMARK_COUNT) {
       problems.push(`${side} has ${payload?.[side]?.[0]?.length} landmarks, expected ${HAND_LANDMARK_COUNT}`)
     }
+  }
+  if (!Number.isInteger(payload?.frameCount) || payload.frameCount < 1) problems.push('invalid frameCount')
+  for (const [channel, count] of [['pose', 33], ['leftHand', 21], ['rightHand', 21]]) {
+    if (!Array.isArray(payload?.[channel]) || payload[channel].some((frame) =>
+      !Array.isArray(frame) || frame.length !== count || frame.some((point) =>
+        !Array.isArray(point) || point.length !== 3 || point.some((value) => !Number.isFinite(value))))) {
+      problems.push(`${channel} contains invalid frames or coordinates`)
+    }
+  }
+  if (payload?.segments) {
+    let cursor = 0
+    for (const segment of payload.segments) {
+      if (!Number.isInteger(segment.startFrame) || !Number.isInteger(segment.endFrame)
+          || segment.startFrame !== cursor || segment.endFrame <= segment.startFrame) problems.push('invalid segment coverage')
+      cursor = segment.endFrame
+    }
+    if (cursor !== payload.frameCount) problems.push('segments do not cover the full track')
   }
   if (problems.length) throw new Error(`Landmark payload is unusable: ${problems.join('; ')}`)
 }

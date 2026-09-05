@@ -25,10 +25,11 @@ from app.models import Gloss, IngestJob, RigProfileRow, SignClip
 _TAKE_SUFFIX = re.compile(r"[_-](\d{1,3})$")
 
 
-def content_hash_for(blob: bytes, phases: dict) -> str:
+def content_hash_for(blob: bytes, phases: dict, raw_payload: dict | None = None) -> str:
     """Content identity includes semantic phase edits as well as the motion bytes."""
     phase_identity = json.dumps(phases, sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(blob + b"\0phases\0" + phase_identity).hexdigest()[:32]
+    motion_identity = json.dumps(raw_payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(blob + b"\0source-clock-v2\0" + phase_identity + b"\0" + motion_identity).hexdigest()[:32]
 
 
 def gloss_and_take_from_filename(stem: str) -> tuple[str, int]:
@@ -89,7 +90,7 @@ def run_ingest(session: Session, job_id: str) -> None:
         # the reviewed composition exactly. Prepared timestamps are relative to the usable slice;
         # translate them back to the original take before storing them.
         if not landmarks.has_phase_bounds:
-            offset = head / landmarks.fps if landmarks.fps else 0.0
+            offset = float(landmarks.times[head])
             landmarks = replace(
                 landmarks,
                 sign_start_s=offset + phases.stroke_start / prepared.fps,
@@ -127,11 +128,12 @@ def run_ingest(session: Session, job_id: str) -> None:
                 "the recording is truncated at that end"
             )
 
-        content_hash = content_hash_for(blob, phase_qc)
+        raw_payload = landmarks.to_payload()
+        content_hash = content_hash_for(blob, phase_qc, raw_payload)
         path = settings.clip_dir / f"{content_hash}.signclip"
         path.write_bytes(blob)
         (settings.clip_dir / f"{content_hash}.landmarks.json").write_text(
-            json.dumps(landmarks.to_payload())
+            json.dumps(raw_payload)
         )
 
         gloss_name, take = gloss_and_take_from_filename(Path(job.source_csv).stem)

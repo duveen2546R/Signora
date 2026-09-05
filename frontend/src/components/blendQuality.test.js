@@ -1,48 +1,38 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-
 import { blendNotices, playableTrack } from './blendQuality.js'
 
-test('a rejected composition never exposes a playable track', () => {
-  assert.equal(playableTrack({ track: null, error: 'blend rejected' }), null)
-})
-
-test('neutral fallback and capture warnings are visible', () => {
-  const notices = blendNotices({
-    blendQuality: { status: 'neutral-fallback' },
-    warnings: ['The skeleton proportions differ.'],
-  })
-  assert.equal(notices.length, 2)
-  assert.match(notices[0], /neutral-pose bridge/)
-  assert.match(notices[1], /skeleton proportions/)
-})
-
-test('legacy automatic-phase messages are grouped into one advisory', () => {
-  const notices = blendNotices({
-    warnings: [
-      'HELLO uses automatically detected phase boundaries; review it.',
-      'NAMASTE uses automatically detected phase boundaries; review it.',
-      'FATHER uses automatically detected phase boundaries; review it.',
-    ],
-  })
-  assert.equal(notices.length, 1)
-  assert.match(notices[0], /HELLO, NAMASTE, FATHER/)
-  assert.match(notices[0], /safe full-motion fallback/)
-})
-
-test('a degraded sentence still plays and names the rough transitions', () => {
-  const result = {
-    track: { frameCount: 100 },
-    blendQuality: {
-      status: 'degraded',
-      seams: [
-        { mode: 'direct', fromGloss: '', toGloss: 'HELLO' },
-        { mode: 'degraded', fromGloss: 'HELLO', toGloss: 'FATHER' },
-      ],
-    },
+function ready() {
+  const frame = (n) => Array.from({ length: n }, () => [0, 0, 0])
+  const blendQuality = { status: 'direct', seams: [{ mode: 'direct', passed: true }] }
+  return { translationStatus: 'ready', blendQuality, track: {
+    fps: 60, frameCount: 2, pose: [frame(33), frame(33)], leftHand: [frame(21), frame(21)],
+    rightHand: [frame(21), frame(21)], blendQuality,
+  } }
+}
+test('only a complete validated sentence is playable', () => {
+  assert.ok(playableTrack(ready()))
+  for (const status of ['missing-signs', 'unsupported', undefined]) {
+    assert.equal(playableTrack({ ...ready(), translationStatus: status }), null)
   }
-  assert.notEqual(playableTrack(result), null, 'a degraded sentence must still be playable')
-  const notices = blendNotices(result)
-  assert.match(notices[0], /played as recorded/)
-  assert.match(notices[0], /HELLO to FATHER/)
+  for (const status of ['rejected', 'neutral-fallback', 'degraded']) {
+    assert.equal(playableTrack({ ...ready(), blendQuality: { status } }), null)
+  }
+})
+test('a corrupt later frame blocks playback before streaming', () => {
+  const result = ready()
+  result.track.pose[1][0][0] = NaN
+  assert.equal(playableTrack(result), null)
+})
+test('failed seam metadata blocks even a claimed direct track', () => {
+  const result = ready()
+  result.blendQuality.seams[0].passed = false
+  assert.equal(playableTrack(result), null)
+})
+test('rejected pairs and missing signs produce actionable notices', () => {
+  const notices = blendNotices({ blendQuality: { status: 'rejected', seams: [
+    { mode: 'rejected', fromGloss: 'HELLO', toGloss: 'FATHER', passed: false },
+  ] }, issues: [{ message: 'Record D.' }], warnings: ['Check capture.'] })
+  assert.match(notices[0], /Playback blocked.*HELLO → FATHER/)
+  assert.ok(notices.includes('Record D.'))
 })

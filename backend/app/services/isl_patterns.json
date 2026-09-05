@@ -1,0 +1,133 @@
+{
+  "language": "ISL",
+  "version": 1,
+  "patterns": [
+    {
+      "id": "hello",
+      "forms": [
+        "hello"
+      ],
+      "glosses": [
+        "HELLO"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "father",
+      "forms": [
+        "father"
+      ],
+      "glosses": [
+        "FATHER"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "thankyou",
+      "forms": [
+        "thank you"
+      ],
+      "glosses": [
+        "THANKYOU"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "good_morning",
+      "forms": [
+        "good morning"
+      ],
+      "glosses": [
+        "GOOD_MORNING"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "namaste",
+      "forms": [
+        "namaste"
+      ],
+      "glosses": [
+        "NAMASTE"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "hello-father",
+      "forms": [
+        "hello father"
+      ],
+      "glosses": [
+        "HELLO",
+        "FATHER"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "hello-thanks",
+      "forms": [
+        "hello, thank you"
+      ],
+      "glosses": [
+        "HELLO",
+        "THANKYOU"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "good_morning-father",
+      "forms": [
+        "good morning father"
+      ],
+      "glosses": [
+        "GOOD_MORNING",
+        "FATHER"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "good_morning-thanks",
+      "forms": [
+        "good morning, thank you"
+      ],
+      "glosses": [
+        "GOOD_MORNING",
+        "THANKYOU"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "namaste-father",
+      "forms": [
+        "namaste father"
+      ],
+      "glosses": [
+        "NAMASTE",
+        "FATHER"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "namaste-thanks",
+      "forms": [
+        "namaste, thank you"
+      ],
+      "glosses": [
+        "NAMASTE",
+        "THANKYOU"
+      ],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "thanks-father",
+      "forms": [
+        "thank you father"
+      ],
+      "glosses": [
+        "THANKYOU",
+        "FATHER"
+      ],
+      "reviewStatus": "candidate"
+    }
+  ]
+}

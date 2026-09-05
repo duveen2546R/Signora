@@ -31,6 +31,7 @@ export default class SignoraPlayer {
     this.lastPose = null
     this.frameIndex = 0
     this.startedAt = 0
+    this.pausedAt = null
     this.raf = null
     this.calibrated = false
     this.awaitingResult = false
@@ -118,6 +119,12 @@ export default class SignoraPlayer {
     if (this.visibilityBound) return
     this.visibilityBound = true
     this.onVisibilityChange = () => {
+      const now = performance.now()
+      if (document.hidden && this.track && this.pausedAt === null) this.pausedAt = now
+      if (!document.hidden && this.pausedAt !== null) {
+        this.startedAt += now - this.pausedAt
+        this.pausedAt = null
+      }
       // Coming back into view is the moment a starved calibration can finally succeed.
       if (!document.hidden && !this.calibrated && !this.awaitingResult) {
         this.attempts = 0
@@ -136,6 +143,9 @@ export default class SignoraPlayer {
    */
   play(payload) {
     assertPayloadShape(payload)
+    if (payload.blendQuality && payload.blendQuality.status !== 'direct') {
+      throw new Error('Animation failed transition validation.')
+    }
     if (!this.calibrated) {
       throw new Error('Avatar calibration must complete before playback starts.')
     }
@@ -143,6 +153,8 @@ export default class SignoraPlayer {
     this.segments = payload.segments ?? []
     this.segmentIndex = -1
     this.startedAt = performance.now()
+    this.pausedAt = document.hidden ? this.startedAt : null
+    this.#watchVisibility()
     this.frameIndex = 0
     if (payload.neutral) this.setIdlePose(payload.neutral)
     this.#ensureLoop()
@@ -156,6 +168,7 @@ export default class SignoraPlayer {
   }
 
   clear() {
+    this.pausedAt = null
     this.track = null
     this.segments = []
     this.segmentIndex = -1
@@ -214,7 +227,7 @@ export default class SignoraPlayer {
     if (at === this.segmentIndex) return
     this.segmentIndex = at
     const segment = this.segments[at]
-    if (segment?.kind === 'sign') this.onSignStart?.(segment.gloss)
+    if (segment?.kind === 'sign') this.onSignStart?.(segment.gloss, segment.occurrenceIndex)
   }
 
   #tick = () => {
@@ -229,7 +242,7 @@ export default class SignoraPlayer {
     }
 
     if (this.track) {
-      const elapsed = (now - this.startedAt) / 1000
+      const elapsed = ((this.pausedAt ?? now) - this.startedAt) / 1000
       if (elapsed * this.track.fps < this.track.frameCount) {
         const frame = this.#sample(elapsed)
         this.frameIndex = frame.index
@@ -238,6 +251,9 @@ export default class SignoraPlayer {
         this.#emit(frame.pose, frame.leftHand, frame.rightHand, 'playing')
         return
       }
+      const final = this.#sample((this.track.frameCount - 1) / this.track.fps)
+      this.lastPose = final
+      this.frameIndex = final.index
       this.track = null
       this.segments = []
       this.segmentIndex = -1
