@@ -26,12 +26,46 @@ export async function inspectCaptureDuration(file) {
   return (timestamps.at(-1) - first + step) / 1000
 }
 
+/** Round an authored boundary onto the nearest captured CSV row. */
+export function snapBoundary(track, seconds) {
+  const value = Number(seconds)
+  if (!track?.timestampsSeconds || !Number.isFinite(value)) return value
+  const times = track.timestampsSeconds
+  return times[nearestCaptureFrame(times, value)]
+}
+
+/**
+ * The boundaries a draft will actually be saved with.
+ *
+ * Row timestamps are irregular and nobody authoring a sign knows them, so a typed or dragged
+ * value is rounded to the nearest captured frame rather than refused. Callers submit these
+ * values, so what is validated is what is stored.
+ */
+export function snapPhaseDraft({ signStart, signEnd, track }) {
+  return { signStart: snapBoundary(track, signStart), signEnd: snapBoundary(track, signEnd) }
+}
+
+/**
+ * The boundaries the editor should open on for a capture.
+ *
+ * A take's own saved boundaries win: once it has been reviewed, those are what it plays with, so
+ * reopening the editor has to show them. The CSV Phase column is only a seed for a take nobody has
+ * reviewed yet - reading it first makes every saved edit look as though it was discarded.
+ */
+export function initialPhaseDraft(raw) {
+  return {
+    signStart: raw?.signStartSeconds ?? raw?.csvPhaseBounds?.signStartSeconds ?? '',
+    signEnd: raw?.signEndSeconds ?? raw?.csvPhaseBounds?.signEndSeconds ?? '',
+  }
+}
+
 export function validatePhaseDraft({ duration, signStart, signEnd, track }) {
-  const start = Number(signStart)
-  const end = Number(signEnd)
-  if (signStart === '' || signEnd === '' || !Number.isFinite(start) || !Number.isFinite(end)) {
+  if (signStart === '' || signEnd === '' || !Number.isFinite(Number(signStart)) || !Number.isFinite(Number(signEnd))) {
     return 'Enter both sign-start and sign-end times.'
   }
+  // Validate the snapped values: rounding can move a boundary a few milliseconds either way, and
+  // the limits below have to hold for the times that get saved, not for what was typed.
+  const { signStart: start, signEnd: end } = snapPhaseDraft({ signStart, signEnd, track })
   if (start < 0 || end <= start || end > duration + 1e-6) {
     return `Use 0 ≤ start < end ≤ ${duration.toFixed(3)} seconds.`
   }
@@ -42,23 +76,12 @@ export function validatePhaseDraft({ duration, signStart, signEnd, track }) {
   ) {
     return 'Include at least 0.120s of Start, 0.300s of Sign, and 0.120s of End motion.'
   }
-  if (track?.timestampsSeconds) {
-    const times = track.timestampsSeconds
-    for (const boundary of [start, end]) {
-      const nearest = times[nearestCaptureFrame(times, boundary)]
-      if (Math.abs(nearest - boundary) > 0.00051) return `Choose a CSV Timestamp. Nearest frame: ${nearest.toFixed(6)}s.`
-    }
-    if (track.csvPhaseBounds && (Math.abs(start - track.csvPhaseBounds.signStartSeconds) > 0.00051 || Math.abs(end - track.csvPhaseBounds.signEndSeconds) > 0.00051)) {
-      return 'These timestamps conflict with the CSV Phase column. Use its boundaries or correct the CSV and upload a new take.'
-    }
-  }
   return null
 }
 
 export function phaseDurations(draft) {
   if (validatePhaseDraft(draft)) return null
-  const start = Number(draft.signStart)
-  const end = Number(draft.signEnd)
+  const { signStart: start, signEnd: end } = snapPhaseDraft(draft)
   return { start, sign: end - start, end: draft.duration - end }
 }
 

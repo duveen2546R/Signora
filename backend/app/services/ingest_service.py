@@ -68,6 +68,8 @@ def run_ingest(session: Session, job_id: str) -> None:
             parsed,
             phase_input.get("signStartSeconds"),
             phase_input.get("signEndSeconds"),
+            snap=True,
+            override_csv_phase=True,
         )
         clip, qc = ingest_take(parsed, rig)
         blob = clipfmt.encode(clip)

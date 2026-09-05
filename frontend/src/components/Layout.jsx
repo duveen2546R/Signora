@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import ThemeToggle from './ThemeToggle'
 
 // The header mixes routed destinations with in-page sections of the landing page, the way the
 // reference marketing navigation does. Section links jump to the landing page first when the
@@ -60,6 +61,10 @@ export default function Layout() {
         <div className="shell__head-inner">
           <NavLink to="/" className="wordmark" aria-label="SignSure home" onClick={() => setMenuOpen(false)}>SignSure</NavLink>
 
+          <div className="shell__menu-actions">
+            <ThemeToggle />
+          </div>
+
           <button
             type="button"
             className="shell__menu-button"
@@ -95,6 +100,7 @@ export default function Layout() {
           </nav>
 
           <div className="shell__actions">
+            <ThemeToggle />
             <NavLink to="/sign" className="link">Open studio ↗</NavLink>
           </div>
         </div>

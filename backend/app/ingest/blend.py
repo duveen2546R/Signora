@@ -52,6 +52,14 @@ CONTACT_MIN_FRAMES = 3
 TORSO_RADIUS_M = 0.10
 HEAD_RADIUS_M = 0.09
 
+# How far a bridge may stray from the straight path between the two boundary poses. Replaces the
+# chord-length tangent clamp: overshoot is measured on the finished curve instead of being
+# prevented by scaling the measured boundary velocity toward zero. Calibrated against the recorded
+# strokes themselves - over windows the length of a bridge the performer's own wrists leave the
+# chord by up to 22.3 cm (p99 17.3 cm), so a bridge only fails here when it swings wider than any
+# real signing in the library.
+MAX_EXCURSION_CM = 25.0
+
 # Frames either side of a boundary used to finite-difference the velocity.
 VELOCITY_WINDOW = 3
 
@@ -321,17 +329,20 @@ def _septic_boundary(p0, v0, a0, j0, p1, v1, a1, j1, duration, tau):
 
 
 def _tangent(q0: np.ndarray, q1: np.ndarray, rate: np.ndarray, duration: float) -> np.ndarray:
-    """Endpoint tangent, clamped so a fast exit velocity cannot overshoot the target.
+    """Endpoint tangent carrying the measured boundary velocity, unscaled.
 
-    Two takes end at 79-88% of their peak speed; without this the Hermite swings the hand well past
-    where the next sign starts before coming back.
+    This used to be clamped to the chord length so a fast exit could not overshoot the target. That
+    limit is expressed in the wrong quantity: when the two boundary poses are close together the
+    chord is small, so the clamp scales the boundary velocity toward zero and the avatar stops dead
+    at the seam and restarts - the exact discontinuity a Hermite carrying measured velocities exists
+    to remove. Joining a sign ending at 85 cm/s to one entering at 196 cm/s across a 17 cm gap
+    produced a bridge that started at 26 cm/s and ended at 29 cm/s, a 160 cm/s step at the second
+    join, which the seam-dynamics gate then correctly rejected.
+
+    Overshoot is a property of the resulting curve, so it is measured on the curve instead - see
+    `_max_excursion` and the `excursionCm` gate in `evaluate_transition`.
     """
-    tangent = rate * duration
-    span = np.linalg.norm(q1 - q0, axis=-1, keepdims=True)
-    magnitude = np.linalg.norm(tangent, axis=-1, keepdims=True)
-    limit = np.maximum(span, _EPS)
-    scale = np.where(magnitude > limit, limit / np.maximum(magnitude, _EPS), 1.0)
-    return tangent * scale
+    return rate * duration
 
 
 def _rate(take: LandmarkTake, index: int, skel: LandmarkSkeleton, forward: bool) -> GeneralisedPose:
@@ -838,6 +849,34 @@ def _max_angular_speed(skel: LandmarkSkeleton, take: LandmarkTake) -> float:
     return float(np.degrees(np.arccos(dots)).max() * take.fps)
 
 
+def _point_segment_distance(point: np.ndarray, start: np.ndarray, end: np.ndarray) -> float:
+    axis = end - start
+    denom = float(np.dot(axis, axis))
+    if denom < _EPS:
+        return float(np.linalg.norm(point - start))
+    along = float(np.clip(np.dot(point - start, axis) / denom, 0.0, 1.0))
+    return float(np.linalg.norm(point - (start + along * axis)))
+
+
+def _max_excursion(bridge: LandmarkTake, start: Pose, end: Pose) -> float:
+    """How far the wrists stray from the straight path between the boundary poses, in cm.
+
+    This is the constraint the chord-length tangent clamp was reaching for, stated in the quantity
+    that actually matters. A bridge carrying real boundary velocity arcs rather than travelling the
+    chord, which is what a hand does; what has to be caught is the curve that swings wide and comes
+    back. Distance to the *segment* rather than the infinite line, so travelling past either
+    endpoint counts as excursion too.
+    """
+    if bridge.frame_count == 0:
+        return 0.0
+    worst = 0.0
+    for wrist in (15, 16):
+        p0, p1 = start.pose[wrist], end.pose[wrist]
+        for point in bridge.pose[:, wrist]:
+            worst = max(worst, _point_segment_distance(point, p0, p1))
+    return worst * 100.0
+
+
 def _max_bone_error(skel: LandmarkSkeleton, take: LandmarkTake) -> float:
     worst = 0.0
     for (x, y), length in skel.pose_lengths.items():
@@ -848,15 +887,6 @@ def _max_bone_error(skel: LandmarkSkeleton, take: LandmarkTake) -> float:
             got = np.linalg.norm(hand[:, y] - hand[:, x], axis=1)
             worst = max(worst, float(np.abs(got - length).max()))
     return worst
-
-
-def _point_segment_distance(point: np.ndarray, start: np.ndarray, end: np.ndarray) -> float:
-    axis = end - start
-    denom = float(np.dot(axis, axis))
-    if denom < _EPS:
-        return float(np.linalg.norm(point - start))
-    along = float(np.clip(np.dot(point - start, axis) / denom, 0.0, 1.0))
-    return float(np.linalg.norm(point - (start + along * axis)))
 
 
 def _collision_count(take: LandmarkTake, contacts: dict[str, ContactState]) -> int:
@@ -1015,6 +1045,7 @@ def evaluate_transition(
     contact_error = _contact_handshape_error(
         skel, a, a_index, bridge, b, b_index, contacts,
     )
+    excursion = _max_excursion(bridge, Pose.at(a, a_index), Pose.at(b, b_index))
 
     metrics: dict[str, float | int | bool] = {
         "finite": finite,
@@ -1025,6 +1056,7 @@ def evaluate_transition(
         "seamJerkRatio": round(jerk_ratio, 3),
         "collisionFrames": collisions,
         "contactHandshapeErrorDeg": round(contact_error, 2),
+        "excursionCm": round(excursion, 2),
     }
     reasons = []
     checks = (
@@ -1038,6 +1070,7 @@ def evaluate_transition(
          "seam jerk exceeds the adjacent-motion envelope"),
         (collisions > 0, "transition intersects the torso or head"),
         (contact_error > 8.0, "contact handshape is not ready at the required boundary"),
+        (excursion > MAX_EXCURSION_CM, "transition swings wide of the path between the signs"),
         (requires_neutral, "direct transition requires more than 600 ms"),
     )
     reasons.extend(message for failed, message in checks if failed)
@@ -1048,6 +1081,7 @@ def evaluate_transition(
         min(jerk_ratio / SEAM_ENVELOPE_MULTIPLIER, 1.5),
         min(collisions / 3.0, 1.5),
         min(contact_error / 8.0, 1.5),
+        min(excursion / MAX_EXCURSION_CM, 1.5),
     ]
     score = max(0.0, 100.0 - 8.0 * sum(penalties) - (20.0 if requires_neutral else 0.0))
     return TransitionQuality(score, not reasons, metrics, tuple(reasons))

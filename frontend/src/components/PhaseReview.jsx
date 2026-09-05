@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import { validatePhaseDraft } from '../capturePhases'
+import { initialPhaseDraft, snapPhaseDraft, validatePhaseDraft } from '../capturePhases'
 import MotionPhaseEditor from './MotionPhaseEditor'
 
 export default function PhaseReview({ sign, onSaved, onClose }) {
@@ -13,7 +13,7 @@ export default function PhaseReview({ sign, onSaved, onClose }) {
     api.landmarks(sign.rawUrl ?? sign.landmarksUrl).then((raw) => {
       if (cancelled) return
       setTrack(raw)
-      setDraft({ signStart: raw.csvPhaseBounds?.signStartSeconds ?? raw.signStartSeconds ?? '', signEnd: raw.csvPhaseBounds?.signEndSeconds ?? raw.signEndSeconds ?? '' })
+      setDraft(initialPhaseDraft(raw))
     }).catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
   }, [sign.rawUrl, sign.landmarksUrl])
@@ -24,8 +24,9 @@ export default function PhaseReview({ sign, onSaved, onClose }) {
     setBusy(true)
     setError(null)
     try {
+      const snapped = snapPhaseDraft({ ...draft, track })
       const updated = await api.updatePhases(sign.id, {
-        signStartSeconds: Number(draft.signStart), signEndSeconds: Number(draft.signEnd),
+        signStartSeconds: snapped.signStart, signEndSeconds: snapped.signEnd,
         expectedContentHash: sign.contentHash,
       })
       onSaved(updated)

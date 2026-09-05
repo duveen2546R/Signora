@@ -21,7 +21,9 @@ def load_source_motion(path: Path, source_csv: str, *, validate_stored_phases: b
     if raw.timestamps is not None and not np.allclose(raw.times, source.times, atol=1e-9, rtol=0):
         raise ValueError("Stored timestamps do not match the CSV Timestamp column; re-ingest the capture.")
     if validate_stored_phases and raw.phase_reviewed:
-        checked = with_phase_bounds(source, raw.sign_start_s, raw.sign_end_s)
+        checked = with_phase_bounds(
+            source, raw.sign_start_s, raw.sign_end_s, snap=True, override_csv_phase=True,
+        )
         raw = replace(raw, sign_start_s=checked.sign_start_s, sign_end_s=checked.sign_end_s)
     return replace(raw, timestamps=source.times.copy()), source
 

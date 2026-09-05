@@ -6,10 +6,38 @@
   --black: #050505;
   --muted: #676461;
   --rule-on-light: #595754;
+  --surface: #f4f0eb;
+  /* Footer is a deliberate dark statement band in both themes, so it uses fixed tokens
+     rather than --charcoal/--cream, which swap roles under dark mode. */
+  --ink: #1c1b19;
+  --paper: #e9e6e2;
+  --ink-muted: #8f8c88;
   --gutter: clamp(16px, 1.3vw, 28px);
   --fast: 320ms;
   --slow: 760ms;
   --ease: cubic-bezier(.19, 1, .22, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --red: #4fa3d1;
+    --cream: #1c1b19;
+    --charcoal: #ece8e2;
+    --black: #f5f3ef;
+    --muted: #9a968f;
+    --rule-on-light: #4c4a46;
+    --surface: #26241f;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --red: #4fa3d1;
+  --cream: #1c1b19;
+  --charcoal: #ece8e2;
+  --black: #f5f3ef;
+  --muted: #9a968f;
+  --rule-on-light: #4c4a46;
+  --surface: #26241f;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }

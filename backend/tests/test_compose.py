@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from app.ingest import compose as compose_module
 from app.ingest.compose import ALGORITHM_VERSION, BlendRejected, TARGET_FPS, compose, neutral_pose, prepare
 from tests.test_blend import segment_errors
 
@@ -180,26 +181,38 @@ def test_reviewed_phases_follow_sentence_position(prepared, skeleton):
     ] == ["preparation", "sign", "retraction"]
 
     sentence = compose(skeleton, [(name, reviewed[name]) for name in names])
+    # A seam may reach into preparation or retraction to find a joinable boundary, so a sign
+    # segment can carry recorded context around its stroke. What it must never do is alter or drop
+    # a meaning-bearing frame: the whole stroke still appears verbatim, contiguously, inside it.
     for segment in sentence.segments:
         if segment.kind == "sign":
             source = reviewed[segment.gloss]
             span = spans[segment.gloss]
+            played = sentence.track.pose[segment.start:segment.end]
+            stroke = source.pose[span.start:span.end]
+            assert len(played) >= len(stroke)
+            offsets = [
+                i for i in range(len(played) - len(stroke) + 1)
+                if np.array_equal(played[i:i + len(stroke)], stroke)
+            ]
+            assert len(offsets) >= 1, f"{segment.gloss} stroke is not intact in the composition"
+            at = offsets[0]
             for channel in ("pose", "left_hand", "right_hand"):
                 np.testing.assert_array_equal(
-                    getattr(sentence.track, channel)[segment.start:segment.end],
+                    getattr(sentence.track, channel)[segment.start + at:segment.start + at + span.frame_count],
                     getattr(source, channel)[span.start:span.end],
                 )
     retained = [
-        (segment.gloss, segment.kind, segment.end - segment.start)
+        (segment.gloss, segment.kind)
         for segment in sentence.segments
         if segment.kind in {"preparation", "sign", "retraction"}
     ]
     assert retained == [
-        (names[0], "preparation", spans[names[0]].start),
-        (names[0], "sign", spans[names[0]].frame_count),
-        (names[1], "sign", spans[names[1]].frame_count),
-        (names[2], "sign", spans[names[2]].frame_count),
-        (names[2], "retraction", reviewed[names[2]].frame_count - spans[names[2]].end),
+        (names[0], "preparation"),
+        (names[0], "sign"),
+        (names[1], "sign"),
+        (names[2], "sign"),
+        (names[2], "retraction"),
     ]
 
 
@@ -252,20 +265,19 @@ def test_authored_phases_automatically_blend_without_pair_configuration(
         ))
 
     actual = blending.plan_transition
-    rejected_direct = False
 
-    def reject_first_sign_to_sign(*args, **kwargs):
-        nonlocal rejected_direct
+    # Every sign-to-sign direct bridge is refused, including the ones built while choosing a
+    # boundary, so the composition has to reach the phase-overlap strategy on its own.
+    def reject_sign_to_sign(*args, **kwargs):
         result = actual(*args, **kwargs)
         a, b = args[1], args[3]
-        if not rejected_direct and a.name != "neutral" and b.name != "neutral":
-            rejected_direct = True
+        if a.name != "neutral" and b.name != "neutral":
             return replace(result, quality=blending.TransitionQuality(
                 40.0, False, result.quality.metrics, ("forced direct rejection",),
             ))
         return result
 
-    monkeypatch.setattr(blending, "plan_transition", reject_first_sign_to_sign)
+    monkeypatch.setattr(blending, "plan_transition", reject_sign_to_sign)
     result = compose(skeleton, list(zip(names, reviewed, strict=True)))
 
     assert result.blend_quality["status"] == "direct"
@@ -276,11 +288,12 @@ def test_authored_phases_automatically_blend_without_pair_configuration(
     sign_segments = [segment for segment in result.segments if segment.kind == "sign"]
     for source, segment in zip(reviewed, sign_segments, strict=True):
         span = find_stroke(source)
-        for channel in ("pose", "left_hand", "right_hand"):
-            np.testing.assert_array_equal(
-                getattr(result.track, channel)[segment.start:segment.end],
-                getattr(source, channel)[span.start:span.end],
-            )
+        played = result.track.pose[segment.start:segment.end]
+        stroke = source.pose[span.start:span.end]
+        assert any(
+            np.array_equal(played[i:i + len(stroke)], stroke)
+            for i in range(len(played) - len(stroke) + 1)
+        ), "the protected stroke must survive the join intact"
     between = result.segments[result.segments.index(sign_segments[0]) + 1:
                               result.segments.index(sign_segments[1])]
     assert between and all(segment.kind == "transition" for segment in between)
@@ -458,3 +471,163 @@ def test_preparation_uses_csv_timebase_for_resampling(library, skeleton):
     with patch.object(module.resample, "resample_positions", capture_times):
         prepare(raw, skeleton)
     assert seen and any(np.any(np.abs(np.diff(t) - 1 / source.fps) > 0.001) for t in seen)
+
+
+def test_every_ordered_pair_of_reviewed_signs_composes(prepared, skeleton):
+    """No pair of reviewed captures may be unjoinable.
+
+    A reviewed boundary marks where meaning begins, which is not necessarily a frame the hand can
+    be delivered to - it can sit mid-stroke while the wrist is crossing 190 cm/s. Pinning the seam
+    there made whole pairs unplayable, with no remedy but retiming one sign by hand for every
+    neighbour it might ever meet. The seam search widens into preparation and retraction until a
+    bridge passes the gate, so joinability is a property of the algorithm rather than of how
+    carefully each capture happened to be timed.
+    """
+    import itertools
+    from dataclasses import replace
+
+    from app.ingest.segment import find_stroke
+
+    reviewed = {}
+    for name, track in prepared.items():
+        stroke = find_stroke(track)
+        reviewed[name] = replace(
+            track,
+            sign_start_s=stroke.start / track.fps,
+            sign_end_s=stroke.end / track.fps,
+            phase_source="authored-ui",
+            phase_reviewed=True,
+        )
+
+    for first, second in itertools.permutations(reviewed, 2):
+        composition = compose(
+            skeleton, [(first, reviewed[first]), (second, reviewed[second])],
+        )
+        assert composition.track.frame_count > 0, f"{first} -> {second} produced no frames"
+        assert composition.blend_quality["status"] == "direct"
+
+
+def test_a_boundary_in_fast_motion_is_still_joinable(prepared, skeleton):
+    """The specific shape of the failure: a sign whose reviewed start lands at high wrist speed."""
+    from dataclasses import replace
+
+    import numpy as np
+
+    from app.ingest.segment import find_stroke
+
+    names = list(prepared)[:2]
+    outgoing = prepared[names[0]]
+    incoming = prepared[names[1]]
+
+    # Move the reviewed start onto the fastest frame in the incoming capture - the worst possible
+    # place to have to deliver the hand to, and exactly what an author can produce in the studio.
+    speed = np.linalg.norm(np.diff(incoming.pose[:, 16], axis=0), axis=1) * incoming.fps
+    stroke = find_stroke(incoming)
+    fastest = int(np.argmax(speed[stroke.start:stroke.end])) + stroke.start
+
+    reviewed = [
+        replace(outgoing, sign_start_s=find_stroke(outgoing).start / outgoing.fps,
+                sign_end_s=find_stroke(outgoing).end / outgoing.fps,
+                phase_source="authored-ui", phase_reviewed=True),
+        replace(incoming, sign_start_s=fastest / incoming.fps,
+                sign_end_s=stroke.end / incoming.fps,
+                phase_source="authored-ui", phase_reviewed=True),
+    ]
+    composition = compose(skeleton, list(zip(names, reviewed, strict=True)))
+    assert composition.blend_quality["status"] == "direct"
+
+    # A boundary this hostile cannot always be given a generated bridge within the displacement
+    # the seam is allowed, and the resolution is deliberately ordered: the author's trim is honoured
+    # first and a cross-fade fallback is accepted second. What must hold either way is that the
+    # sentence plays and the sign is not quietly widened back into its run-up to buy a nicer seam.
+    seam = [s for s in composition.blend_quality["seams"] if s["fromGloss"] and s["toGloss"]][0]
+    assert seam["passed"] is True
+    cap = compose_module.SEAM_MAX_DISPLACEMENT_SECONDS * incoming.fps
+    incoming_segment = [
+        segment for segment in composition.segments
+        if segment.kind == "sign" and segment.gloss == names[1]
+    ][0]
+    authored_frames = stroke.end - fastest
+    widened = (incoming_segment.end - incoming_segment.start) - authored_frames
+    assert 0 <= widened <= cap, f"seam reinstated {widened / incoming.fps:.2f}s of run-up"
+
+
+def test_an_authored_boundary_is_kept_when_it_can_be_joined(prepared, skeleton):
+    """A sign that joins cleanly where it was trimmed must not be widened at all.
+
+    The seam is allowed to reach into preparation when the authored frame cannot be bridged, and
+    that licence has to stay narrow: ranked on posture cost alone the search happily reinstated a
+    whole second of run-up, so a sign trimmed to start at 0.9s played from 0.5s and read as
+    untrimmed. The authored pair is tried first and kept whenever it works.
+    """
+    from dataclasses import replace
+
+    from app.ingest.segment import find_stroke
+
+    names = list(prepared)[:2]
+    reviewed, spans = [], []
+    for name in names:
+        track = prepared[name]
+        stroke = find_stroke(track)
+        spans.append(stroke)
+        reviewed.append(replace(
+            track,
+            sign_start_s=stroke.start / track.fps,
+            sign_end_s=stroke.end / track.fps,
+            phase_source="authored-ui",
+            phase_reviewed=True,
+        ))
+
+    composition = compose(skeleton, list(zip(names, reviewed, strict=True)))
+    played = {
+        segment.gloss: segment.end - segment.start
+        for segment in composition.segments if segment.kind == "sign"
+    }
+    # Whatever the seam does, it may never reinstate more than the cap allows, and it may only
+    # add frames - a sign is never shortened below what the author marked as meaning-bearing.
+    cap = compose_module.SEAM_MAX_DISPLACEMENT_SECONDS * reviewed[0].fps
+    for name, stroke in zip(names, spans, strict=True):
+        assert played[name] >= stroke.frame_count, f"{name} lost meaning-bearing frames"
+        assert played[name] - stroke.frame_count <= cap, (
+            f"{name} reinstated {(played[name] - stroke.frame_count) / 60:.2f}s of run-up"
+        )
+
+
+def test_a_joinable_seam_is_never_moved(prepared, skeleton):
+    """When the authored boundary already works, the composed sign is exactly the stroke."""
+    from dataclasses import replace
+
+    from app.ingest import blend as blending
+    from app.ingest.segment import find_stroke
+
+    names = list(prepared)[:2]
+    reviewed = []
+    for name in names:
+        track = prepared[name]
+        stroke = find_stroke(track)
+        reviewed.append(replace(
+            track, sign_start_s=stroke.start / track.fps, sign_end_s=stroke.end / track.fps,
+            phase_source="authored-ui", phase_reviewed=True,
+        ))
+
+    # Force every bridge to pass, so the only thing that can move the seam is the search itself.
+    original = blending.plan_transition
+
+    def always_passes(*args, **kwargs):
+        result = original(*args, **kwargs)
+        return replace(result, quality=blending.TransitionQuality(
+            100.0, True, result.quality.metrics, (),
+        ))
+
+    blending.plan_transition = always_passes
+    try:
+        composition = compose(skeleton, list(zip(names, reviewed, strict=True)))
+    finally:
+        blending.plan_transition = original
+
+    for segment in composition.segments:
+        if segment.kind == "sign":
+            stroke = find_stroke(prepared[segment.gloss])
+            assert segment.end - segment.start == stroke.frame_count, (
+                f"{segment.gloss} was moved even though its authored boundary joined cleanly"
+            )

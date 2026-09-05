@@ -22,7 +22,7 @@
 }
 .shell__nav { display: flex; align-items: center; justify-content: flex-end; gap: clamp(20px, 3.4vw, 60px); }
 .shell__actions { display: flex; align-items: center; gap: 20px; padding-left: clamp(20px, 3.4vw, 60px); }
-.shell__menu-button, .shell__nav .shell__nav-mobile { display: none; }
+.shell__menu-button, .shell__nav .shell__nav-mobile, .shell__menu-actions { display: none; }
 .shell__menu-button {
   min-height: 44px; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid currentColor;
   border-radius: 999px; background: transparent; color: inherit; cursor: pointer; font-weight: 600;
@@ -75,9 +75,9 @@
 .pill-link--outline:hover, .button--ghost:hover { background: var(--charcoal); color: var(--cream); }
 .button:disabled { cursor: not-allowed; opacity: .42; }
 .button--wide { width: 100%; }
-.studio-preview { min-height: 620px; overflow: hidden; border-radius: 28px; background: #f4f0eb; }
+.studio-preview { min-height: 620px; overflow: hidden; border-radius: 28px; background: var(--surface); }
 .studio-preview__bar { display: flex; height: 38px; align-items: center; gap: 6px; padding: 0 14px; background: var(--charcoal); color: var(--cream); }
-.studio-preview__bar span { width: 8px; height: 8px; border-radius: 50%; background: #696969; }
+.studio-preview__bar span { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .studio-preview__bar b { margin-left: auto; font-size: 10px; font-weight: 500; letter-spacing: .08em; }
 .studio-preview__body { position: relative; min-height: 582px; overflow: hidden; padding: 30px; }
 .studio-preview__body > p { position: relative; z-index: 2; max-width: 6ch; font-size: clamp(50px, 7.5vw, 116px); font-weight: 700; line-height: .8; letter-spacing: -.075em; }
@@ -110,13 +110,13 @@
 .sign { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 29%); min-height: 72svh; }
 .sign__stage { position: sticky; top: 88px; align-self: start; min-height: 0; border-right: 1px solid var(--rule-on-light); padding: var(--gutter); }
 .sign__rail { display: flex; min-width: 0; flex-direction: column; }
-.stage { position: relative; height: clamp(500px, 72svh, 760px); min-height: 500px; overflow: hidden; border-radius: 26px; background: #d7d3cd; }
+.stage { position: relative; height: clamp(500px, 72svh, 760px); min-height: 500px; overflow: hidden; border-radius: 26px; background: var(--surface); }
 .stage__canvas { width: 100%; height: 100%; display: block; }
-.stage__overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 32px; background: #d7d3cd; text-align: center; }
+.stage__overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 32px; background: var(--surface); text-align: center; }
 .stage__progress { width: min(280px, 60vw); height: 2px; overflow: hidden; background: rgba(47,47,47,.2); }
 .stage__progress span { display: block; height: 100%; background: var(--red); transform-origin: left; transition: transform var(--slow) var(--ease); }
 .stage__status { position: absolute; top: 16px; right: 16px; display: inline-flex; min-height: 36px; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--charcoal); color: var(--cream); font-size: 11px; text-transform: uppercase; }
-.stage__dot { width: 7px; height: 7px; border-radius: 50%; background: #aaa; }
+.stage__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
 .stage__status--ready .stage__dot { background: #91c87f; }
 .stage__status--error .stage__dot { background: var(--red); }
 .panel { padding: 24px var(--gutter); border-bottom: 1px solid var(--rule-on-light); }
@@ -174,10 +174,10 @@
 .status { display: inline-flex; padding: 3px 8px; border: 1px solid var(--rule-on-light); border-radius: 999px; font-size: 11px; text-transform: uppercase; }
 
 /* Footer */
-.shell__foot { display: grid; grid-template-columns: 1.3fr 1fr 1fr .7fr; gap: 32px; padding: 64px var(--gutter) 28px; background: var(--charcoal); color: var(--cream); }
+.shell__foot { display: grid; grid-template-columns: 1.3fr 1fr 1fr .7fr; gap: 32px; padding: 64px var(--gutter) 28px; background: var(--ink); color: var(--paper); }
 .shell__foot-statement h3 { font-size: clamp(22px, 2.3vw, 38px); line-height: 1; letter-spacing: -.04em; }
-.shell__foot ul { color: #aaa; }
-.foot__col--end { justify-self: end; color: #aaa; text-align: right; }
+.shell__foot ul { color: var(--ink-muted); }
+.foot__col--end { justify-self: end; color: var(--ink-muted); text-align: right; }
 
 
 /* Scrolling keyword band between the hero and the case study. */
@@ -210,7 +210,7 @@
 .capabilities__head h2 { font-size: clamp(34px, 4.4vw, 68px); line-height: .96; letter-spacing: -.05em; }
 .capabilities__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule-on-light); border: 1px solid var(--rule-on-light); }
 .capability { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 34px 28px 44px; background: var(--cream); transition: background var(--fast) var(--ease); }
-.capability:hover { background: #f4f0eb; }
+.capability:hover { background: var(--surface); }
 .capability h3 { font-size: clamp(19px, 1.7vw, 25px); letter-spacing: -.03em; }
 .capability p { color: var(--muted); font-size: 15px; line-height: 1.5; }
 .capability__rule { position: absolute; bottom: 22px; left: 28px; width: 0; height: 1px; background: var(--charcoal); transition: width var(--slow) var(--ease); }
@@ -236,8 +236,9 @@
   .pipeline__item, .pipeline__item:not(:first-child) { padding: 26px 0 32px; border-right: 0; border-top: 1px solid var(--rule-on-light); }
   .pipeline, .capabilities { padding-block: 64px; }
   .landing__hero-copy { gap: 16px; }
-  .shell__head-inner { grid-template-columns: 1fr auto; min-height: 78px; }
+  .shell__head-inner { grid-template-columns: 1fr auto auto; min-height: 78px; }
   .wordmark { font-size: 32px; }
+  .shell__menu-actions { display: flex; align-items: center; }
   .shell__menu-button { display: inline-flex; justify-self: end; }
   .shell__actions { display: none; }
   .shell__nav {

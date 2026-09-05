@@ -119,20 +119,58 @@ def test_raw_preview_does_not_register_a_capture(stored):
         app.dependency_overrides.clear()
 
 
-def test_library_edit_must_agree_with_csv_phase_column(stored):
+def test_library_edit_supersedes_the_csv_phase_column(stored):
+    """The CSV Phase column seeds the editor; a deliberate edit replaces it.
+
+    Requiring the two to agree made the editor unusable for every capture authored with a Phase
+    column - the author would have had to retype boundaries they cannot see.
+    """
     import pandas as pd
     session, clip, raw = stored
     path = Path(clip.source_csv)
     df = pd.read_csv(path)
     df["Phase"] = ["start" if t < 0.3 else "sign" if t < 1.6 else "end" for t in raw.times]
     df.to_csv(path, index=False)
-    with pytest.raises(ValueError, match="conflict with the CSV Phase"):
-        edit_phases(session, clip, 0.4, 1.6)
-    assert clip.content_hash == "original"
+    updated = edit_phases(session, clip, 0.4, 1.6)
+    assert updated.content_hash != "original"
+    assert updated.qc["phases"]["signStartSeconds"] == pytest.approx(0.4, abs=1 / 60)
+    assert updated.qc["phases"]["source"] == "authored-ui"
 
 
-def test_off_grid_boundary_is_rejected_before_publishing(stored):
-    session, clip, _ = stored
-    with pytest.raises(ValueError, match="not a CSV Timestamp"):
-        edit_phases(session, clip, 0.31, 1.6)
-    assert clip.content_hash == "original"
+def test_off_grid_boundary_is_rounded_to_the_nearest_captured_row(stored):
+    session, clip, raw = stored
+    updated = edit_phases(session, clip, 0.31, 1.6)
+    saved = updated.qc["phases"]["signStartSeconds"]
+    nearest = float(raw.times[int(np.argmin(np.abs(raw.times - 0.31)))])
+    assert saved == pytest.approx(nearest)
+    assert saved in [pytest.approx(t) for t in raw.times]
+
+
+def test_edited_capture_still_composes_against_its_csv(stored):
+    """An edit that diverges from the CSV Phase column must not make the sign unplayable.
+
+    `load_source_motion` re-checks stored boundaries against the CSV on every compose. While that
+    check arbitrated between the two, saving an edit here would have traded one blocking error for
+    another the author had even less way to act on.
+    """
+    import pandas as pd
+
+    from app.services.compose_service import compose_clips
+    from app.services.source_motion import load_source_motion
+
+    session, clip, raw = stored
+    path = Path(clip.source_csv)
+    df = pd.read_csv(path)
+    df["Phase"] = ["start" if t < 0.3 else "sign" if t < 1.6 else "end" for t in raw.times]
+    df.to_csv(path, index=False)
+
+    edited = edit_phases(session, clip, 0.4, 1.6)
+    restored, _source = load_source_motion(
+        Path(edited.clip_path).with_suffix(".landmarks.json"), str(path),
+    )
+    assert restored.sign_start_s == pytest.approx(edited.qc["phases"]["signStartSeconds"])
+    assert restored.phase_source == "authored-ui"
+
+    composition, warnings = compose_clips([("HELLO", edited)])
+    assert composition.track.frame_count > 0
+    assert not [w for w in warnings if "review" in w]

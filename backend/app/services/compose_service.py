@@ -24,6 +24,7 @@ from app.ingest.compose import (
 )
 from app.ingest.landmarks import LandmarkSkeleton, LandmarkTake
 from app.models import SignClip
+from app.services.artifact_paths import clip_file, source_file
 from app.services.source_motion import load_source_motion
 
 
@@ -59,7 +60,7 @@ def _raw(clip_path: str, source_csv: str = "", source_hash: str = "") -> Landmar
 
 
 def landmark_path(clip: SignClip) -> Path:
-    return Path(clip.clip_path).parent / f"{clip.content_hash}.landmarks.json"
+    return clip_file(clip.clip_path).parent / f"{clip.content_hash}.landmarks.json"
 
 
 @lru_cache(maxsize=128)
@@ -137,7 +138,8 @@ def compose_clips(clips: list[tuple[str, SignClip]]) -> tuple[Composition, list[
             raise ComposeError(
                 f"{gloss} has no landmark frames; re-ingest the capture for that sign"
             )
-        source_csv = getattr(clip, "source_csv", "")
+        stored_csv = getattr(clip, "source_csv", "")
+        source_csv = str(source_file(stored_csv)) if stored_csv else ""
         try:
             source_hash = hashlib.sha256(Path(source_csv).read_bytes()).hexdigest() if source_csv else ""
         except OSError as exc:

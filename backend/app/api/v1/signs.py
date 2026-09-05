@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_session
 from app.models import Gloss, SignClip
-from app.services.compose_service import ComposeError, compose_clips
+from app.services.artifact_paths import clip_file, source_file
+from app.services.compose_service import ComposeError, compose_clips, landmark_path
 from app.services.phase_service import edit_phases
 from app.services.source_motion import load_source_motion, raw_payload
 
@@ -91,7 +92,7 @@ def raw_capture(clip_id: int, session: Session = Depends(get_session)):
     if clip is None:
         raise HTTPException(404, "no such clip")
     try:
-        raw, source = load_source_motion(Path(clip.clip_path).with_suffix(".landmarks.json"), clip.source_csv, validate_stored_phases=False)
+        raw, source = load_source_motion(landmark_path(clip), str(source_file(clip.source_csv)), validate_stored_phases=False)
         return raw_payload(raw, source)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
@@ -131,11 +132,11 @@ def set_canonical(clip_id: int, session: Session = Depends(get_session)):
 def _artifact_path(content_hash: str, session: Session) -> Path | None:
     clip = session.scalars(select(SignClip).where(SignClip.content_hash == content_hash)).first()
     if clip is not None:
-        return Path(clip.clip_path)
+        return clip_file(clip.clip_path)
     for row in session.scalars(select(SignClip)):
         for version in (row.qc or {}).get("phaseHistory", []):
             if version["contentHash"] == content_hash:
-                return Path(version["clipPath"])
+                return clip_file(version["clipPath"])
     return None
 
 

@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
-import { captureTimes, captureFrameAt, nearestCaptureFrame } from '../capturePhases'
+import { captureTimes, captureFrameAt, nearestCaptureFrame, snapBoundary } from '../capturePhases'
 
 const BODY = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28]]
 const HAND = [1, 5, 9, 13, 17].flatMap((start) => [[0, start], [start, start + 1], [start + 1, start + 2], [start + 2, start + 3]])
@@ -77,7 +77,9 @@ export default function MotionPhaseEditor({ track, signStart, signEnd, onChange,
     <fieldset className="motion-editor" disabled={disabled}>
       <legend>Review captured movement</legend>
       <p className="hint">Keep the full sign and its holds. Times are seconds from the first CSV Timestamp; each slider step selects a captured CSV row.</p>
-      {track.csvPhaseBounds && <p className="hint">CSV Phase boundaries: {track.csvPhaseBounds.signStartSeconds.toFixed(6)}s → {track.csvPhaseBounds.signEndSeconds.toFixed(6)}s. Inputs must match these values. To change them, correct the CSV Phase column and upload a new take.</p>}
+      {track.csvPhaseBounds && <p className="hint">CSV Phase column: {track.csvPhaseBounds.signStartSeconds.toFixed(6)}s → {track.csvPhaseBounds.signEndSeconds.toFixed(6)}s. {track.phaseSource === 'authored-ui'
+        ? 'This take has been re-timed here, so the boundaries below are the ones it plays with; the CSV values are shown only for reference.'
+        : 'These seed the boundaries below; anything you save replaces them for this take.'}</p>}
       <div className="motion-editor__viewport">
         <div className="motion-editor__views" style={{ width: `${zoom * 100}%` }}>
           <Skeleton track={track} index={frame} axis={0} bounds={bounds} />
@@ -104,7 +106,8 @@ export default function MotionPhaseEditor({ track, signStart, signEnd, onChange,
         <div className="motion-editor__boundary" key={key}>
           <label htmlFor={`${id}-${key}`}>{label} (seconds)</label>
           <input id={`${id}-${key}`} type="number" required min="0" max={times.at(-1)} step="any" value={value}
-            onChange={(event) => onChange({ [key]: event.target.value })} />
+            onChange={(event) => onChange({ [key]: event.target.value })}
+            onBlur={(event) => event.target.value !== '' && onChange({ [key]: String(snapBoundary(track, event.target.value)) })} />
           <input type="range" aria-label={`${label} boundary`} min="0" max={track.frameCount - 1} step="1" value={value === '' ? 0 : nearestCaptureFrame(times, Number(value))}
             onChange={(event) => onChange({ [key]: String(times[Number(event.target.value)]) })} />
           <button type="button" className="secondary" onClick={() => onChange({ [key]: String(time) })}>Use current frame</button>

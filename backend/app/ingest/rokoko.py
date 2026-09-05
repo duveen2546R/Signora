@@ -152,12 +152,19 @@ def validate_phase_seconds(start: float, end: float, clip_end: float) -> None:
         )
 
 
-def align_csv_boundary(times: np.ndarray, value: float) -> float:
-    """Accept a CSV row timestamp (allow sub-millisecond display rounding), never invent a cut."""
+def align_csv_boundary(times: np.ndarray, value: float, *, snap: bool = False) -> float:
+    """Resolve an authored boundary onto a real CSV row, never inventing a cut between rows.
+
+    Nobody authoring a boundary knows the capture's row timestamps - they are irregular (a nominal
+    30 fps take steps 0.033s but drifts), and the studio offers a slider and a seconds field, not a
+    list of times. `snap` therefore rounds to the nearest captured row instead of refusing, which is
+    the same guarantee reached by a different route: the boundary still lands exactly on a frame.
+    The strict form is kept for callers verifying a value that is already supposed to be a row.
+    """
     if not np.isfinite(value):
         raise RokokoFormatError("sign timestamps must be finite numbers")
     nearest = float(times[int(np.argmin(np.abs(times - value)))])
-    if abs(nearest - value) > 0.00051:
+    if not snap and abs(nearest - value) > 0.00051:
         raise RokokoFormatError(
             f"Boundary {value:.6f}s is not a CSV Timestamp. "
             f"Choose a captured frame (nearest: {nearest:.6f}s)."
@@ -171,8 +178,16 @@ def with_phase_bounds(
     sign_end_s: float | None,
     *,
     source: str = "authored-ui",
+    snap: bool = False,
+    override_csv_phase: bool = False,
 ) -> Take:
-    """Validate user-authored sign boundaries and attach them to a parsed take."""
+    """Validate user-authored sign boundaries and attach them to a parsed take.
+
+    `snap` rounds each boundary to the nearest captured row rather than rejecting a value that
+    falls between rows. `override_csv_phase` lets an authored boundary supersede the CSV Phase
+    column instead of being refused as a conflict; the two are then distinguished by
+    `phase_source`, and the CSV's own boundaries stay readable for display.
+    """
     if (sign_start_s is None) != (sign_end_s is None):
         raise RokokoFormatError("sign start and sign end timestamps must be supplied together")
     if sign_start_s is None:
@@ -181,12 +196,15 @@ def with_phase_bounds(
     start, end = float(sign_start_s), float(sign_end_s)
     step = float(np.median(np.diff(take.times))) if take.frame_count > 1 else 0.0
     clip_end = float(take.times[-1] + step) if take.frame_count else 0.0
-    validate_phase_seconds(start, end, clip_end)
-    start = align_csv_boundary(take.times, start)
-    end = align_csv_boundary(take.times, end)
+    # Snap before range-checking: a value a few milliseconds outside a limit may well land on a
+    # row that satisfies it, and rejecting what the author meant is the behaviour being removed.
+    if not snap:
+        validate_phase_seconds(start, end, clip_end)
+    start = align_csv_boundary(take.times, start, snap=snap)
+    end = align_csv_boundary(take.times, end, snap=snap)
     validate_phase_seconds(start, end, clip_end)
 
-    if take.has_phase_bounds:
+    if take.has_phase_bounds and not override_csv_phase:
         tolerance = 1e-6
         if abs(start - take.sign_start_s) > tolerance or abs(end - take.sign_end_s) > tolerance:
             raise RokokoFormatError(

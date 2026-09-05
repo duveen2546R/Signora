@@ -24,7 +24,7 @@ from .landmarks import LandmarkSkeleton, LandmarkTake, concat, slice_frames
 from .segment import Phases, Stroke, boundary_candidates, find_phases, find_stroke, usable_range
 
 TARGET_FPS = 60.0
-ALGORITHM_VERSION = 7
+ALGORITHM_VERSION = 8
 
 # Stillness after each sign so one word reads as finished before the next begins.
 HOLD_SECONDS = 0.10
@@ -33,7 +33,15 @@ PHASE_ASSIST_OUTGOING_SECONDS = 0.40
 PHASE_ASSIST_INCOMING_SECONDS = 0.15
 PHASE_ASSIST_STEP_SECONDS = 0.05
 
-
+# The furthest a seam may reach into preparation/retraction looking for a joinable boundary. A
+# reviewed boundary marks where meaning starts, which need not be a frame the hand can be delivered
+# to - it can sit mid-stroke at 190 cm/s. Rather than asking for that sign to be retimed by hand for
+# each neighbour it meets, the seam may move, but never far enough to play a sign's whole run-up:
+# beyond this it is left to the fallback strategies instead.
+SEAM_MAX_DISPLACEMENT_SECONDS = 0.60
+# Granularity of the first sweep. Adjacent frames are near-identical postures, so stepping 50 ms
+# finds the right neighbourhood for a fraction of the bridges a frame-exact sweep would build.
+SEAM_COARSE_STEP_SECONDS = 0.05
 class BlendRejected(ValueError):
     """A generated bridge failed the motion-quality constraints."""
 
@@ -291,37 +299,102 @@ def compose(
 
     # Nothing is joined at an edge that plays its own recorded phase, so there is nothing to
     # optimize there - the boundary is the phase boundary.
-    if lead_in is None:
-        first_candidates = (
-            [detected[0].start] if clips[0][1].phase_reviewed
-            else boundary_candidates(clips[0][1], detected[0], "entry")
+    #
+    # Reviewing a capture fixes where its *meaning* begins and ends; it does not dictate where the
+    # sign is easiest to join to a neighbour, and those are different questions. Authored
+    # timestamps used to pin the seam to the exact reviewed frame, which is how a boundary landing
+    # mid-stroke - the hand crossing 190 cm/s on its way to a peak - became unjoinable, with no
+    # remedy but retiming that sign by hand for every neighbour it might meet. `boundary_candidates`
+    # searches only preparation and retraction, so widening the choice here can add recorded run-up
+    # or return but can never remove a frame the review marked as meaning-bearing.
+    def choose(
+        a: LandmarkTake, a_stroke: Stroke, b: LandmarkTake, b_stroke: Stroke,
+    ) -> tuple[int, int]:
+        """Boundary frames for one join: the authored ones, or the nearest pair that can be bridged.
+
+        A reviewed boundary says where the sign begins, and the composition has to honour it - a
+        sign trimmed to start at 0.9s must not play from 0.5s because some earlier frame happened
+        to join more cheaply. But an authored boundary can also land somewhere the hand cannot be
+        delivered to, mid-stroke at 190 cm/s, and then the sentence will not play at all.
+
+        These two pull against each other and cannot be traded off with a single weight: charging
+        for departure keeps seams honest but hides the far candidate that is the only one that
+        works. So the rule is ordered rather than weighted. Among boundaries whose bridge passes the
+        motion-quality gate, the one nearest the author's is taken; `seam_cost` only breaks ties
+        between equally displaced pairs. The authored pair itself is tried first, so a sign that can
+        be joined where it was trimmed is never moved at all.
+
+        The search is coarse-to-fine: a strided sweep finds roughly how far the seam has to
+        travel, then a frame-exact sweep of that neighbourhood recovers the nearest boundary within
+        one stride of the true minimum. Candidates are visited nearest-first and the sweep stops at
+        the first success, so a seam that works as authored costs a single bridge and only a
+        difficult one pays for the search.
+        """
+        authored = (a_stroke.end - 1, b_stroke.start)
+
+        def passes(pair: tuple[int, int]) -> bool:
+            return blend.plan_transition(skel, a, pair[0], b, pair[1], fps).quality.passed
+
+        if passes(authored):
+            return authored
+
+        def distance(pair: tuple[int, int]) -> int:
+            return abs(pair[0] - authored[0]) + abs(pair[1] - authored[1])
+
+        def nearest_first(exit_offers, entry_offers):
+            """Pairs in ascending distance from the authored boundary, ties by posture cost.
+
+            Grouped rather than sorted outright so `seam_cost` is only paid for the groups the
+            sweep actually reaches - it stops at the first pair that can be bridged.
+            """
+            groups: dict[int, list[tuple[int, int]]] = {}
+            for x in exit_offers:
+                for y in entry_offers:
+                    groups.setdefault(distance((x, y)), []).append((x, y))
+            for at in sorted(groups):
+                group = groups[at]
+                if len(group) > 1:
+                    group.sort(key=lambda p: blend.seam_cost(skel, a, p[0], b, p[1]))
+                yield from group
+
+        limit = int(round(SEAM_MAX_DISPLACEMENT_SECONDS * fps))
+        exits = [at for at in boundary_candidates(a, a_stroke, "exit", None)
+                 if at - authored[0] <= limit]
+        entries = [at for at in boundary_candidates(b, b_stroke, "entry", None)
+                   if authored[1] - at <= limit]
+
+        stride = max(int(round(SEAM_COARSE_STEP_SECONDS * fps)), 1)
+        coarse = next(
+            (pair for pair in nearest_first(exits[::stride], entries[::stride]) if passes(pair)),
+            None,
         )
+        if coarse is None:
+            # Nothing within reach can be bridged directly; hand the closest offer to the fallback
+            # strategies rather than reinstating a sign's whole run-up to chase a direct bridge.
+            return next(nearest_first(exits[::stride], entries[::stride]), authored)
+
+        # The strided sweep can only land on a multiple of the stride, so the nearest joinable
+        # boundary may sit just inside it. Re-sweep the frames the stride skipped over.
+        near_exits = [at for at in exits if abs(at - coarse[0]) < stride]
+        near_entries = [at for at in entries if abs(at - coarse[1]) < stride]
+        closer = (
+            pair for pair in nearest_first(near_exits, near_entries)
+            if distance(pair) < distance(coarse)
+        )
+        return next((pair for pair in closer if passes(pair)), coarse)
+
+    if lead_in is None:
         entries[0] = min(
-            first_candidates,
+            boundary_candidates(clips[0][1], detected[0], "entry"),
             key=lambda at: blend.seam_cost(skel, rest_track, 0, clips[0][1], at),
         )
     for i in range(len(clips) - 1):
-        outgoing = (
-            [detected[i].end - 1] if clips[i][1].phase_reviewed
-            else boundary_candidates(clips[i][1], detected[i], "exit")
-        )
-        incoming = (
-            [detected[i + 1].start] if clips[i + 1][1].phase_reviewed
-            else boundary_candidates(clips[i + 1][1], detected[i + 1], "entry")
-        )
-        exits[i], entries[i + 1] = min(
-            ((a_at, b_at) for a_at in outgoing for b_at in incoming),
-            key=lambda pair: blend.seam_cost(
-                skel, clips[i][1], pair[0], clips[i + 1][1], pair[1],
-            ),
+        exits[i], entries[i + 1] = choose(
+            clips[i][1], detected[i], clips[i + 1][1], detected[i + 1],
         )
     if lead_out is None:
-        last_candidates = (
-            [detected[-1].end - 1] if clips[-1][1].phase_reviewed
-            else boundary_candidates(clips[-1][1], detected[-1], "exit")
-        )
         exits[-1] = min(
-            last_candidates,
+            boundary_candidates(clips[-1][1], detected[-1], "exit"),
             key=lambda at: blend.seam_cost(skel, clips[-1][1], at, rest_track, 0),
         )
 

@@ -83,17 +83,26 @@ class Stroke:
         return self.end - self.start
 
 
-def boundary_candidates(take: LandmarkTake, stroke: Stroke, side: str) -> range:
+def boundary_candidates(
+    take: LandmarkTake, stroke: Stroke, side: str, seconds: float | None = None,
+) -> range:
     """Safe entry/exit frames around a protected stroke.
 
     Entry candidates live before (and include) ``stroke.start``; exit candidates live after (and
     include) the final protected frame. Consequently optimizing a seam can add preparation or
     retraction, but can never remove a frame that stroke detection marked as meaning-bearing.
+
+    ``seconds`` overrides how far the search may reach; ``None`` offers every usable frame outside
+    the protected stroke. A seam is joined with the tightest window that works, so the default stays
+    small and a wider one is only paid for when the tight seam cannot be built at all.
     """
     if side not in {"entry", "exit"}:
         raise ValueError("side must be 'entry' or 'exit'")
     head, tail, _ = usable_range(take)
-    window = max(int(round(SEAM_SEARCH_SECONDS * take.fps)), 1)
+    if seconds is None:
+        window = take.frame_count
+    else:
+        window = max(int(round(seconds * take.fps)), 1)
     if side == "entry":
         start = max(head, stroke.start - window)
         return range(start, stroke.start + 1)

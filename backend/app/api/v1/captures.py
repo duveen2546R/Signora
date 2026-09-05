@@ -54,7 +54,9 @@ async def upload_capture(
             raise RokokoFormatError(
                 "enter the Start→Sign and Sign→End timestamps before uploading"
             )
-        with_phase_bounds(parsed, sign_start_seconds, sign_end_seconds)
+        with_phase_bounds(
+            parsed, sign_start_seconds, sign_end_seconds, snap=True, override_csv_phase=True,
+        )
     except RokokoFormatError as exc:
         temporary.unlink(missing_ok=True)
         raise HTTPException(400, str(exc)) from exc

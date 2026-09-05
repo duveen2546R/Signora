@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import MotionPhaseEditor from '../components/MotionPhaseEditor'
-import { inspectCaptureDuration, phaseDurations, validatePhaseDraft } from '../capturePhases'
+import { inspectCaptureDuration, phaseDurations, snapPhaseDraft, validatePhaseDraft } from '../capturePhases'
 
 /** Upload rig profiles and motion captures, and watch ingest results come back. */
 export default function Capture({ onLibraryChanged }) {
@@ -72,9 +72,10 @@ export default function Capture({ onLibraryChanged }) {
     }
     updateDraft(id, { uploading: true, error: null })
     try {
+      const snapped = snapPhaseDraft(draft)
       const phases = {
-        signStartSeconds: Number(draft.signStart),
-        signEndSeconds: Number(draft.signEnd),
+        signStartSeconds: snapped.signStart,
+        signEndSeconds: snapped.signEnd,
       }
       const job = await api.uploadCapture(draft.file, phases)
       setJobs((previous) => [{ ...job, name: draft.file.name }, ...previous])
