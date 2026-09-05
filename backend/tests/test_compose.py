@@ -631,3 +631,119 @@ def test_a_joinable_seam_is_never_moved(prepared, skeleton):
             assert segment.end - segment.start == stroke.frame_count, (
                 f"{segment.gloss} was moved even though its authored boundary joined cleanly"
             )
+
+
+def test_three_reviewed_signs_keep_exact_bounds_when_shifted_seams_are_easier(
+    prepared, skeleton, monkeypatch,
+):
+    """A failed exact bridge must not restart the next word in its Start phase."""
+    from dataclasses import replace
+    from app.ingest import blend as blending
+    from app.ingest.segment import find_phases, find_stroke
+
+    clips = []
+    spans = {}
+    for name, track in prepared.items():
+        stroke = find_stroke(track)
+        reviewed = replace(
+            track, sign_start_s=stroke.start / track.fps,
+            sign_end_s=stroke.end / track.fps,
+            phase_source="authored-ui", phase_reviewed=True,
+        )
+        clips.append((name, reviewed))
+        spans[name] = find_phases(reviewed)
+
+    actual = blending.plan_transition
+
+    def bridge_with_easier_shifted_boundary(skel, a, ai, b, bi, fps):
+        result = actual(skel, a, ai, b, bi, fps)
+        # Reject exact semantic joins, but offer a passing bridge if the old
+        # optimizer moves either boundary into Start/End. Outer rest joins pass.
+        internal = a.name in spans and b.name in spans
+        shifted = internal and (
+            ai >= spans[a.name].stroke_end or bi < spans[b.name].stroke_start
+        )
+        passed = not internal or shifted
+        return replace(result, quality=blending.TransitionQuality(
+            100.0 if passed else 40.0, passed, result.quality.metrics,
+            () if passed else ("exact bridge needs overlap",),
+        ))
+
+    monkeypatch.setattr(blending, "plan_transition", bridge_with_easier_shifted_boundary)
+    result = compose(skeleton, clips)
+    signs = [s for s in result.segments if s.kind == "sign"]
+    assert len(signs) == 3
+    for (name, source), segment in zip(clips, signs, strict=True):
+        span = spans[name]
+        for channel in ("pose", "left_hand", "right_hand"):
+            np.testing.assert_array_equal(
+                getattr(result.track, channel)[segment.start:segment.end],
+                getattr(source, channel)[span.stroke_start:span.stroke_end],
+            )
+    assert [(s.occurrence_index, s.kind) for s in result.segments
+            if s.kind in {"preparation", "sign", "retraction"}] == [
+        (0, "preparation"), (0, "sign"), (1, "sign"),
+        (2, "sign"), (2, "retraction"),
+    ]
+
+
+def test_pacing_preserves_reviewed_source_positions(prepared, skeleton):
+    from dataclasses import replace
+    from app.ingest.segment import find_stroke
+    from app.services.compose_service import _pace_reviewed
+
+    source = next(iter(prepared.values()))
+    stroke = find_stroke(source)
+    source = replace(source, sign_start_s=stroke.start / source.fps,
+                     sign_end_s=stroke.end / source.fps,
+                     phase_source="authored-ui", phase_reviewed=True)
+    paced = _pace_reviewed(source, skeleton)
+    assert paced.sign_start_s / 1.25 == pytest.approx(source.sign_start_s)
+    assert paced.sign_end_s / 1.25 == pytest.approx(source.sign_end_s)
+    assert paced.duration == pytest.approx(source.duration * 1.25, abs=1 / source.fps)
+    assert paced.phase_reviewed and paced.phase_source == source.phase_source
+    assert segment_errors(skeleton, paced) < 5e-4
+    for channel in ("pose", "left_hand", "right_hand"):
+        # Every fourth original frame lies exactly on the fifth paced frame.
+        np.testing.assert_allclose(getattr(paced, channel)[::5][:len(getattr(source, channel)[::4])],
+                                   getattr(source, channel)[::4], atol=1e-9)
+
+
+@pytest.mark.parametrize("retry_passes", [True, False])
+def test_reviewed_sequence_pacing_retry_is_reported_and_validated(
+    prepared, monkeypatch, retry_passes,
+):
+    from dataclasses import replace
+    from types import SimpleNamespace
+    from app.ingest.segment import find_stroke
+    from app.services import compose_service as svc
+
+    reviewed = {}
+    for name, source in prepared.items():
+        stroke = find_stroke(source)
+        reviewed[name] = replace(source, sign_start_s=stroke.start / source.fps,
+                                 sign_end_s=stroke.end / source.fps,
+                                 phase_source="authored-ui", phase_reviewed=True)
+    monkeypatch.setattr(svc, "_raw", lambda path, *_: reviewed[path])
+    monkeypatch.setattr(svc, "prepare", lambda track, *_args, **_kwargs: track)
+    attempts = []
+
+    def gated_compose(_skeleton, clips, **_kwargs):
+        attempts.append(clips)
+        if len(attempts) == 1 or not retry_passes:
+            raise BlendRejected("fast boundary")
+        return SimpleNamespace(blend_quality={"status": "direct"})
+
+    monkeypatch.setattr(svc, "compose", gated_compose)
+    key = tuple((name, name, name, "", "") for name in reviewed)
+    if retry_passes:
+        composition, warnings = svc._compose_cached.__wrapped__(key, ALGORITHM_VERSION)
+        assert composition.blend_quality["playbackRate"] == 0.8
+        assert any("80% speed" in warning for warning in warnings)
+    else:
+        with pytest.raises(svc.ComposeError, match="fast boundary"):
+            svc._compose_cached.__wrapped__(key, ALGORITHM_VERSION)
+    assert len(attempts) == 2
+    for (_, original), (_, paced) in zip(*attempts, strict=True):
+        assert paced.sign_start_s == pytest.approx(original.sign_start_s * 1.25)
+        assert paced.sign_end_s == pytest.approx(original.sign_end_s * 1.25)

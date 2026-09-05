@@ -24,7 +24,7 @@ from .landmarks import LandmarkSkeleton, LandmarkTake, concat, slice_frames
 from .segment import Phases, Stroke, boundary_candidates, find_phases, find_stroke, usable_range
 
 TARGET_FPS = 60.0
-ALGORITHM_VERSION = 8
+ALGORITHM_VERSION = 9
 
 # Stillness after each sign so one word reads as finished before the next begins.
 HOLD_SECONDS = 0.10
@@ -300,41 +300,29 @@ def compose(
     # Nothing is joined at an edge that plays its own recorded phase, so there is nothing to
     # optimize there - the boundary is the phase boundary.
     #
-    # Reviewing a capture fixes where its *meaning* begins and ends; it does not dictate where the
-    # sign is easiest to join to a neighbour, and those are different questions. Authored
-    # timestamps used to pin the seam to the exact reviewed frame, which is how a boundary landing
-    # mid-stroke - the hand crossing 190 cm/s on its way to a peak - became unjoinable, with no
-    # remedy but retiming that sign by hand for every neighbour it might meet. `boundary_candidates`
-    # searches only preparation and retraction, so widening the choice here can add recorded run-up
-    # or return but can never remove a frame the review marked as meaning-bearing.
+    # Reviewed boundaries are fixed. Only unreviewed motion may use the seam
+    # search below; authored joins use the phase-aware strategies in join().
     def choose(
         a: LandmarkTake, a_stroke: Stroke, b: LandmarkTake, b_stroke: Stroke,
     ) -> tuple[int, int]:
-        """Boundary frames for one join: the authored ones, or the nearest pair that can be bridged.
+        """Keep reviewed boundaries fixed; optimize only unreviewed boundaries.
 
-        A reviewed boundary says where the sign begins, and the composition has to honour it - a
-        sign trimmed to start at 0.9s must not play from 0.5s because some earlier frame happened
-        to join more cheaply. But an authored boundary can also land somewhere the hand cannot be
-        delivered to, mid-stroke at 190 cm/s, and then the sentence will not play at all.
-
-        These two pull against each other and cannot be traded off with a single weight: charging
-        for departure keeps seams honest but hides the far candidate that is the only one that
-        works. So the rule is ordered rather than weighted. Among boundaries whose bridge passes the
-        motion-quality gate, the one nearest the author's is taken; `seam_cost` only breaks ties
-        between equally displaced pairs. The authored pair itself is tried first, so a sign that can
-        be joined where it was trimmed is never moved at all.
-
-        The search is coarse-to-fine: a strided sweep finds roughly how far the seam has to
-        travel, then a frame-exact sweep of that neighbourhood recovers the nearest boundary within
-        one stride of the true minimum. Candidates are visited nearest-first and the sweep stops at
-        the first success, so a seam that works as authored costs a single bridge and only a
-        difficult one pays for the search.
+        For unreviewed motion, try the detected pair first, then search outward
+        nearest-first. A coarse sweep finds a passing neighbourhood and a
+        frame-exact sweep refines it. Reviewed sides never enter this search;
+        join() handles their transition without changing the Sign range.
         """
         authored = (a_stroke.end - 1, b_stroke.start)
 
         def passes(pair: tuple[int, int]) -> bool:
             return blend.plan_transition(skel, a, pair[0], b, pair[1], fps).quality.passed
 
+        # Saved Start/Sign/End boundaries define sentence position. Do not widen a
+        # reviewed sign into its standalone run-up/return to make a bridge cheaper.
+        # join() can blend the neighbouring phase trajectories when the exact
+        # boundary needs assistance, without replaying them as part of the Sign.
+        if a.phase_reviewed and b.phase_reviewed:
+            return authored
         if passes(authored):
             return authored
 
@@ -358,10 +346,14 @@ def compose(
                 yield from group
 
         limit = int(round(SEAM_MAX_DISPLACEMENT_SECONDS * fps))
-        exits = [at for at in boundary_candidates(a, a_stroke, "exit", None)
-                 if at - authored[0] <= limit]
-        entries = [at for at in boundary_candidates(b, b_stroke, "entry", None)
-                   if authored[1] - at <= limit]
+        exits = ([authored[0]] if a.phase_reviewed else [
+            at for at in boundary_candidates(a, a_stroke, "exit", None)
+            if at - authored[0] <= limit
+        ])
+        entries = ([authored[1]] if b.phase_reviewed else [
+            at for at in boundary_candidates(b, b_stroke, "entry", None)
+            if authored[1] - at <= limit
+        ])
 
         stride = max(int(round(SEAM_COARSE_STEP_SECONDS * fps)), 1)
         coarse = next(
@@ -495,13 +487,13 @@ def compose(
                 incoming_phase.stroke_start - incoming_phase.prep_start - 1,
                 int(round(PHASE_ASSIST_INCOMING_SECONDS * fps)),
             )
-            outgoing_offsets = list(range(0, max(max_outgoing, 0) + 1, step))
+            # -1 joins directly from the last Sign frame, adding no End motion.
+            outgoing_offsets = [-1, *range(0, max(max_outgoing, 0) + 1, step)]
             if max_outgoing >= 0 and max_outgoing not in outgoing_offsets:
                 outgoing_offsets.append(max_outgoing)
-            incoming_backs = [
-                value for value in (step, step * 2, 0, step * 3)
-                if value <= max_incoming
-            ]
+            # Prefer the shortest incoming context so the transition does not
+            # replay an unnecessary portion of the standalone Start phase.
+            incoming_backs = list(range(0, max(max_incoming, 0) + 1, step))
             if max_incoming >= 0 and max_incoming not in incoming_backs:
                 incoming_backs.append(max_incoming)
 
@@ -543,15 +535,15 @@ def compose(
 
             if assisted is not None:
                 outgoing_at, incoming_at, candidate = assisted
-                outgoing_context = slice_frames(
+                outgoing_context = (slice_frames(
                     outgoing_take, outgoing_phase.stroke_end, outgoing_at + 1,
-                )
+                ) if outgoing_at >= outgoing_phase.stroke_end else None)
                 incoming_context = slice_frames(
                     incoming_take, incoming_at, incoming_phase.stroke_start,
                 )
                 score = candidate.quality.score
                 duration_seconds = (
-                    outgoing_context.frame_count / fps
+                    (outgoing_context.frame_count if outgoing_context is not None else 0) / fps
                     + candidate.duration
                     + incoming_context.frame_count / fps
                 )
@@ -564,12 +556,13 @@ def compose(
                     "durationMs": int(round(duration_seconds * 1000)),
                     "directAttempt": direct_attempt,
                     "boundaryAdjustment": {
-                        "outgoingFrames": outgoing_context.frame_count,
+                        "outgoingFrames": outgoing_context.frame_count if outgoing_context is not None else 0,
                         "incomingFrames": incoming_context.frame_count,
                     },
                 })
                 seams.append(seam)
-                add(outgoing_context, to_gloss, "transition", "direct", score)
+                if outgoing_context is not None:
+                    add(outgoing_context, to_gloss, "transition", "direct", score)
                 add(candidate.track, to_gloss, "transition", "direct", score)
                 add(incoming_context, to_gloss, "transition", "direct", score)
                 return "direct"

@@ -11,15 +11,20 @@ from __future__ import annotations
 import json
 import hashlib
 import logging
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 
+import numpy as np
+
+from app.ingest.resample import resample_positions
 from app.ingest.compose import (
     ALGORITHM_VERSION,
     TARGET_FPS,
     BlendRejected,
     Composition,
     compose,
+    enforce_track,
     prepare,
 )
 from app.ingest.landmarks import LandmarkSkeleton, LandmarkTake
@@ -61,6 +66,22 @@ def _raw(clip_path: str, source_csv: str = "", source_hash: str = "") -> Landmar
 
 def landmark_path(clip: SignClip) -> Path:
     return clip_file(clip.clip_path).parent / f"{clip.content_hash}.landmarks.json"
+
+
+def _pace_reviewed(track: LandmarkTake, skeleton: LandmarkSkeleton) -> LandmarkTake:
+    """Play at 80% speed without moving boundaries within the captured motion."""
+    stretch = 1.25
+    source_times = track.times
+    target = np.arange(int(np.ceil(track.frame_count * stretch))) / track.fps / stretch
+    return enforce_track(skeleton, replace(
+        track,
+        pose=resample_positions(source_times, track.pose, target),
+        left_hand=resample_positions(source_times, track.left_hand, target),
+        right_hand=resample_positions(source_times, track.right_hand, target),
+        sign_start_s=track.sign_start_s * stretch,
+        sign_end_s=track.sign_end_s * stretch,
+        timestamps=None,
+    ))
 
 
 @lru_cache(maxsize=128)
@@ -114,7 +135,27 @@ def _compose_cached(
             shared, prepared, fps=TARGET_FPS, algorithm_version=algorithm_version,
         )
     except BlendRejected as exc:
-        raise ComposeError(str(exc), exc.blend_quality) from exc
+        # A reviewed boundary may lie in fast motion. Keep its source position
+        # fixed and try a modest, uniform slowdown before declaring it unjoinable.
+        # Every retry still passes the same geometry and motion-quality checks.
+        if len(prepared) < 2 or not all(
+            track.phase_reviewed and track.has_phase_bounds for _, track in prepared
+        ):
+            raise ComposeError(str(exc), exc.blend_quality) from exc
+        try:
+            composition = compose(
+                shared, [(gloss, _pace_reviewed(track, shared)) for gloss, track in prepared],
+                fps=TARGET_FPS, algorithm_version=algorithm_version,
+            )
+        except BlendRejected as paced_exc:
+            raise ComposeError(str(paced_exc), paced_exc.blend_quality) from paced_exc
+        except ValueError as paced_exc:
+            raise ComposeError(str(paced_exc)) from paced_exc
+        composition.blend_quality["playbackRate"] = 0.8
+        warnings.append(
+            "Playing at 80% speed to preserve saved Start, Sign and End boundaries "
+            "through fast transitions."
+        )
     except ValueError as exc:
         raise ComposeError(str(exc)) from exc
     return composition, tuple(warnings)
