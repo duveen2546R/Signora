@@ -30,7 +30,7 @@ def translate(body: TranslateRequest, session: Session = Depends(get_session)):
     track, error, blend_quality = None, None, None
     warnings: list[str] = []
     issues = list(interpretation.issues)
-    if interpretation.status == "ready" and items:
+    if interpretation.status in {"ready", "preview"} and items:
         clips = session.scalars(
             select(SignClip).where(SignClip.id.in_([i.clip_id for i in items]))
         ).all()

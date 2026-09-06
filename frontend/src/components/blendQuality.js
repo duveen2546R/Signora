@@ -1,7 +1,7 @@
 import { assertPayloadShape } from '../unity/canonicalFrame.js'
 
 export function playableTrack(result) {
-  if (result?.translationStatus !== 'ready' || result?.blendQuality?.status !== 'direct' || result?.error) return null
+  if (!['ready', 'preview'].includes(result?.translationStatus) || result?.blendQuality?.status !== 'direct' || result?.error) return null
   if (!result.track || result.track.blendQuality?.status !== 'direct') return null
   if (result.blendQuality.seams?.some((seam) => seam.passed !== true || seam.mode !== 'direct')) return null
   try {

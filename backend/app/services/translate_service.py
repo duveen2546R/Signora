@@ -122,19 +122,34 @@ def interpret(session: Session, text: str, registry: Registry | None = None) -> 
     # An exact reviewed phrase has precedence over a generic reviewed spelling slot.
     exact = [(p, slots) for p, slots in approved if not p.fingerspellSlots]
     approved = exact or approved
-    if len(approved) != 1:
-        pending = any(p.reviewStatus == "candidate" for p, _ in candidates)
-        code = "ambiguous-pattern" if len(approved) > 1 else (
-            "review-required" if pending else "unsupported-pattern"
-        )
+    if len(approved) > 1:
         return Interpretation("unsupported", registry.version, issues=[{
-            "code": code,
-            "message": "This sentence is awaiting ISL review." if pending else
-                       "This sentence does not have one supported, reviewed ISL interpretation.",
+            "code": "ambiguous-pattern",
+            "message": "This sentence has more than one reviewed ISL interpretation.",
         }])
 
-    pattern, slots = approved[0]
-    result = Interpretation("ready", registry.version, pattern.id)
+    # Candidate patterns are useful for previewing the recorded vocabulary while linguistic
+    # review is pending. Keep that state distinct from a reviewed ISL translation, and only
+    # preview a single, renderable candidate so an ambiguous phrase never plays arbitrarily.
+    preview = [(p, slots) for p, slots in candidates
+               if p.reviewStatus == "candidate" and not p.requiresUnavailableFeatures]
+    if not approved and len(preview) != 1:
+        pending = bool(preview)
+        return Interpretation("unsupported", registry.version, issues=[{
+            "code": "ambiguous-pattern" if len(preview) > 1 else (
+                "review-required" if pending else "unsupported-pattern"
+            ),
+            "message": "This sentence matches more than one preview pattern." if len(preview) > 1
+                       else "This sentence does not have a supported ISL interpretation.",
+        }])
+
+    pattern, slots = (approved or preview)[0]
+    result = Interpretation("ready" if approved else "preview", registry.version, pattern.id)
+    if not approved:
+        result.issues.append({
+            "code": "unreviewed-preview",
+            "message": "Playing a literal recorded-sign preview; this sentence is awaiting ISL review.",
+        })
     recordings = session.scalars(
         select(SignClip).join(Gloss).where(SignClip.is_canonical.is_(True))
         .order_by(SignClip.created_at.desc(), SignClip.id.desc())
@@ -157,7 +172,7 @@ def interpret(session: Session, text: str, registry: Registry | None = None) -> 
             continue
         for name in names:
             clip = by_gloss[name]
-            if pattern.reviewedClipHashes.get(name) != clip.content_hash:
+            if pattern.reviewStatus == "approved" and pattern.reviewedClipHashes.get(name) != clip.content_hash:
                 result.issues.append({
                     "code": "recording-review-required", "clipId": clip.id,
                     "message": f"The current {name} recording needs ISL review for this pattern.",
@@ -167,7 +182,8 @@ def interpret(session: Session, text: str, registry: Registry | None = None) -> 
                 fingerspelled=spelling, source_word=source,
                 occurrence_index=len(result.items),
             ))
-    if result.issues:
+    blocking_issues = [issue for issue in result.issues if issue["code"] != "unreviewed-preview"]
+    if blocking_issues:
         result.status = "missing-signs" if result.unmapped else "unsupported"
     return result
 
@@ -176,4 +192,3 @@ def build_playlist(session: Session, text: str) -> tuple[list[PlaylistItem], lis
     """Compatibility helper; callers deciding playback must use interpret()."""
     result = interpret(session, text)
     return result.items, result.unmapped
-

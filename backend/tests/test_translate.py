@@ -43,6 +43,19 @@ def test_production_candidates_are_not_claimed_as_reviewed():
     assert all(p.reviewStatus == "candidate" for p in load_registry().patterns)
 
 
+def test_unique_candidate_plays_as_an_explicit_unreviewed_preview(session):
+    add(session, "HELLO")
+    add(session, "FATHER")
+    pattern = Pattern(id="hello-father", forms=["hello father"], glosses=["HELLO", "FATHER"])
+    result = interpret(session, "Hello Father", registry(pattern))
+    assert result.status == "preview"
+    assert [item.gloss for item in result.items] == ["HELLO", "FATHER"]
+    assert result.issues == [{
+        "code": "unreviewed-preview",
+        "message": "Playing a literal recorded-sign preview; this sentence is awaiting ISL review.",
+    }]
+
+
 def test_normalisation_preserves_meaning():
     assert normalise("  THANK you, Father. ") == "thank you father"
     assert normalise("Father isn't here?") == "father isn't here?"
@@ -66,10 +79,19 @@ def test_known_words_do_not_enable_unsupported_grammar(session, text):
     assert result.status == "unsupported" and not result.items
 
 
-def test_unapproved_and_unrenderable_patterns_are_blocked(session):
-    for pattern in [Pattern(id="hello", forms=["hello"], glosses=["HELLO"]),
-                    approved(forms=["hello"], glosses=["HELLO"], requiresUnavailableFeatures=True)]:
-        assert interpret(session, "hello", registry(pattern)).status == "unsupported"
+def test_unrenderable_patterns_are_blocked(session):
+    add(session, "HELLO")
+    pattern = approved(forms=["hello"], glosses=["HELLO"], requiresUnavailableFeatures=True)
+    assert interpret(session, "hello", registry(pattern)).status == "unsupported"
+
+
+def test_ambiguous_candidate_preview_is_blocked(session):
+    add(session, "HELLO")
+    first = Pattern(id="first", forms=["hello"], glosses=["HELLO"])
+    second = Pattern(id="second", forms=["hello"], glosses=["HELLO"])
+    result = interpret(session, "hello", registry(first, second))
+    assert result.status == "unsupported"
+    assert result.issues[0]["code"] == "ambiguous-pattern"
 
 
 def test_approval_requires_evidence():
@@ -133,7 +155,7 @@ def test_default_sentence_interpretation_still_uses_reviewed_meaning(session, mo
     monkeypatch.setattr(translate_service, 'load_registry', lambda: registry(
         Pattern(id='hello', forms=['hello'], glosses=['HELLO']),
     ))
-    assert interpret(session, 'hello').status == 'unsupported'
+    assert interpret(session, 'hello').status == 'preview'
     monkeypatch.setattr(translate_service, 'load_registry', lambda: registry(
         approved(forms=['hello'], glosses=['HELLO']),
     ))

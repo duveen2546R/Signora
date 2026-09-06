@@ -19,6 +19,9 @@ test('only a complete validated sentence is playable', () => {
     assert.equal(playableTrack({ ...ready(), blendQuality: { status } }), null)
   }
 })
+test('an explicitly labelled candidate preview is playable', () => {
+  assert.ok(playableTrack({ ...ready(), translationStatus: 'preview' }))
+})
 test('a corrupt later frame blocks playback before streaming', () => {
   const result = ready()
   result.track.pose[1][0][0] = NaN

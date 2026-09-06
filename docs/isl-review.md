@@ -3,9 +3,10 @@
 Sentence signing uses complete reviewed English forms in
 `backend/app/services/isl_patterns.json`. The initial registry intentionally contains **candidates,
 not approved translations**. No fluent ISL review has been supplied with these recordings.
-The normal sentence composer therefore reports “awaiting ISL review” until actual approval is
-recorded. Individual recording previews and the explicitly labelled **Preview automatic transitions**
-tool remain available to inspect motion. Neither constitutes linguistic approval.
+Until actual approval is recorded, the normal sentence composer labels a unique matching candidate
+as a literal recorded-sign preview and plays it when all recordings and transitions pass the motion
+checks. The explicitly labelled **Preview automatic transitions** tool also remains available to
+inspect motion. Neither kind of preview constitutes linguistic approval.
 
 **Annotate each recording once. There is no pair approval table and no requirement to configure
 each neighbour.** Start/Sign/End annotations drive every occurrence of that recording automatically.
@@ -68,10 +69,11 @@ Multiword names, number signing and broad sentence grammar are outside this rele
 ## API contracts
 
 `POST /api/v1/translate` still accepts `{ "text": "..." }`. It adds `language`,
-`translationStatus` (`ready`, `unsupported`, `missing-signs`), `patternId`, `patternVersion`, and
+`translationStatus` (`ready`, `preview`, `unsupported`, `missing-signs`), `patternId`, `patternVersion`, and
 structured `issues`. `ready` describes interpretation: motion can still fail, returning `track: null`,
 `totalMs: 0`, and `blendQuality.status: rejected` with seam diagnostics. Playback requires ready
-interpretation, a direct passing quality result, and a fully valid track. Playlist items and segments
+or uniquely matched preview interpretation, a direct passing quality result, and a fully valid track.
+`preview` is intentionally not a reviewed ISL claim. Playlist items and segments
 carry zero-based `occurrenceIndex` so repeated signs remain distinct.
 
 `GET /api/v1/translate/patterns` exposes registry review states and examples. There is deliberately

@@ -21,8 +21,9 @@ sentences never fall back through neutral or play degraded motion. See [docs/sen
 workflow.
 
 English sentence signing uses a versioned registry of reviewed ISL patterns. The bundled patterns
-are candidates awaiting fluent ISL review; they are not automatically approved translations.
-Missing signs or unsupported sentences never play partially. Use individual recording previews,
+are candidates awaiting fluent ISL review; a unique candidate can play as an explicitly labelled
+literal sign preview but is not presented as an approved translation. Missing signs, ambiguous
+patterns, and unsupported sentences never play partially. Use individual recording previews,
 **Edit timestamps**, and **Preview automatic transitions** to prepare recordings for review. See
 [ISL review and release workflow](docs/isl-review.md) for approval and validation steps.
 

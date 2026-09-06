@@ -33,6 +33,17 @@ def test_translate_exposes_metadata(monkeypatch):
     assert result["patternVersion"] == 2 and result["items"][0]["occurrenceIndex"] == 0
 
 
+def test_candidate_preview_is_composed_but_not_claimed_as_ready(monkeypatch):
+    quality = {"status": "direct", "score": 82.0, "algorithmVersion": 7, "seams": []}
+    composition = SimpleNamespace(blend_quality=quality,
+                                  to_payload=lambda: {"fps": 60, "frameCount": 60, "blendQuality": quality})
+    monkeypatch.setattr(endpoint, "interpret", lambda *_: resolved("preview"))
+    monkeypatch.setattr(endpoint, "compose_clips", lambda _: (composition, []))
+    result = endpoint.translate(endpoint.TranslateRequest(text="hello"), _Session())
+    assert result["translationStatus"] == "preview"
+    assert result["track"] is not None
+
+
 def test_rejection_preserves_seam_diagnostics(monkeypatch):
     quality = {"status": "rejected", "seams": [{"fromGloss": "HELLO", "toGloss": "FATHER", "reasons": ["too fast"]}]}
     monkeypatch.setattr(endpoint, "interpret", lambda *_: resolved())
