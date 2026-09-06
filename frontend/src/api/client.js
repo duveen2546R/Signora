@@ -10,7 +10,9 @@ async function request(path, options = {}) {
     } catch {
       // Non-JSON error body; the status text is the best we have.
     }
-    throw new Error(detail)
+    const error = new Error(detail)
+    error.status = response.status
+    throw error
   }
   return response.status === 204 ? null : response.json()
 }
@@ -48,6 +50,22 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     }),
+
+  liveReadiness: () => request('/live/readiness'),
+
+  liveTranslate: (payload, signal) => request('/live/translate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  }),
+
+  liveClose: (payload, signal) => request('/live/close', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  }),
 
   listRigs: () => request('/rigs'),
 

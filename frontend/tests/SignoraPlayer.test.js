@@ -132,3 +132,38 @@ test('a rejected track cannot reach the runtime', () => {
     assert.throws(() => player.play({ ...sentence(), blendQuality: { status: 'degraded' } }), /failed transition validation/)
   })
 })
+
+test('queued tracks hand off in the same animation frame without finishing early', () => {
+  simulatedBrowser(({ tick }) => {
+    const messages = []
+    let finished = 0
+    const player = new SignoraPlayer((...args) => messages.push(args))
+    player.calibrated = true
+    player.onFinished = () => { finished += 1 }
+    const first = sentence()
+    const second = sentence()
+    for (const frame of second.pose) for (const point of frame) point[0] += 100
+    player.enqueue(first, 0)
+    player.enqueue(second, 1)
+    tick(2000)
+    const emitted = JSON.parse(messages.at(-1)[2])
+    assert.equal(emitted.pose.landmarks[0].x, 100)
+    assert.equal(player.queue.length, 0)
+    assert.equal(finished, 0)
+    tick(4000)
+    assert.equal(finished, 1)
+    player.stop()
+  })
+})
+
+test('queued closures can be cancelled before they start', () => {
+  simulatedBrowser(() => {
+    const player = new SignoraPlayer(() => {})
+    player.calibrated = true
+    player.enqueue(sentence(), 0, 'live-motion')
+    player.enqueue(sentence(), 1, 'live-closure')
+    assert.equal(player.cancelQueued('live-closure'), 1)
+    assert.equal(player.queue.length, 0)
+    player.stop()
+  })
+})

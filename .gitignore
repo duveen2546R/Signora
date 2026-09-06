@@ -28,8 +28,10 @@ coverage.xml
 # Backend runtime data. Keep the empty directories themselves in Git.
 backend/data/uploads/*
 backend/data/clips/*
+backend/data/transitions/*
 !backend/data/uploads/.gitkeep
 !backend/data/clips/.gitkeep
+!backend/data/transitions/.gitkeep
 backend/data/*.db
 backend/data/*.db-*
 backend/data/*.sqlite

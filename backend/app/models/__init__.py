@@ -77,3 +77,20 @@ class IngestJob(Base):
     qc: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class LiveMotionArtifact(Base):
+    """A persistent, quality-gated single-sign or directed-pair composition."""
+
+    __tablename__ = "live_motion_artifacts"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    library_version: Mapped[str] = mapped_column(String(64), index=True)
+    from_clip_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    to_clip_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    algorithm_version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    artifact_path: Mapped[str] = mapped_column(String(512), default="")
+    quality: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)

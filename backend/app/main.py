@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.api.v1 import captures, rigs, signs, translate
+from app.api.v1 import captures, live, rigs, signs, translate
 from app.core.config import settings
 from app.core.db import init_db
 
@@ -31,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for router in (rigs.router, captures.router, signs.router, translate.router):
+for router in (rigs.router, captures.router, signs.router, translate.router, live.router):
     app.include_router(router, prefix="/api/v1")
 
 

@@ -63,6 +63,9 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
         player.calibrate()
       },
       play: (track) => player.play(track),
+      enqueue: (track, sequence, tag) => player.enqueue(track, sequence, tag),
+      cancelQueued: (tag) => player.cancelQueued(tag),
+      queuedDurationMs: () => player.queuedDurationMs(),
       clear: () => player.clear(),
       isCalibrated: () => player.calibrated,
     }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import SignoraStage from '../components/SignoraStage'
 import SignComposer from '../components/SignComposer'
+import LiveSignComposer from '../components/LiveSignComposer'
 import SequenceReview from '../components/SequenceReview'
 import PhaseReview from '../components/PhaseReview'
 import SignLibrary from '../components/SignLibrary'
@@ -37,6 +38,16 @@ export default function SignPage() {
     window.signsure.play(track)
   }, [])
 
+  const enqueueLiveTrack = useCallback((track, sequence, tag) => {
+    setError(null)
+    if (!window.signsure?.isCalibrated()) {
+      setError('Wait for avatar calibration to finish before starting live signing.')
+      return
+    }
+    setPlaybackSource('live')
+    window.signsure.enqueue(track, sequence, tag)
+  }, [])
+
   const playSign = useCallback(async (sign) => {
     setError(null)
     try {
@@ -70,6 +81,13 @@ export default function SignPage() {
         </div>
 
         <aside className="sign__rail">
+          <LiveSignComposer
+            activeOccurrence={playbackSource === 'live' ? activeOccurrence : null}
+            disabled={!avatarReady}
+            onEnqueue={enqueueLiveTrack}
+            onCancelQueued={(tag) => window.signsure?.cancelQueued(tag) ?? 0}
+            onClear={() => { window.signsure?.clear(); setActiveGloss(null); setActiveOccurrence(null) }}
+          />
           <SignComposer activeOccurrence={playbackSource === 'sentence' ? activeOccurrence : null} onClear={() => { window.signsure?.clear(); setActiveGloss(null); setActiveOccurrence(null) }} onPlay={playTrack} disabled={!avatarReady} />
           {error && <div className="panel"><p className="notice notice--bad">{error}</p></div>}
           {editingSign && <PhaseReview

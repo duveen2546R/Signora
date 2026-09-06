@@ -25,6 +25,7 @@ export default class SignoraPlayer {
     this.send = sendMessage
     this.sequence = 0
     this.track = null
+    this.queue = []
     this.segments = []
     this.segmentIndex = -1
     this.idlePose = null
@@ -142,6 +143,12 @@ export default class SignoraPlayer {
    * pause. Segments only say which sign is on screen.
    */
   play(payload) {
+    this.clear()
+    this.enqueue(payload)
+  }
+
+  /** Append a validated motion chunk without restarting the current avatar stream. */
+  enqueue(payload, sequence = null, tag = null) {
     assertPayloadShape(payload)
     if (payload.blendQuality && payload.blendQuality.status !== 'direct') {
       throw new Error('Animation failed transition validation.')
@@ -149,15 +156,42 @@ export default class SignoraPlayer {
     if (!this.calibrated) {
       throw new Error('Avatar calibration must complete before playback starts.')
     }
-    this.track = payload
-    this.segments = payload.segments ?? []
+    if (payload.neutral) this.setIdlePose(payload.neutral)
+    const entry = { payload, sequence, tag }
+    if (this.track) {
+      this.queue.push(entry)
+    } else {
+      this.#startEntry(entry, performance.now())
+    }
+    this.#ensureLoop()
+  }
+
+  #startEntry(entry, startedAt) {
+    this.track = entry.payload
+    this.currentSequence = entry.sequence
+    this.currentTag = entry.tag
+    this.segments = entry.payload.segments ?? []
     this.segmentIndex = -1
-    this.startedAt = performance.now()
-    this.pausedAt = document.hidden ? this.startedAt : null
+    this.startedAt = startedAt
+    this.pausedAt = document.hidden ? startedAt : null
     this.#watchVisibility()
     this.frameIndex = 0
-    if (payload.neutral) this.setIdlePose(payload.neutral)
-    this.#ensureLoop()
+  }
+
+  cancelQueued(tag) {
+    const before = this.queue.length
+    this.queue = this.queue.filter((entry) => entry.tag !== tag)
+    return before - this.queue.length
+  }
+
+  queuedDurationMs() {
+    const queued = this.queue.reduce(
+      (total, entry) => total + entry.payload.frameCount / entry.payload.fps * 1000, 0,
+    )
+    if (!this.track) return queued
+    const elapsed = Math.max(performance.now() - this.startedAt, 0)
+    const remaining = Math.max(this.track.frameCount / this.track.fps * 1000 - elapsed, 0)
+    return remaining + queued
   }
 
   /** Where the avatar rests between sentences, in the performer's proportions. */
@@ -170,6 +204,7 @@ export default class SignoraPlayer {
   clear() {
     this.pausedAt = null
     this.track = null
+    this.queue = []
     this.segments = []
     this.segmentIndex = -1
   }
@@ -241,9 +276,10 @@ export default class SignoraPlayer {
       return
     }
 
-    if (this.track) {
+    while (this.track) {
       const elapsed = ((this.pausedAt ?? now) - this.startedAt) / 1000
-      if (elapsed * this.track.fps < this.track.frameCount) {
+      const duration = this.track.frameCount / this.track.fps
+      if (elapsed < duration) {
         const frame = this.#sample(elapsed)
         this.frameIndex = frame.index
         this.#announce(frame.index)
@@ -254,9 +290,17 @@ export default class SignoraPlayer {
       const final = this.#sample((this.track.frameCount - 1) / this.track.fps)
       this.lastPose = final
       this.frameIndex = final.index
+      const spilloverMs = Math.max(elapsed - duration, 0) * 1000
+      const next = this.queue.shift()
+      if (next) {
+        this.#startEntry(next, now - spilloverMs)
+        continue
+      }
       this.track = null
       this.segments = []
       this.segmentIndex = -1
+      this.currentSequence = null
+      this.currentTag = null
       this.onFinished?.()
     }
 

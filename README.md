@@ -68,6 +68,27 @@ Open [http://localhost:5173](http://localhost:5173). Wait for the avatar badge t
 Vite proxies `/api` to the backend on port 8000. Override the API location with
 `VITE_API_BASE` when the services are hosted separately.
 
+## Live microphone signing
+
+The Studio can use Chrome's Web Speech API to turn finalized English (`en-IN`) microphone phrases
+into an appendable avatar stream. Click **Start listening**; interim speech is shown immediately but
+only Chrome-finalized text is signed, so a revised hypothesis never plays the wrong motion. This
+uses no project API key, although Chrome may use an online recognition service.
+
+Live motion is persisted as content-addressed single-sign and directed-pair artifacts. Compile or
+resume the local library after recording, changing timestamps, or selecting a new canonical take:
+
+```bash
+cd backend
+./.venv/bin/python tools/compile_live_library.py
+```
+
+Use `--limit N` for a bounded batch or repeat `--gloss HELLO` to rebuild pairs touching selected
+signs. `GET /api/v1/live/readiness` reports the current library version, missing core/A–Z captures,
+compiled transition count, and failures. The initial publication target is the documented 25 core
+glosses plus A–Z; until those recordings exist, the panel truthfully reports an incomplete library
+while known phrases remain available as previews. Set `VITE_LIVE_SIGNING=false` to hide live mode.
+
 ## Uploading motion captures
 
 Open the **Capture** tab and upload a Rokoko Studio **biomechanics CSV**. Use one sign per file.
