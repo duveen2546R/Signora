@@ -70,11 +70,24 @@ Vite proxies `/api` to the backend on port 8000. Override the API location with
 
 ## Live microphone signing
 
-The Studio can use Chrome's Web Speech API to turn finalized English (`en-IN`) microphone phrases
-into an appendable avatar stream. Click **Start listening**; interim speech is shown immediately but
-only Chrome-finalized text is signed, so a revised hypothesis never plays the wrong motion. This
-uses no project API key, although Chrome may use an online recognition service.
+The Studio uses Chrome's Web Speech API for English (`en-IN`) microphone signing. Click **Start
+listening**. Fast mode dispatches stable interim prefixes after 220 ms, or a trailing word after
+350 ms, with up to 550 ms of lookahead for registered phrases such as “good morning”. Final results
+only dispatch the remaining words. A revision to words already dispatched is reported; playback
+cannot undo those signs. Clear stops recognition and discards late responses. This uses no project
+API key, although Chrome may use an online recognition service.
 
+Live playback adjusts its rate at chunk boundaries using observed word-arrival intervals and queued
+motion. Speedup is capped at 1.5× and further restricted by measured wrist/limb speeds in each
+artifact. This mechanical limit does not certify linguistic intelligibility. Slow speech uses the
+original rate. Manual sign previews retain their original rate. The UI distinguishes transcript-to-queue
+time from buffered motion; neither includes Chrome's audio-to-transcript latency. Under-one-second
+audio-to-sign latency is a target, not a guarantee, especially when the recorded motion takes longer
+than the speech or the browser delays recognition.
+
+Live requests only read compiled artifacts and retain a bounded in-memory cache of decoded frames;
+they never run the motion compiler while the microphone is active. Missing artifacts produce an
+actionable preparation message instead of delaying subsequent speech by several seconds.
 Live motion is persisted as content-addressed single-sign and directed-pair artifacts. Compile or
 resume the local library after recording, changing timestamps, or selecting a new canonical take:
 

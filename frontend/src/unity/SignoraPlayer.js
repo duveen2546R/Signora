@@ -170,6 +170,14 @@ export default class SignoraPlayer {
     this.track = entry.payload
     this.currentSequence = entry.sequence
     this.currentTag = entry.tag
+    const durationMs = entry.payload.frameCount / entry.payload.fps * 1000
+    const upcomingMs = this.queue.reduce((total, next) => total + next.payload.frameCount / next.payload.fps * 1000, 0)
+    const targetMs = entry.payload.liveTiming?.targetDurationMs
+    // Choose speed at a chunk boundary so rate updates never jump within a stroke.
+    // A server-measured limit bounds source wrist/limb velocity; manual previews stay at 1x.
+    this.playbackRate = entry.tag === 'live-motion' && Number.isFinite(targetMs) && targetMs > 0
+      ? Math.max(1, Math.min(1.5, entry.payload.maxPlaybackRate ?? 1,
+        Math.max(durationMs / Math.max(targetMs, 250), 1 + upcomingMs / 5000))) : 1
     this.segments = entry.payload.segments ?? []
     this.segmentIndex = -1
     this.startedAt = startedAt
@@ -189,8 +197,8 @@ export default class SignoraPlayer {
       (total, entry) => total + entry.payload.frameCount / entry.payload.fps * 1000, 0,
     )
     if (!this.track) return queued
-    const elapsed = Math.max(performance.now() - this.startedAt, 0)
-    const remaining = Math.max(this.track.frameCount / this.track.fps * 1000 - elapsed, 0)
+    const elapsed = Math.max((this.pausedAt ?? performance.now()) - this.startedAt, 0)
+    const remaining = Math.max(this.track.frameCount / this.track.fps * 1000 / this.playbackRate - elapsed, 0)
     return remaining + queued
   }
 
@@ -277,7 +285,7 @@ export default class SignoraPlayer {
     }
 
     while (this.track) {
-      const elapsed = ((this.pausedAt ?? now) - this.startedAt) / 1000
+      const elapsed = ((this.pausedAt ?? now) - this.startedAt) / 1000 * this.playbackRate
       const duration = this.track.frameCount / this.track.fps
       if (elapsed < duration) {
         const frame = this.#sample(elapsed)
@@ -290,7 +298,7 @@ export default class SignoraPlayer {
       const final = this.#sample((this.track.frameCount - 1) / this.track.fps)
       this.lastPose = final
       this.frameIndex = final.index
-      const spilloverMs = Math.max(elapsed - duration, 0) * 1000
+      const spilloverMs = Math.max(elapsed - duration, 0) * 1000 / this.playbackRate
       const next = this.queue.shift()
       if (next) {
         this.#startEntry(next, now - spilloverMs)

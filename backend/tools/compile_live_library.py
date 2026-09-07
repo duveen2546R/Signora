@@ -41,7 +41,7 @@ def main() -> int:
                 continue
             try:
                 _payload, hit = cached_composition(
-                    session, list(job), version, retry_failed=args.retry_failed,
+                    session, list(job), version, retry_failed=args.retry_failed, allow_compile=True,
                 )
                 state = "cached" if hit else "built"
                 print(f"{state:6} {' -> '.join(clip.gloss.name for clip in job)}")

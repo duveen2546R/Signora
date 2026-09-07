@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import useLiveSpeech from './useLiveSpeech'
+import { speechWords } from './stableSpeech'
 
 const CLOSE_DELAY_MS = 800
-
-function normalized(text) {
-  return text.toLowerCase().replace(/[,;.!]+/g, ' ').replace(/\s+/g, ' ').trim()
-}
 
 export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue, onCancelQueued, onClear }) {
   const enabled = import.meta.env.VITE_LIVE_SIGNING !== 'false'
@@ -17,6 +14,8 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
   const [notices, setNotices] = useState([])
   const [activity, setActivity] = useState('stopped')
   const [lagMs, setLagMs] = useState(0)
+  const [dispatchMs, setDispatchMs] = useState(null)
+  const [forms, setForms] = useState([])
   const [streamId] = useState(() => globalThis.crypto?.randomUUID?.() ?? `live-${Math.random()}`)
   const sequence = useRef(0)
   const generation = useRef(0)
@@ -25,8 +24,9 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
   const closeTimer = useRef(null)
   const closeToken = useRef(0)
   const closureEnqueued = useRef(false)
-  const speculative = useRef(new Map())
-  const busy = useRef(false)
+  const nextOccurrence = useRef(0)
+  const lastCommitAt = useRef(null)
+  const wordIntervalMs = useRef(500)
 
   const refreshReadiness = useCallback(() => api.liveReadiness().then((value) => {
     setReadiness(value)
@@ -37,6 +37,17 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
   }), [])
 
   useEffect(() => { if (enabled) refreshReadiness() }, [enabled, refreshReadiness])
+  useEffect(() => {
+    let cancelled = false
+    api.patterns().then((value) => {
+      if (!cancelled) setForms(value.patterns.flatMap((pattern) => pattern.forms.map(speechWords)))
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  useEffect(() => () => {
+    generation.current += 1
+    clearTimeout(closeTimer.current)
+  }, [])
   useEffect(() => {
     const timer = setInterval(() => setLagMs(window.signsure?.queuedDurationMs?.() ?? 0), 500)
     return () => clearInterval(timer)
@@ -66,7 +77,9 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
       if (token !== closeToken.current || requestGeneration !== generation.current) return
       onEnqueue(value.motion, value.sequence, 'live-closure')
       closureEnqueued.current = true
-    }).catch((error) => setNotices([error.message]))
+    }).catch((error) => {
+      if (requestGeneration === generation.current) setNotices([error.message])
+    })
   }, [onEnqueue, readiness, streamId])
 
   const scheduleClose = useCallback((requestGeneration) => {
@@ -78,32 +91,25 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
     }, CLOSE_DELAY_MS)
   }, [queueClose])
 
-  const commitFinal = useCallback((text) => {
+  const commitSpeech = useCallback((text, timing = {}) => {
     const phrase = text.trim()
     if (!phrase || !readiness) return
     invalidateClosure()
-    setInterim('')
-    setFinalText((previous) => previous ? `${previous} ${phrase}` : phrase)
     setActivity('processing')
+    const committedAt = performance.now()
+    const count = timing.wordCount ?? speechWords(phrase).length
+    if (lastCommitAt.current !== null) {
+      const interval = (committedAt - lastCommitAt.current) / Math.max(count, 1)
+      if (interval > 100 && interval < 2000) wordIntervalMs.current = .7 * wordIntervalMs.current + .3 * interval
+    }
+    lastCommitAt.current = committedAt
     const requestGeneration = generation.current
     const requestSequence = sequence.current++
     scheduleClose(requestGeneration)
     chain.current = chain.current.then(async () => {
       if (requestGeneration !== generation.current) return
-      busy.current = true
       const tail = tailClipId.current
-      const key = `${readiness.libraryVersion}|${tail ?? 'rest'}|${normalized(phrase)}`
-      let pending = speculative.current.get(key)
-      speculative.current.delete(key)
-      if (!pending) pending = api.liveTranslate({
-        streamId,
-        sequence: requestSequence,
-        text: phrase,
-        fromClipId: tail,
-        libraryVersion: readiness.libraryVersion,
-      })
-      let value = await pending
-      if (!value) value = await api.liveTranslate({
+      const value = await api.liveTranslate({
         streamId,
         sequence: requestSequence,
         text: phrase,
@@ -111,18 +117,26 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
         libraryVersion: readiness.libraryVersion,
       })
       if (requestGeneration !== generation.current) return
-      setItems(value.items ?? [])
+      const offset = nextOccurrence.current
+      const currentItems = (value.items ?? []).map((item) => ({ ...item, occurrenceIndex: item.occurrenceIndex + offset }))
+      nextOccurrence.current += currentItems.length
+      setItems((previous) => [...previous, ...currentItems].slice(-100))
       setNotices((value.issues ?? []).map((issue) => issue.message).filter(Boolean))
       if (value.motion && !value.error) {
-        onEnqueue(value.motion, requestSequence, 'live-motion')
+        const motion = { ...value.motion,
+          segments: value.motion.segments.map((segment) => ({ ...segment,
+            ...(Number.isInteger(segment.occurrenceIndex) ? { occurrenceIndex: segment.occurrenceIndex + offset } : {}),
+          })),
+          liveTiming: { targetDurationMs: wordIntervalMs.current * count },
+        }
+        onEnqueue(motion, requestSequence, 'live-motion')
+        setDispatchMs(performance.now() - (timing.observedAt ?? committedAt))
         tailClipId.current = value.tailClipId
         setActivity('signing')
       } else {
         setActivity('listening')
       }
-      busy.current = false
     }).catch(async (error) => {
-      busy.current = false
       if (requestGeneration !== generation.current) return
       if (error.status === 409) {
         tailClipId.current = null
@@ -133,41 +147,30 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
     })
   }, [invalidateClosure, onEnqueue, readiness, refreshReadiness, scheduleClose, streamId])
 
-  const handleInterim = useCallback((text) => setInterim(text), [])
-  const speech = useLiveSpeech({ onFinal: commitFinal, onInterim: handleInterim })
-
-  useEffect(() => {
-    if (!interim || !readiness || busy.current) return undefined
-    const timer = setTimeout(() => {
-      const tail = tailClipId.current
-      const key = `${readiness.libraryVersion}|${tail ?? 'rest'}|${normalized(interim)}`
-      if (!speculative.current.has(key)) {
-        if (speculative.current.size >= 8) {
-          speculative.current.delete(speculative.current.keys().next().value)
-        }
-        speculative.current.set(key, api.liveTranslate({
-          streamId, sequence: sequence.current,
-          text: interim, fromClipId: tail, libraryVersion: readiness.libraryVersion,
-        }).catch(() => {
-          speculative.current.delete(key)
-          return null
-        }))
-      }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [interim, readiness, streamId])
+  const handleInterim = useCallback((text) => {
+    setInterim(text)
+    if (text) invalidateClosure()
+    scheduleClose(generation.current)
+  }, [invalidateClosure, scheduleClose])
+  const speech = useLiveSpeech({
+    onCommit: commitSpeech, onInterim: handleInterim, forms,
+    onFinal: (text) => setFinalText((previous) => `${previous} ${text}`.trim().slice(-4000)),
+    onCorrection: (message) => setNotices((previous) => [...previous, message].slice(-5)),
+  })
 
   function clear() {
     generation.current += 1
+    speech.cancel()
     invalidateClosure()
     tailClipId.current = null
     chain.current = Promise.resolve()
-    speculative.current.clear()
+    lastCommitAt.current = null
+    setDispatchMs(null)
     setInterim('')
     setFinalText('')
     setItems([])
     setNotices([])
-    setActivity(speech.listening ? 'listening' : 'stopped')
+    setActivity('stopped')
     onClear()
   }
 
@@ -207,6 +210,7 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
         <button className="button button--ghost" type="button" onClick={clear}>Clear</button>
       </div>
       {!speech.supported && <p className="notice notice--bad">Live recognition needs Chrome desktop with the Web Speech API.</p>}
+      <p className="hint">Fast mode signs stable words before the sentence ends and adjusts playback to your pace. Recognition can still correct early words.</p>
       {readiness && missingCount > 0 && (
         <p className="notice notice--warn">
           Preview library incomplete: {readiness.missingCoreGlosses.length} core and {readiness.missingAlphabetGlosses.length} alphabet recordings missing. Known phrases can still play.
@@ -216,7 +220,8 @@ export default function LiveSignComposer({ disabled, activeOccurrence, onEnqueue
         <span>{finalText || 'Your finalized speech will appear here.'}</span>
         {interim && <em> {interim}</em>}
       </div>
-      {lagMs > 1000 && <p className="hint">Signing is {(lagMs / 1000).toFixed(1)}s behind speech.</p>}
+      {dispatchMs !== null && <p className="hint">Transcript to queue: {Math.round(dispatchMs)} ms · buffered motion: {(lagMs / 1000).toFixed(1)}s</p>}
+      {lagMs > 3000 && <p className="hint">Speech is ahead of signing. Playback is adjusting within the motion speed limit.</p>}
       {displayedNotices.map((notice) => <p className="notice notice--warn" key={notice}>{notice}</p>)}
       {items.length > 0 && (
         <ol className="chips">

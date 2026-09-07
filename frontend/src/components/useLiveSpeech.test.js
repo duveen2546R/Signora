@@ -49,3 +49,24 @@ test('ordinary recognition endings restart while permission failures stop', asyn
   assert.equal(recognition.starts, 2)
   controller.destroy()
 })
+
+test('stable interim commits once before final and Clear ignores late recognition', async () => {
+  const commits = []
+  const finals = []
+  const controller = createSpeechController(FakeRecognition, {
+    onCommit: (text) => commits.push(text), onFinal: (text) => finals.push(text),
+  })
+  const result = (text, isFinal) => Object.assign([{ transcript: text }], { isFinal })
+  controller.start()
+  controller.recognition.onresult({ resultIndex: 0, results: [result('hello', false)] })
+  await new Promise((resolve) => setTimeout(resolve, 420))
+  assert.deepEqual(commits, ['hello'])
+  controller.recognition.onresult({ resultIndex: 0, results: [result('hello father', true)] })
+  controller.recognition.onresult({ resultIndex: 0, results: [result('hello father', true)] })
+  assert.deepEqual(commits, ['hello', 'father'])
+  assert.deepEqual(finals, ['hello father'])
+  controller.cancel()
+  controller.recognition.onresult({ resultIndex: 1, results: [result('hello father', true), result('hello', true)] })
+  assert.deepEqual(commits, ['hello', 'father'])
+  controller.destroy()
+})

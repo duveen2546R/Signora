@@ -1,7 +1,10 @@
 from types import SimpleNamespace
 
+import pytest
+
 from app.services import live_motion_service as live
 from app.services.translate_service import PlaylistItem
+from app.services.compose_service import ComposeError
 
 
 def frame(value):
@@ -95,3 +98,50 @@ def test_close_starts_after_the_sign_and_returns_to_rest(monkeypatch):
     assert not any(segment["kind"] == "sign" for segment in result["segments"])
     assert result["segments"][-1]["kind"] == "hold"
     assert result["segments"][-1]["endFrame"] == result["frameCount"]
+
+
+def test_cache_miss_never_compiles_on_a_live_request(monkeypatch, tmp_path):
+    monkeypatch.setattr(live.settings, "transition_dir", tmp_path)
+    monkeypatch.setattr(live, "compose_clips", lambda *_: pytest.fail("runtime must not compile"))
+    session = SimpleNamespace(get=lambda *_: None)
+    with pytest.raises(ComposeError, match="not compiled"):
+        live.cached_composition(session, [clip(1, "HELLO")], "new-version")
+
+
+def test_decoded_motion_is_reused_and_file_replacement_invalidates_cache(tmp_path):
+    import gzip
+    import json
+    path = tmp_path / "motion.json.gz"
+    with gzip.open(path, "wt") as stream:
+        json.dump(payload(["HELLO"]), stream)
+    live._read_compiled.cache_clear()
+    first = live._read_compiled(str(path), 1, 10)
+    assert live._read_compiled(str(path), 1, 10) is first
+    assert live._read_compiled(str(path), 2, 10) is not first
+    assert 1 <= first["maxPlaybackRate"] <= 1.5
+
+
+def test_high_speed_capture_cannot_be_sped_up():
+    track = payload(["HELLO"])
+    assert live.playback_rate_limit(track) == 1.0  # fixture moves 1 metre per frame
+    for channel in ("pose", "leftHand", "rightHand"):
+        track[channel] = [track[channel][0]] * track["frameCount"]
+    assert live.playback_rate_limit(track) == 1.5
+
+
+def test_uncompiled_long_paced_phrase_uses_all_cached_signs_in_order(monkeypatch):
+    hello, father = clip(1, "HELLO"), clip(2, "FATHER")
+    monkeypatch.setattr(live, "canonical_clips", lambda _: [hello, father])
+    def cached(_session, clips, _version):
+        if len(clips) > 2:
+            raise ComposeError("not compiled")
+        value = payload([c.gloss.name for c in clips])
+        if len(clips) == 2:
+            value["blendQuality"]["playbackRate"] = 0.8
+        return value, True
+    monkeypatch.setattr(live, "cached_composition", cached)
+    result, tail, hit = live.assemble_live_motion(
+        object(), [item(hello), item(father), item(hello)], None, "v1",
+    )
+    assert [s["gloss"] for s in result["segments"] if s["kind"] == "sign"] == ["HELLO", "FATHER", "HELLO"]
+    assert tail is None and hit and result["warnings"]

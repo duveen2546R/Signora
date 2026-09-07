@@ -6,13 +6,17 @@ import hashlib
 import json
 import os
 import uuid
+from functools import lru_cache
 from pathlib import Path
+
+import numpy as np
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.ingest.compose import ALGORITHM_VERSION
+from app.ingest import landmarks as lm
 from app.models import Gloss, LiveMotionArtifact, SignClip
 from app.services.compose_service import ComposeError, compose_clips
 from app.services.translate_service import PlaylistItem
@@ -50,20 +54,58 @@ def _artifact_path(key: str) -> Path:
     return settings.transition_dir / f"{key}.json.gz"
 
 
+def playback_rate_limit(payload: dict) -> float:
+    """Bound optional live speedup using measured wrist/limb speeds at the source fps.
+
+    This is a mechanical cap, not a linguistic intelligibility certification.
+    """
+    fps = payload["fps"]
+    pose = np.asarray(payload["pose"])
+    if len(pose) < 2:
+        return 1.0
+    wrist_speed = np.max(np.linalg.norm(np.diff(pose[:, [15, 16]], axis=0), axis=-1)) * fps * 100
+    peak_angle = 0.0
+    for points, edges in [(pose, lm.POSE_BONES),
+                          (np.asarray(payload["leftHand"]), lm.HAND_SPOKES + lm.HAND_BONES),
+                          (np.asarray(payload["rightHand"]), lm.HAND_SPOKES + lm.HAND_BONES)]:
+        vectors = np.stack([points[:, end] - points[:, start] for start, end in edges], axis=1)
+        lengths = np.linalg.norm(vectors, axis=-1, keepdims=True)
+        unit = vectors / np.maximum(lengths, 1e-8)
+        dot = np.sum(unit[1:] * unit[:-1], axis=-1)
+        valid = (lengths[1:, :, 0] > 1e-8) & (lengths[:-1, :, 0] > 1e-8)
+        angles = np.degrees(np.arccos(np.clip(dot[valid], -1, 1))) * fps
+        if angles.size:
+            peak_angle = max(peak_angle, float(angles.max()))
+    return round(max(1.0, min(1.5, 237.5 / max(float(wrist_speed), 1e-8),
+                             684.0 / max(peak_angle, 1e-8))), 3)
+
+
+@lru_cache(maxsize=64)
+def _read_compiled(path: str, modified: int, size: int) -> dict:
+    with gzip.open(path, "rt", encoding="utf-8") as source:
+        payload = json.load(source)
+    payload["maxPlaybackRate"] = playback_rate_limit(payload)
+    return payload
+
+
 def cached_composition(
     session: Session, clips: list[SignClip], version: str | None = None,
     retry_failed: bool = False,
+    allow_compile: bool = False,
 ) -> tuple[dict, bool]:
     """Return a validated composition payload and whether it was already persisted."""
     version = version or library_version(session)
     key = _artifact_key(version, clips)
     path = _artifact_path(key)
     if path.exists():
-        with gzip.open(path, "rt", encoding="utf-8") as source:
-            return json.load(source), True
+        stat = path.stat()
+        return _read_compiled(str(path), stat.st_mtime_ns, stat.st_size), True
     existing = session.get(LiveMotionArtifact, key)
     if existing is not None and existing.status == "failed" and not retry_failed:
         raise ComposeError(existing.error, existing.quality)
+    if not allow_compile:
+        raise ComposeError("Live motion is not compiled for " + " → ".join(c.gloss.name for c in clips)
+                           + ". Prepare these recordings with compile_live_library.py before listening.")
 
     try:
         composition, warnings = compose_clips([(clip.gloss.name, clip) for clip in clips])
@@ -108,6 +150,7 @@ def _slice_payload(payload: dict, start: int, end: int, occurrence: int | str | 
         "leftHand": payload["leftHand"][start:end],
         "rightHand": payload["rightHand"][start:end],
         "segments": [], "blendQuality": payload.get("blendQuality", {}),
+        "maxPlaybackRate": payload.get("maxPlaybackRate", 1.0),
     }
     if payload.get("neutral") is not None:
         result["neutral"] = payload["neutral"]
@@ -133,6 +176,7 @@ def _join_payloads(parts: list[dict], seams: list[dict]) -> dict:
         "fps": parts[0]["fps"], "frameCount": 0,
         "pose": [], "leftHand": [], "rightHand": [], "segments": [],
         "neutral": parts[0].get("neutral"),
+        "maxPlaybackRate": min(part.get("maxPlaybackRate", 1.0) for part in parts),
     }
     cursor = 0
     for part in parts:
@@ -231,7 +275,24 @@ def assemble_live_motion(
                 "requires phrase-wide 80% playback.",
             ]
             return result, tail, close_hit and open_hit
-        payload, hit = cached_composition(session, clips, version)
+        try:
+            payload, hit = cached_composition(session, clips, version)
+        except ComposeError:
+            # Publishing prepares singles/pairs, not every possible long sentence. Avoid an
+            # exponential compilation requirement: use complete cached singles with explicit
+            # rest boundaries when a uniformly paced long phrase has not been compiled.
+            parts = []
+            seams = []
+            all_cached = True
+            for occurrence, clip in enumerate(clips):
+                single, hit = cached_composition(session, [clip], version)
+                parts.append(_slice_payload(single, 0, single["frameCount"], occurrence))
+                seams.extend([_matching_seam(single, "", clip.gloss.name),
+                              _matching_seam(single, clip.gloss.name, "")])
+                all_cached = all_cached and hit
+            result = _join_payloads(parts, seams)
+            result["warnings"] = ["This phrase needs a slower transition; using cached signs with rests between them."]
+            return result, None, all_cached
         signs = _sign_segments(payload)
         if len(signs) != len(clips):
             raise ComposeError("compiled paced phrase has invalid sign segmentation")

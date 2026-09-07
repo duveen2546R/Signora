@@ -167,3 +167,40 @@ test('queued closures can be cancelled before they start', () => {
     player.stop()
   })
 })
+
+test('live speed follows speech timing within the server cap; handoff preserves elapsed time', () => {
+  simulatedBrowser(({ tick }) => {
+    const player = new SignoraPlayer(() => {})
+    player.calibrated = true
+    const fast = { ...sentence(), maxPlaybackRate: 1.5, liveTiming: { targetDurationMs: 500 } }
+    player.enqueue(fast, 0, 'live-motion')
+    player.enqueue(sentence(), 1, 'live-motion')
+    assert.equal(player.playbackRate, 1.5)
+    tick(500)
+    assert.equal(player.frameIndex, 22)
+    tick(1500)
+    assert.equal(player.currentSequence, 1)
+    assert.equal(player.playbackRate, 1)
+    assert.equal(player.frameIndex, 5)
+    player.stop()
+  })
+})
+
+test('live pacing cannot accelerate past source cap or accelerate manual previews', () => {
+  simulatedBrowser(({ tick, hide }) => {
+    const player = new SignoraPlayer(() => {})
+    player.calibrated = true
+    const limited = { ...sentence(), maxPlaybackRate: 1.2, liveTiming: { targetDurationMs: 100 } }
+    player.enqueue(limited, 0, 'live-motion')
+    assert.equal(player.playbackRate, 1.2)
+    tick(500)
+    hide(true, 500)
+    const remaining = player.queuedDurationMs()
+    tick(5500)
+    assert.equal(player.queuedDurationMs(), remaining)
+    hide(false, 5500)
+    player.play(limited)
+    assert.equal(player.playbackRate, 1)
+    player.stop()
+  })
+})
