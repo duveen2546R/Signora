@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     clip_dir: Path = BASE_DIR / "data" / "clips"
     transition_dir: Path = BASE_DIR / "data" / "transitions"
+    speech_model_dir: Path = BASE_DIR / "data" / "speech-model"
+    speech_threads: int = 2
     # Vite dev server; tighten for deployment.
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 

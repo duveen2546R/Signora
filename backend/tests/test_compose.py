@@ -149,10 +149,28 @@ def test_payload_carries_segments_and_neutral(prepared, skeleton):
     payload = compose(skeleton, [(a, prepared[a]), (b, prepared[b])]).to_payload()
     assert payload["frameCount"] == len(payload["pose"])
     assert len(payload["leftHand"]) == len(payload["rightHand"]) == payload["frameCount"]
+    assert len(payload["faceBlendshapes"]) == payload["frameCount"]
+    assert len(payload["faceBlendshapeNames"]) == 52
+    assert len(payload["neutral"]["faceBlendshapes"]) == 52
     assert payload["segments"] and payload["neutral"]
     assert payload["blendQuality"]["algorithmVersion"] == ALGORITHM_VERSION
     assert payload["blendQuality"]["status"] == "direct"
     json.dumps(payload)
+
+
+def test_composition_preserves_recorded_expressions_and_blends_only_the_joins(prepared, skeleton):
+    from dataclasses import replace
+
+    first_name, second_name = list(prepared)[:2]
+    first = replace(prepared[first_name], face_blendshapes=np.full((prepared[first_name].frame_count, 52), 0.2))
+    second = replace(prepared[second_name], face_blendshapes=np.full((prepared[second_name].frame_count, 52), 0.8))
+    result = compose(skeleton, [(first_name, first), (second_name, second)])
+    signs = [segment for segment in result.segments if segment.kind == "sign"]
+
+    assert np.allclose(result.track.face_blendshapes[signs[0].start:signs[0].end], 0.2)
+    assert np.allclose(result.track.face_blendshapes[signs[1].start:signs[1].end], 0.8)
+    assert np.isfinite(result.track.face_blendshapes).all()
+    assert 0.0 <= result.track.face_blendshapes.min() <= result.track.face_blendshapes.max() <= 1.0
 
 
 def test_reviewed_phases_follow_sentence_position(prepared, skeleton):

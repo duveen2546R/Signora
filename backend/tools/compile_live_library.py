@@ -27,11 +27,18 @@ def main() -> int:
                         help="Compile only pairs touching this gloss; may be repeated.")
     parser.add_argument("--retry-failed", action="store_true",
                         help="Retry artifacts previously persisted as rejected.")
+    parser.add_argument("--streaming", action="store_true", help="Publish fixed-skeleton bodies and flow/held streaming edges.")
     args = parser.parse_args()
     init_db()
     built = failed = 0
     selected = {value.upper() for value in args.gloss}
     with SessionLocal() as session:
+        if args.streaming:
+            from app.services.streaming_library import compile_library
+            value = compile_library(session, limit=args.limit, retry_failed=args.retry_failed)
+            failed = sum(entry["status"] != "ready" for entry in value["artifacts"].values())
+            print(f"Streaming library: {len(value['artifacts']) - failed}/{len(value['artifacts'])} artifacts ready")
+            return 1 if failed else 0
         clips = canonical_clips(session)
         version = library_version(session)
         jobs = [(clip,) for clip in clips]

@@ -57,6 +57,7 @@ namespace Signora.Tracking
     [Serializable]
     public sealed class CanonicalTrackingFrameV1
     {
+        public int signMarker = -1;
         public int schemaVersion;
         public int sequence;
         public double captureTimeMs;
@@ -105,4 +106,3 @@ namespace Signora.Tracking
         }
     }
 }
-

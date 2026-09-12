@@ -4,15 +4,14 @@ SignSure turns English text into sign-language performances by a motion-captured
 browser.
 
 ```text
-Rokoko Studio ──CSV──▶ FastAPI ingest ──landmarks──▶ Unity WebGL ──▶ React
-                          │                             ▲
-                  avatar bind pose ───calibration───────┘
-                  (from SignoraNewAvatar.glb)
+Rokoko Studio ──combined FBX──▶ FastAPI normalization ──motion JSON──▶ Unity WebGL ──▶ React
+                                                                          ▲
+                   SignoraNewAvatar.glb ─────single rendered avatar────────┘
 ```
 
-Rokoko biomechanics CSV exports are converted into MediaPipe-style body and hand landmarks. The
-React application streams those frames to the Unity runtime, which retargets them onto the avatar.
-See [docs/signora-integration.md](docs/signora-integration.md) for the browser/Unity protocol.
+Combined Rokoko FBX exports are sampled at 60 fps into MediaPipe-style body/hand landmarks and 52
+named ARKit facial-expression coefficients. The FBX character is never rendered. React streams the
+normalized motion to Unity, which retargets it onto the existing `SignoraNewAvatar.glb` avatar.
 
 Annotate Start/Sign/End once per recording. The backend retains phases by sentence position and
 automatically blends neighbouring signs into one quality-gated motion track. There are no
@@ -70,20 +69,38 @@ Vite proxies `/api` to the backend on port 8000. Override the API location with
 
 ## Live microphone signing
 
-The Studio uses Chrome's Web Speech API for English (`en-IN`) microphone signing. Click **Start
-listening**. Fast mode dispatches stable interim prefixes after 220 ms, or a trailing word after
-350 ms, with up to 550 ms of lookahead for registered phrases such as “good morning”. Final results
-only dispatch the remaining words. A revision to words already dispatched is reported; playback
-cannot undo those signs. Clear stops recognition and discards late responses. This uses no project
-API key, although Chrome may use an online recognition service.
+The Studio defaults to free **local streaming recognition** (Sherpa-ONNX, English), not Chrome's
+network speech service. This is a literal signing preview, not a reviewed ISL sentence translation.
+Install and prepare once using the Python environment that actually runs your backend:
 
-Live playback adjusts its rate at chunk boundaries using observed word-arrival intervals and queued
-motion. Speedup is capped at 1.5× and further restricted by measured wrist/limb speeds in each
-artifact. This mechanical limit does not certify linguistic intelligibility. Slow speech uses the
-original rate. Manual sign previews retain their original rate. The UI distinguishes transcript-to-queue
-time from buffered motion; neither includes Chrome's audio-to-transcript latency. Under-one-second
-audio-to-sign latency is a target, not a guarantee, especially when the recorded motion takes longer
-than the speech or the browser delays recognition.
+```bash
+cd backend
+./.venv/bin/python -m pip install -r requirements-live.txt
+./.venv/bin/python tools/setup_live_speech.py
+./.venv/bin/python tools/compile_live_library.py --streaming
+```
+
+If uvicorn uses the repository-root `.venv`, use `../.venv/bin/python` instead. The model download is
+about 44 MB of extracted weights, licensed Apache-2.0; no API key or paid recognition service is used.
+Microphone audio stays in memory on your local machine. The optional **Chrome fallback** uses `en-IN`
+and may send audio to Chrome's recognition service; it has no sub-second timing guarantee.
+
+After the avatar calibrates, click **Warm local recognizer**, then **Start listening**. AudioWorklet
+resamples to 16 kHz and streams 20 ms PCM packets through `/api/v1/live/session`. Stable complete
+words commit across successive decoder updates; multiword aliases have bounded lookahead. Late
+recognition corrections are shown, not replayed. Stop flushes recognition and drains accepted signs;
+Clear cancels the stream generation and playback. Losing the device/connection or hiding the tab
+stops capture visibly. A 60-second pending-motion limit stops new capture rather than dropping signs.
+
+Adaptive mode uses audio-token timing, not request arrival times. It selects normal or compiled 80%
+variants only at neutral boundaries and keeps that variant through a continuous run. Protected Sign
+frames are never accelerated just to catch speech. Optional neutral waiting is capped at 100 ms.
+If the recordings cannot keep up, the UI shows buffered motion instead of hiding the backlog.
+
+The UI separately labels transcript-to-queue, estimated audio-to-sign submission, and (with a rebuilt
+Unity runtime) estimated audio-to-Unity-applied sign. Token timing is approximate; neither submission
+nor a Unity acknowledgement proves visible onset. **Sub-second performance remains unverified** until
+held-out audio and recorded browser output pass the release gate. See [live streaming details](docs/live-streaming.md).
 
 Live requests only read compiled artifacts and retain a bounded in-memory cache of decoded frames;
 they never run the motion compiler while the microphone is active. Missing artifacts produce an
@@ -97,44 +114,45 @@ cd backend
 ```
 
 Use `--limit N` for a bounded batch or repeat `--gloss HELLO` to rebuild pairs touching selected
-signs. `GET /api/v1/live/readiness` reports the current library version, missing core/A–Z captures,
+signs in the legacy compiler. The `--streaming` publisher instead uses dependency-addressed bodies,
+neutral entries, retractions, and separate flowing/held-pose edges at both rates; `--limit` and
+`--retry-failed` support resumable runs. A fixed skeleton snapshot prevents per-phrase proportion
+changes. Rejected edges remain unavailable; verified neutral-rest fallbacks are explicitly labelled.
+`GET /api/v1/live/readiness` reports the current library version, missing core/A–Z captures,
 compiled transition count, and failures. The initial publication target is the documented 25 core
 glosses plus A–Z; until those recordings exist, the panel truthfully reports an incomplete library
 while known phrases remain available as previews. Set `VITE_LIVE_SIGNING=false` to hide live mode.
 
 ## Uploading motion captures
 
-Open the **Capture** tab and upload a Rokoko Studio **biomechanics CSV**. Use one sign per file.
+Open the **Capture** tab and upload a combined Rokoko Studio **FBX** containing body, Smartglove,
+and ARKit face animation at 60 fps. Use one sign per file.
 For each selected file, enter the timestamps where the meaning-bearing sign starts and ends. The
 Capture screen shows the derived `start`, `sign`, and `end` ranges before upload. Both boundaries
 are required; captures without timestamps are rejected. These authored
 boundaries let a first word play `start + sign`, a middle word play only `sign`, and a final word
-play `sign + end`. A single sign plays all three phases. Boundaries must match actual CSV
-Timestamp rows and, when present, the CSV Phase labels. Existing recordings can be inspected and
-edited through **Edit timestamps**; no re-upload is needed unless the source CSV itself is wrong.
+play `sign + end`. A single sign plays all three phases. Boundaries snap to actual FBX animation
+frames. Existing recordings can be inspected and edited through **Edit timestamps**; no re-upload
+is needed unless the source FBX itself is wrong.
 The filename determines the gloss and take number:
 
 | Filename | Gloss | Take |
 |---|---:|---:|
-| `hello.csv` | `HELLO` | 1 |
-| `hello_01.csv` | `HELLO` | 1 |
-| `hello_02.csv` | `HELLO` | 2 |
-| `good_morning_03.csv` | `GOOD_MORNING` | 3 |
+| `hello.fbx` | `HELLO` | 1 |
+| `hello_01.fbx` | `HELLO` | 1 |
+| `hello_02.fbx` | `HELLO` | 2 |
+| `good_morning_03.fbx` | `GOOD_MORNING` | 3 |
 
 The numeric suffix is optional. Use `_01`, `_02`, and so on only when keeping multiple takes of
-the same sign. Uploading `hello.csv` and `hello_01.csv` targets the same take, so the later upload
+the same sign. Uploading `hello.fbx` and `hello_01.fbx` targets the same take, so the later upload
 replaces the earlier one.
 
-On a new backend database, upload an avatar rig profile before uploading captures. The legacy
-`.signclip` fallback still uses this profile during ingest; see [docs/unity-setup.md](docs/unity-setup.md)
-for the exporter workflow.
-
-Uploaded CSVs, generated clips, and the local SQLite database live under `backend/data/` and are
+Uploaded FBX sources, normalized motion JSON, and the local SQLite database live under
+`backend/data/` and are
 intentionally ignored by Git. The `.gitkeep` files preserve the required empty directories.
 
-Captures are registered only through the Capture screen/API; copying a CSV directly into
-`backend/data/uploads/` does not import it. Bulk workflows may add a `Phase` column whose every row
-is labelled `start`, `sign`, or `end`; the three runs must be contiguous and ordered.
+Captures are registered only through the Capture screen/API; copying an FBX directly into
+`backend/data/uploads/` does not import it.
 
 ## Avatar calibration
 
@@ -178,7 +196,7 @@ cd frontend && npm test && npm run lint && npm run build
 
 | Path | Purpose |
 |---|---|
-| `backend/app/ingest/` | CSV parsing, landmark generation, reconstruction, and retargeting |
+| `backend/app/ingest/` | FBX parsing, normalized motion generation, segmentation, and blending |
 | `backend/app/api/v1/` | Capture upload, sign library, clip serving, and text translation APIs |
 | `frontend/` | Vite/React application and browser-side Unity frame player |
 | `SignoraAvatarTracking/` | Active Unity avatar project and retargeting runtime |
@@ -187,7 +205,8 @@ cd frontend && npm test && npm run lint && npm run build
 
 ## Retargeting paths
 
-The active path is Rokoko CSV → landmark JSON → Signora Unity runtime.
+The active path is Rokoko combined FBX → normalized body/hand/face motion JSON → Signora Unity
+runtime → the existing `SignoraNewAvatar.glb`.
 
 `unity/SignSureAvatar/` and the `.signclip` format in `backend/app/ingest/` are an earlier fallback
 that bakes bone rotations in Python. The browser application does not currently play that format.

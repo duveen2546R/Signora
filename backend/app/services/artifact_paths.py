@@ -1,9 +1,9 @@
-"""Locate clip artifacts whose stored absolute path no longer points at this checkout.
+"""Locate motion artifacts whose stored absolute path no longer points at this checkout.
 
 Ingest records absolute paths, so moving or renaming the project directory orphans every row: the
-landmark file is still on disk, but `clip_path` names the old location and composing reports
-"has no landmark frames" for every sign. Artifact and upload names are unique within their
-directory, so falling back to the configured directory recovers the file without a re-ingest.
+normalized motion file is still on disk, but `clip_path` names the old location. Artifact and
+upload names are unique within their directory, so falling back to the configured directory
+recovers the file without a re-ingest.
 """
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ def _resolve(stored: str | Path, directory: Path) -> Path:
 
 
 def clip_file(stored: str | Path) -> Path:
-    """The `.signclip` (or sibling artifact) for a stored clip path."""
+    """The normalized motion artifact (or a legacy `.signclip`) for a stored clip path."""
     return _resolve(stored, settings.clip_dir)
 
 
 def source_file(stored: str | Path) -> Path:
-    """The uploaded CSV a clip was retargeted from."""
+    """The immutable FBX source (or legacy CSV) a clip was normalized from."""
     return _resolve(stored, settings.upload_dir)

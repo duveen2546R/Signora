@@ -106,15 +106,15 @@ def test_edit_endpoint_and_old_asset_urls(stored):
         app.dependency_overrides.clear()
 
 
-def test_raw_preview_does_not_register_a_capture(stored):
+def test_raw_preview_rejects_legacy_csv_capture(stored):
     session, _, _ = stored
     app.dependency_overrides[get_session] = lambda: session
     try:
         with TestClient(app) as client:
             source = Path(__file__).parent / "fixtures" / "hello.csv"
             response = client.post("/api/v1/captures/preview", files={"file": ("hello.csv", source.read_bytes(), "text/csv")})
-            assert response.status_code == 200, response.text
-            assert response.json()["frameCount"] > 1
+            assert response.status_code == 400
+            assert "fbx" in response.json()["detail"].lower()
     finally:
         app.dependency_overrides.clear()
 

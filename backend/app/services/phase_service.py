@@ -52,17 +52,24 @@ def edit_phases(session: Session, clip: SignClip, start: float, end: float,
     phases = find_phases(prepared).as_dict()
     phases.update(signStartSeconds=start, signEndSeconds=end, source="authored-ui", reviewed=True)
     clip_artifact = clip_file(clip.clip_path)
-    blob = clip_artifact.read_bytes()
-    # Preserve every raw coordinate and the original CSV; only annotation fields change.
+    source_blob = source_file(clip.source_csv).read_bytes()
+    # Preserve every raw coordinate and the original FBX; only annotation fields change.
     payload.update(timestampsSeconds=source.times.tolist(), durationSeconds=raw.duration,
                    signStartSeconds=start, signEndSeconds=end,
                    phaseSource="authored-ui", phaseReviewed=True)
-    new_hash = content_hash_for(blob, phases, payload)
+    new_hash = content_hash_for(source_blob, phases, payload)
     if new_hash == old_hash:
         return clip
-    destination = clip_artifact.parent / f"{new_hash}.signclip"
-    publish(destination, blob)
-    publish(destination.with_suffix(".landmarks.json"), json.dumps(payload).encode())
+    encoded = json.dumps(payload, separators=(",", ":")).encode()
+    if source_file(clip.source_csv).suffix.lower() == ".fbx":
+        destination = clip_artifact.parent / f"{new_hash}.motion.json"
+        publish(destination, encoded)
+    else:
+        # Existing CSV rows stay readable during the FBX replacement period. New ingest never
+        # enters this branch.
+        destination = clip_artifact.parent / f"{new_hash}.signclip"
+        publish(destination, clip_artifact.read_bytes())
+        publish(destination.with_suffix(".landmarks.json"), encoded)
     qc = dict(clip.qc or {})
     history = list(qc.get("phaseHistory", []))
     history.append({"contentHash": old_hash, "clipPath": clip.clip_path,

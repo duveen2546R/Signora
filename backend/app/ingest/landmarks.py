@@ -29,6 +29,25 @@ SCHEMA_VERSION = 1
 POSE_LANDMARK_COUNT = 33
 HAND_LANDMARK_COUNT = 21
 
+# Apple ARKit's canonical 52 expression coefficients. Rokoko writes these channels to FBX and the
+# checked-in Avaturn avatar exposes all of them under the same names.
+ARKIT_BLENDSHAPES: tuple[str, ...] = (
+    "browDownLeft", "browDownRight", "browInnerUp", "browOuterUpLeft",
+    "browOuterUpRight", "cheekPuff", "cheekSquintLeft", "cheekSquintRight",
+    "eyeBlinkLeft", "eyeBlinkRight", "eyeLookDownLeft", "eyeLookDownRight",
+    "eyeLookInLeft", "eyeLookInRight", "eyeLookOutLeft", "eyeLookOutRight",
+    "eyeLookUpLeft", "eyeLookUpRight", "eyeSquintLeft", "eyeSquintRight",
+    "eyeWideLeft", "eyeWideRight", "jawForward", "jawLeft", "jawOpen", "jawRight",
+    "mouthClose", "mouthDimpleLeft", "mouthDimpleRight", "mouthFrownLeft",
+    "mouthFrownRight", "mouthFunnel", "mouthLeft", "mouthLowerDownLeft",
+    "mouthLowerDownRight", "mouthPressLeft", "mouthPressRight", "mouthPucker",
+    "mouthRight", "mouthRollLower", "mouthRollUpper", "mouthShrugLower",
+    "mouthShrugUpper", "mouthSmileLeft", "mouthSmileRight", "mouthStretchLeft",
+    "mouthStretchRight", "mouthUpperUpLeft", "mouthUpperUpRight", "noseSneerLeft",
+    "noseSneerRight", "tongueOut",
+)
+FACE_BLENDSHAPE_COUNT = len(ARKIT_BLENDSHAPES)
+
 # MediaPipe Pose indices this pipeline can source from the suit. The retargeters require
 # 11-16 and 23-24; the rest are filled so the frame passes structural validation and the
 # head retargeter has something to work with.
@@ -44,9 +63,9 @@ POSE_FROM_SEGMENT: dict[int, str] = {
     27: "LeftFoot",       28: "RightFoot",        # ankles
 }
 
-# Head landmarks are synthesised from the head position and the body's own axes, offset in metres
-# as (forward, right, up). The suit carries no face capture, so these are anatomically plausible
-# rather than measured - enough for the head retargeter's pose fallback, which is direction-based.
+# Head landmarks are synthesized from the animated FBX head transform, offset in metres as
+# (forward, right, up). Expression coefficients do not contain face vertex positions; these stable
+# reference points let the existing pose-based head retargeter reproduce head orientation.
 HEAD_OFFSETS: dict[int, tuple[float, float, float]] = {
     0:  (0.105, 0.000, -0.010),   # nose
     1:  (0.085, 0.015, 0.030),    # left eye inner
@@ -98,6 +117,7 @@ class LandmarkTake:
     pose: np.ndarray        # (F, 33, 3)
     left_hand: np.ndarray   # (F, 21, 3)
     right_hand: np.ndarray  # (F, 21, 3)
+    face_blendshapes: np.ndarray | None = None  # (F, 52), normalized ARKit scores
 
     # Hand-authored phase boundaries in seconds from this track's own first frame. Carried all the
     # way to composition because it reads the stored .landmarks.json, never the original CSV.
@@ -106,6 +126,28 @@ class LandmarkTake:
     phase_source: str | None = None
     phase_reviewed: bool = False
     timestamps: np.ndarray | None = None
+
+    def __post_init__(self) -> None:
+        face = self.face_blendshapes
+        if face is None:
+            face = np.zeros((len(self.pose), FACE_BLENDSHAPE_COUNT), dtype=np.float64)
+            object.__setattr__(self, "face_blendshapes", face)
+        else:
+            face = np.asarray(face, dtype=np.float64)
+            if face.shape != (len(self.pose), FACE_BLENDSHAPE_COUNT):
+                # Dataclasses.replace() is used by legacy body-only diagnostics to append/drop a
+                # corrupt frame without mentioning the inert face channel. Preserve that ergonomic
+                # behaviour only for a genuinely empty (all-zero) compatibility track.
+                if face.ndim == 2 and face.shape[1] == FACE_BLENDSHAPE_COUNT and not np.any(face):
+                    face = np.zeros((len(self.pose), FACE_BLENDSHAPE_COUNT), dtype=np.float64)
+                else:
+                    raise ValueError(
+                        f"Face track has shape {face.shape}; expected "
+                        f"({len(self.pose)}, {FACE_BLENDSHAPE_COUNT})."
+                    )
+            if not np.all(np.isfinite(face)):
+                raise ValueError("Face track contains NaN or infinity.")
+            object.__setattr__(self, "face_blendshapes", face)
 
     @property
     def times(self) -> np.ndarray:
@@ -134,12 +176,21 @@ class LandmarkTake:
     @classmethod
     def from_payload(cls, payload: dict, name: str | None = None) -> "LandmarkTake":
         # Clip files written before phase annotation existed simply carry no boundaries.
+        if "faceBlendshapes" in payload and payload.get("faceBlendshapeNames") != list(ARKIT_BLENDSHAPES):
+            raise ValueError("Face track does not use the canonical 52-channel ARKit order.")
         return cls(
             name=name or payload.get("name", "clip"),
             fps=float(payload["fps"]),
             pose=np.asarray(payload["pose"], dtype=np.float64),
             left_hand=np.asarray(payload["leftHand"], dtype=np.float64),
             right_hand=np.asarray(payload["rightHand"], dtype=np.float64),
+            face_blendshapes=np.asarray(
+                payload.get(
+                    "faceBlendshapes",
+                    np.zeros((int(payload["frameCount"]), FACE_BLENDSHAPE_COUNT)),
+                ),
+                dtype=np.float64,
+            ),
             sign_start_s=payload.get("signStartSeconds"),
             sign_end_s=payload.get("signEndSeconds"),
             phase_source=payload.get("phaseSource"),
@@ -156,6 +207,9 @@ class LandmarkTake:
             "pose": np.round(self.pose, decimals).tolist(),
             "leftHand": np.round(self.left_hand, decimals).tolist(),
             "rightHand": np.round(self.right_hand, decimals).tolist(),
+            "faceBlendshapeNames": list(ARKIT_BLENDSHAPES),
+            "faceBlendshapes": np.round(self.face_blendshapes, decimals).tolist(),
+            "motionSchemaVersion": 2,
         }
         if self.timestamps is not None:
             payload["timestampsSeconds"] = self.times.tolist()
@@ -270,6 +324,7 @@ def to_landmarks(take: Take) -> LandmarkTake:
         pose=pose - origin,
         left_hand=left - origin,
         right_hand=right - origin,
+        face_blendshapes=None,
         sign_start_s=take.sign_start_s,
         sign_end_s=take.sign_end_s,
         phase_source=take.phase_source,
@@ -413,6 +468,7 @@ def slice_frames(take: LandmarkTake, start: int, end: int) -> LandmarkTake:
         pose=take.pose[start:end],
         left_hand=take.left_hand[start:end],
         right_hand=take.right_hand[start:end],
+        face_blendshapes=take.face_blendshapes[start:end],
         sign_start_s=moved(take.sign_start_s),
         sign_end_s=moved(take.sign_end_s),
         phase_source=take.phase_source,
@@ -432,4 +488,5 @@ def concat(takes: list[LandmarkTake], name: str = "sentence") -> LandmarkTake:
         pose=np.concatenate([t.pose for t in takes], axis=0),
         left_hand=np.concatenate([t.left_hand for t in takes], axis=0),
         right_hand=np.concatenate([t.right_hand for t in takes], axis=0),
+        face_blendshapes=np.concatenate([t.face_blendshapes for t in takes], axis=0),
     )

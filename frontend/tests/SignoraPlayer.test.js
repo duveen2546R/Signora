@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import SignoraPlayer from '../src/unity/SignoraPlayer.js'
+import { ARKIT_BLENDSHAPES } from '../src/unity/canonicalFrame.js'
 
 function payload() {
   const points = (count) => Array.from({ length: count }, () => [0, 0, 0])
@@ -34,7 +35,7 @@ function withBrowserStubs(run) {
   }
 }
 
-test('calibrating progress does not unlock CSV playback', () => {
+test('calibrating progress does not unlock motion playback', () => {
   withBrowserStubs(() => {
     const messages = []
     const player = new SignoraPlayer((...args) => messages.push(args))
@@ -91,7 +92,10 @@ function simulatedBrowser(run) {
 function sentence() {
   const single = payload()
   const repeat = (channel) => Array.from({ length: 60 }, (_, index) => single[channel][0].map(() => [index / 100, 0, 0]))
+  const faceBlendshapeNames = ARKIT_BLENDSHAPES
+  const faceBlendshapes = Array.from({ length: 60 }, (_, index) => Array(52).fill(index / 100))
   return { fps: 30, frameCount: 60, pose: repeat('pose'), leftHand: repeat('leftHand'), rightHand: repeat('rightHand'),
+    faceBlendshapeNames, faceBlendshapes,
     blendQuality: { status: 'direct' }, segments: [
       { kind: 'sign', gloss: 'HELLO', occurrenceIndex: 0, startFrame: 0, endFrame: 30 },
       { kind: 'sign', gloss: 'HELLO', occurrenceIndex: 1, startFrame: 30, endFrame: 60 },
@@ -107,6 +111,9 @@ test('background time does not skip signing and repeated occurrences announce se
     player.play(sentence())
     tick(500)
     assert.equal(player.frameIndex, 15)
+    const facialFrame = JSON.parse(messages.at(-1)[2])
+    assert.equal(facialFrame.face.present, true)
+    assert.deepEqual(facialFrame.face.blendshapes[0], { name: 'browDownLeft', score: 0.15 })
     hide(true, 500)
     tick(5500)
     assert.equal(player.frameIndex, 15)

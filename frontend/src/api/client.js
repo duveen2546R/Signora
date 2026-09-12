@@ -52,6 +52,7 @@ export const api = {
     }),
 
   liveReadiness: () => request('/live/readiness'),
+  liveWarm: () => request('/live/warm', { method: 'POST' }),
 
   liveTranslate: (payload, signal) => request('/live/translate', {
     method: 'POST',
@@ -90,7 +91,8 @@ export const api = {
 
   captureStatus: (jobId) => request(`/captures/${jobId}`),
 
-  // Landmark frames for the Signora Unity runtime, which retargets in-engine.
+  // Normalized body, hand, head, and facial motion; the Unity runtime retargets it in-engine.
+  motion: (url) => request(url.replace('/api/v1', '')),
   landmarks: (url) => request(url.replace('/api/v1', '')),
 }
 

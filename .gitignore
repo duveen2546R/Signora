@@ -81,3 +81,5 @@ sysinfo.txt
 # the stable symlink through which Vite serves SignoraAvatarTracking/WebBuild.
 /SignoraAvatarTracking/WebBuild/
 /SignoraAvatarTracking/Data/
+# Downloaded speech models are local artifacts, not source code.
+backend/data/speech-model/

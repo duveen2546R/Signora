@@ -26,7 +26,7 @@ export default function SignLibrary({ signs, activeGloss, onPlay, onEditPhases, 
 
       {signs.length === 0 ? (
         <p className="empty" style={{ marginTop: 16 }}>
-          No signs yet. Upload a Rokoko CSV on the Capture page to add the first one.
+          No signs yet. Upload a combined Rokoko FBX on the Capture page to add the first one.
         </p>
       ) : (
         <ul className="library">

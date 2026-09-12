@@ -1,4 +1,7 @@
 mergeInto(LibraryManager.library, {
+  Signora_ReportSignApplied: function (marker) {
+    if (typeof window.SignoraSignApplied === "function") window.SignoraSignApplied(marker);
+  },
   Signora_SetUnityReady: function () {
     if (typeof window.SignoraUnityReady === "function") window.SignoraUnityReady();
   },
@@ -8,4 +11,3 @@ mergeInto(LibraryManager.library, {
     if (typeof window.SignoraCalibrationState === "function") window.SignoraCalibrationState(state);
   }
 });
-

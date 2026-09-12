@@ -1,4 +1,4 @@
-"""Turn an uploaded CSV into a stored, servable clip."""
+"""Turn an uploaded combined Rokoko FBX into a stored, servable motion track."""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ import re
 import uuid
 from pathlib import Path
 
+import numpy as np
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.ingest import clipfmt, rigprofile
 from app.ingest.compose import prepare
-from app.ingest.landmarks import LandmarkSkeleton, to_landmarks
+from app.ingest.fbx import parse_fbx
+from app.ingest.landmarks import LandmarkSkeleton
 from app.ingest.segment import find_phases, usable_range
-from app.ingest.pipeline import ingest_take
-from app.ingest.rokoko import parse_csv, with_phase_bounds
-from app.models import Gloss, IngestJob, RigProfileRow, SignClip
+from app.ingest.rokoko import with_phase_bounds
+from app.models import Gloss, IngestJob, SignClip
 
 _TAKE_SUFFIX = re.compile(r"[_-](\d{1,3})$")
 
@@ -33,7 +33,7 @@ def content_hash_for(blob: bytes, phases: dict, raw_payload: dict | None = None)
 
 
 def gloss_and_take_from_filename(stem: str) -> tuple[str, int]:
-    """`hello_02.csv` -> ("HELLO", 2). Falls back to take 1 when no suffix is present."""
+    """`hello_02.fbx` -> ("HELLO", 2). Falls back to take 1 when no suffix is present."""
     take = 1
     m = _TAKE_SUFFIX.search(stem)
     if m:
@@ -43,26 +43,12 @@ def gloss_and_take_from_filename(stem: str) -> tuple[str, int]:
     return name or "UNNAMED", take
 
 
-def active_rig(session: Session, digest: str | None = None) -> rigprofile.RigProfile:
-    stmt = select(RigProfileRow)
-    if digest:
-        stmt = stmt.where(RigProfileRow.digest == digest)
-    row = session.scalars(stmt.order_by(RigProfileRow.created_at.desc())).first()
-    if row is None:
-        raise LookupError(
-            "no rig profile has been uploaded yet. Export one from Unity "
-            "(SignSure > Export Rig Profile) and POST it to /api/v1/rigs."
-        )
-    return rigprofile.from_dict(row.payload, digest=row.digest)
-
-
 def run_ingest(session: Session, job_id: str) -> None:
     job = session.get(IngestJob, job_id)
     if job is None:
         return
     try:
-        rig = active_rig(session)
-        parsed = parse_csv(job.source_csv)
+        parsed = parse_fbx(job.source_csv)
         phase_input = (job.qc or {}).get("phaseInput", {})
         parsed = with_phase_bounds(
             parsed,
@@ -71,12 +57,7 @@ def run_ingest(session: Session, job_id: str) -> None:
             snap=True,
             override_csv_phase=True,
         )
-        clip, qc = ingest_take(parsed, rig)
-        blob = clipfmt.encode(clip)
-
-        # Landmark frames for the Signora Unity runtime, which retargets in-engine from
-        # MediaPipe-style points rather than consuming baked bone rotations.
-        landmarks = to_landmarks(parsed)
+        landmarks = parsed
 
         # Record where the sign itself starts and ends. Sentences play only the stroke, so a bad
         # detection here silently truncates a word - it belongs in the QC panel, not a log line.
@@ -108,8 +89,30 @@ def run_ingest(session: Session, job_id: str) -> None:
             "source": landmarks.phase_source or phases.source,
             "reviewed": landmarks.phase_reviewed,
         })
-        qc.phases = phase_qc
-        qc.stroke = {
+        left_travel = float(np.linalg.norm(np.diff(landmarks.pose[:, 15], axis=0), axis=1).sum() * 100)
+        right_travel = float(np.linalg.norm(np.diff(landmarks.pose[:, 16], axis=0), axis=1).sum() * 100)
+        warnings = []
+        qc = {
+            "source_fps": landmarks.fps,
+            "source_frames": landmarks.frame_count,
+            "output_frames": prepared.frame_count,
+            "duration": landmarks.duration,
+            "dominant_hand": "Right" if right_travel >= left_travel else "Left",
+            "hand_travel_cm": {"Left": left_travel, "Right": right_travel},
+            "face": {
+                "channelCount": landmarks.face_blendshapes.shape[1],
+                "activeChannelCount": int(np.count_nonzero(np.ptp(landmarks.face_blendshapes, axis=0) > 0.002)),
+                "peakWeight": round(float(landmarks.face_blendshapes.max()), 4),
+            },
+            "warnings": warnings,
+            "phases": phase_qc,
+        }
+        if qc["face"]["activeChannelCount"] == 0:
+            warnings.append(
+                "all 52 facial channels are flat; verify that Rokoko face animation was recorded "
+                "and included in the combined FBX export"
+            )
+        qc["stroke"] = {
             "start": phases.stroke_start,
             "end": phases.stroke_end,
             "durationSeconds": round(
@@ -120,23 +123,22 @@ def run_ingest(session: Session, job_id: str) -> None:
             "reason": phases.reason,
         }
         if not landmarks.phase_reviewed:
-            qc.warnings.append(
+            warnings.append(
                 "phase boundaries were detected automatically and need review; "
                 "enter sign-start and sign-end timestamps when uploading this capture"
             )
         if corrupt:
-            qc.warnings.append(
+            warnings.append(
                 f"dropped {corrupt} corrupt frame(s) where the whole skeleton jumped; "
                 "the recording is truncated at that end"
             )
 
         raw_payload = landmarks.to_payload()
-        content_hash = content_hash_for(blob, phase_qc, raw_payload)
-        path = settings.clip_dir / f"{content_hash}.signclip"
-        path.write_bytes(blob)
-        (settings.clip_dir / f"{content_hash}.landmarks.json").write_text(
-            json.dumps(raw_payload)
-        )
+        source_blob = Path(job.source_csv).read_bytes()
+        content_hash = content_hash_for(source_blob, phase_qc, raw_payload)
+        path = settings.clip_dir / f"{content_hash}.motion.json"
+        encoded = json.dumps(raw_payload, separators=(",", ":")).encode()
+        path.write_bytes(encoded)
 
         gloss_name, take = gloss_and_take_from_filename(Path(job.source_csv).stem)
         gloss = session.scalars(select(Gloss).where(Gloss.name == gloss_name)).first()
@@ -154,19 +156,19 @@ def run_ingest(session: Session, job_id: str) -> None:
             session.flush()
 
         row = SignClip(
-            gloss_id=gloss.id, rig_digest=rig.digest, take=take,
+            gloss_id=gloss.id, rig_digest="fbx-motion-v2", take=take,
             is_canonical=was_canonical or not any(
                 c.is_canonical and c is not existing for c in gloss.clips
             ),
             source_csv=job.source_csv, clip_path=str(path), content_hash=content_hash,
-            fps=clip.fps, frame_count=clip.frame_count, duration=clip.duration,
-            byte_size=len(blob), qc=qc.__dict__,
+            fps=landmarks.fps, frame_count=landmarks.frame_count, duration=landmarks.duration,
+            byte_size=len(encoded), qc=qc,
         )
         session.add(row)
         session.flush()
 
         job.clip_id = row.id
-        job.qc = qc.__dict__
+        job.qc = qc
         job.status = "done"
     except Exception as exc:  # surfaced to the admin UI rather than swallowed
         job.status = "failed"
@@ -178,11 +180,11 @@ def run_ingest(session: Session, job_id: str) -> None:
 
 def create_job(
     session: Session,
-    csv_path: Path,
+    capture_path: Path,
     sign_start_s: float | None = None,
     sign_end_s: float | None = None,
 ) -> IngestJob:
-    gloss_name, _ = gloss_and_take_from_filename(csv_path.stem)
+    gloss_name, _ = gloss_and_take_from_filename(capture_path.stem)
     phase_input = {}
     if sign_start_s is not None or sign_end_s is not None:
         phase_input = {
@@ -190,7 +192,7 @@ def create_job(
             "signEndSeconds": sign_end_s,
         }
     job = IngestJob(
-        id=str(uuid.uuid4()), gloss_name=gloss_name, source_csv=str(csv_path),
+        id=str(uuid.uuid4()), gloss_name=gloss_name, source_csv=str(capture_path),
         qc={"phaseInput": phase_input} if phase_input else {},
     )
     session.add(job)

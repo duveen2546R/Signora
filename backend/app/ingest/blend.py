@@ -523,6 +523,18 @@ def transition(
     return plan_transition(skel, a, a_index, b, b_index, fps, duration).track
 
 
+def _face_transition(a: LandmarkTake, a_index: int, b: LandmarkTake, b_index: int,
+                     count: int) -> np.ndarray:
+    """Minimum-jerk direct blend between two synchronized ARKit expression vectors."""
+    if count <= 0:
+        return np.empty((0, a.face_blendshapes.shape[1]), dtype=np.float64)
+    tau = np.arange(1, count + 1, dtype=np.float64) / (count + 1)
+    weight = 6 * tau ** 5 - 15 * tau ** 4 + 10 * tau ** 3
+    start = a.face_blendshapes[a_index]
+    end = b.face_blendshapes[b_index]
+    return np.clip(start[None] * (1.0 - weight[:, None]) + end[None] * weight[:, None], 0.0, 1.0)
+
+
 def plan_transition(
     skel: LandmarkSkeleton,
     a: LandmarkTake,
@@ -666,6 +678,7 @@ def plan_phase_overlap(
                 pose=np.stack([frame.pose for frame in frames]),
                 left_hand=np.stack([frame.left_hand for frame in frames]),
                 right_hand=np.stack([frame.right_hand for frame in frames]),
+                face_blendshapes=_face_transition(a, a_index, b, b_index, len(frames)),
             )
             quality = evaluate_transition(skel, a, a_index, bridge, b, b_index, contacts)
             candidate = TransitionResult(bridge, quality, duration, False, contacts)
@@ -826,6 +839,7 @@ def _build_transition(
         pose=np.stack([f.pose for f in frames]),
         left_hand=np.stack([f.left_hand for f in frames]),
         right_hand=np.stack([f.right_hand for f in frames]),
+        face_blendshapes=_face_transition(a, a_index, b, b_index, len(frames)),
     )
 
 
@@ -1037,6 +1051,11 @@ def evaluate_transition(
             bridge.right_hand,
             b.right_hand[b_index:b_index + 1],
         ]),
+        face_blendshapes=np.concatenate([
+            a.face_blendshapes[a_index:a_index + 1],
+            bridge.face_blendshapes,
+            b.face_blendshapes[b_index:b_index + 1],
+        ]),
     )
     wrist_speed = _max_wrist_speed(seam_track)
     angular_speed = _max_angular_speed(skel, seam_track)
@@ -1104,7 +1123,8 @@ def coast(
     if frames <= 0:
         return LandmarkTake(name=f"{take.name}-coast", fps=fps,
                             pose=take.pose[:0], left_hand=take.left_hand[:0],
-                            right_hand=take.right_hand[:0])
+                            right_hand=take.right_hand[:0],
+                            face_blendshapes=take.face_blendshapes[:0])
 
     duration = frames / fps
     start = decompose(skel, Pose.at(take, index))
@@ -1141,4 +1161,5 @@ def coast(
         pose=np.stack([p.pose for p in poses]),
         left_hand=np.stack([p.left_hand for p in poses]),
         right_hand=np.stack([p.right_hand for p in poses]),
+        face_blendshapes=np.repeat(take.face_blendshapes[index:index + 1], frames, axis=0),
     )

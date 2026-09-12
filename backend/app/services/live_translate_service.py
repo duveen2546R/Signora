@@ -28,26 +28,35 @@ def _aliases(registry: Registry, recordings: dict[str, SignClip]) -> list[tuple[
         for form in pattern.forms:
             words = tuple(normalise(form).split())
             if words and all(re.fullmatch(r"[a-z]+", word) for word in words):
-                values.setdefault(words, [gloss])
+                options = values.setdefault(words, [])
+                if gloss not in options:
+                    options.append(gloss)
     for gloss, clip in recordings.items():
         english = tuple(normalise(clip.gloss.english or "").split())
         if english and all(re.fullmatch(r"[a-z]+", word) for word in english):
-            values.setdefault(english, [gloss])
+            options = values.setdefault(english, [])
+            if gloss not in options:
+                options.append(gloss)
     return sorted(values.items(), key=lambda item: (-len(item[0]), item[0]))
 
 
-def interpret_live(session: Session, text: str, registry: Registry | None = None) -> Interpretation:
+def interpret_live(session: Session, text: str, registry: Registry | None = None,
+                   *, literal: bool = False) -> Interpretation:
     """Resolve a finalized speech phrase, then fall back to literal signs/fingerspelling."""
     registry = registry or load_registry()
     exact = interpret(session, text, registry)
-    if exact.status in {"ready", "preview", "missing-signs"}:
+    if not literal and exact.status in {"ready", "preview", "missing-signs"}:
         return exact
-    if any(issue.get("code") not in {"unsupported-pattern", "review-required"}
+    if not literal and any(issue.get("code") not in {"unsupported-pattern", "review-required"}
            for issue in exact.issues):
         return exact
 
     value = normalise(text)
-    if not value or not re.fullmatch(r"[a-z' ]+", value):
+    number_words = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+                    "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
+                    "nineteen", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
+                    "hundred", "thousand", "million", "billion"}
+    if not value or not re.fullmatch(r"[a-z ]+" if literal else r"[a-z' ]+", value) or (literal and number_words.intersection(value.split())):
         return Interpretation("unsupported", registry.version, issues=[{
             "code": "unsupported-speech-token",
             "message": "Live signing currently supports spoken English words, not numbers or symbols.",
@@ -72,6 +81,10 @@ def interpret_live(session: Session, text: str, registry: Registry | None = None
                         if tuple(words[at:at + len(entry[0])]) == entry[0]), None)
         if matched:
             phrase, glosses = matched
+            if len(glosses) != 1:
+                return Interpretation("unsupported", registry.version, issues=[{
+                    "code": "ambiguous-literal-alias", "message": "Multiple recordings match: " + " ".join(phrase),
+                }])
             source = " ".join(phrase)
             resolved.extend((gloss, source, False) for gloss in glosses)
             at += len(phrase)

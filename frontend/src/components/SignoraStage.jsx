@@ -41,9 +41,11 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
       report(`calibration:${state}`)
       playerRef.current?.handleCalibrationState(state)
     }
+    window.SignoraSignApplied = (marker) => playerRef.current?.handleApplied(marker)
     return () => {
       delete window.SignoraUnityReady
       delete window.SignoraCalibrationState
+      delete window.SignoraSignApplied
     }
   }, [report])
 
@@ -68,6 +70,7 @@ export default function SignoraStage({ onSignStart, onIdle, onStatus }) {
       queuedDurationMs: () => player.queuedDurationMs(),
       clear: () => player.clear(),
       isCalibrated: () => player.calibrated,
+      isPlaying: () => Boolean(player.track),
     }
 
     // Calibrate here rather than from the app shell: the player only exists once Unity has

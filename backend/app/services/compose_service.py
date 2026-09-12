@@ -57,15 +57,18 @@ SKELETON_TOLERANCE_M = 0.004
 
 
 @lru_cache(maxsize=64)
-def _raw(clip_path: str, source_csv: str = "", source_hash: str = "") -> LandmarkTake:
+def _raw(clip_path: str, source_capture: str = "", source_hash: str = "") -> LandmarkTake:
     """Clip files are content-addressed, so this is safe to cache for the process lifetime."""
-    if source_csv:
-        return load_source_motion(Path(clip_path), source_csv)[0]
+    if source_capture:
+        return load_source_motion(Path(clip_path), source_capture)[0]
     return _load(clip_path)
 
 
 def landmark_path(clip: SignClip) -> Path:
-    return clip_file(clip.clip_path).parent / f"{clip.content_hash}.landmarks.json"
+    path = clip_file(clip.clip_path)
+    if path.suffix == ".json":
+        return path
+    return path.parent / f"{clip.content_hash}.landmarks.json"
 
 
 def _pace_reviewed(track: LandmarkTake, skeleton: LandmarkSkeleton) -> LandmarkTake:
@@ -78,6 +81,9 @@ def _pace_reviewed(track: LandmarkTake, skeleton: LandmarkSkeleton) -> LandmarkT
         pose=resample_positions(source_times, track.pose, target),
         left_hand=resample_positions(source_times, track.left_hand, target),
         right_hand=resample_positions(source_times, track.right_hand, target),
+        face_blendshapes=np.clip(
+            resample_positions(source_times, track.face_blendshapes, target), 0.0, 1.0,
+        ),
         sign_start_s=track.sign_start_s * stretch,
         sign_end_s=track.sign_end_s * stretch,
         timestamps=None,
@@ -91,9 +97,9 @@ def _compose_cached(
 ) -> tuple[Composition, tuple[str, ...]]:
     """Cache immutable compositions by ordered content hashes and algorithm version."""
     raw = []
-    for gloss, path, _content_hash, source_csv, source_hash in key:
+    for gloss, path, _content_hash, source_capture, source_hash in key:
         try:
-            raw.append((gloss, _raw(path, source_csv, source_hash)))
+            raw.append((gloss, _raw(path, source_capture, source_hash)))
         except (ValueError, OSError) as exc:
             raise ComposeError(f"{gloss}: {exc}") from exc
     shared = LandmarkSkeleton.from_takes([track for _, track in raw])
@@ -179,13 +185,13 @@ def compose_clips(clips: list[tuple[str, SignClip]]) -> tuple[Composition, list[
             raise ComposeError(
                 f"{gloss} has no landmark frames; re-ingest the capture for that sign"
             )
-        stored_csv = getattr(clip, "source_csv", "")
-        source_csv = str(source_file(stored_csv)) if stored_csv else ""
+        stored_source = getattr(clip, "source_csv", "")
+        source_capture = str(source_file(stored_source)) if stored_source else ""
         try:
-            source_hash = hashlib.sha256(Path(source_csv).read_bytes()).hexdigest() if source_csv else ""
+            source_hash = hashlib.sha256(Path(source_capture).read_bytes()).hexdigest() if source_capture else ""
         except OSError as exc:
-            raise ComposeError(f"{gloss}: source CSV is missing; re-ingest the capture.") from exc
-        key.append((gloss, str(path), clip.content_hash, source_csv, source_hash))
+            raise ComposeError(f"{gloss}: source capture is missing; re-ingest it.") from exc
+        key.append((gloss, str(path), clip.content_hash, source_capture, source_hash))
 
     try:
         composition, warnings = _compose_cached(tuple(key), ALGORITHM_VERSION)

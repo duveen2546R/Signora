@@ -44,6 +44,9 @@ export default class SignoraPlayer {
     this.onFinished = null
     this.onCalibrated = null
     this.onCalibrationFailed = null
+    this.appliedMarkers = new Map()
+    this.reportedSigns = new Set()
+    this.activeMarker = -1
   }
 
   /** A single pose held during calibration; becomes the avatar's zero. */
@@ -51,6 +54,7 @@ export default class SignoraPlayer {
     assertPayloadShape(payload)
     this.calibrationPose = {
       pose: payload.pose[0], leftHand: payload.leftHand[0], rightHand: payload.rightHand[0],
+      faceBlendshapes: null,
     }
   }
 
@@ -168,6 +172,7 @@ export default class SignoraPlayer {
 
   #startEntry(entry, startedAt) {
     this.track = entry.payload
+    this.faceBlendshapeNames = entry.payload.faceBlendshapeNames ?? []
     this.currentSequence = entry.sequence
     this.currentTag = entry.tag
     const durationMs = entry.payload.frameCount / entry.payload.fps * 1000
@@ -180,6 +185,15 @@ export default class SignoraPlayer {
         Math.max(durationMs / Math.max(targetMs, 250), 1 + upcomingMs / 5000))) : 1
     this.segments = entry.payload.segments ?? []
     this.segmentIndex = -1
+    this.reportedSigns.clear()
+    this.activeMarker = -1
+    const firstSign = this.segments.find((segment) => segment.kind === 'sign')
+    const deadline = entry.payload.liveTiming?.desiredSignAt
+    // Only an idle neutral opening may wait. Never insert a hold into a flowing boundary.
+    const opening = entry.payload.streamingLibrary && entry.payload.startsFromNeutral
+    if (opening && Number.isFinite(deadline) && firstSign) {
+      startedAt += Math.max(0, Math.min(100, deadline - startedAt - firstSign.startFrame / entry.payload.fps * 1000))
+    }
     this.startedAt = startedAt
     this.pausedAt = document.hidden ? startedAt : null
     this.#watchVisibility()
@@ -206,6 +220,7 @@ export default class SignoraPlayer {
   setIdlePose(frame) {
     this.idlePose = {
       pose: frame.pose, leftHand: frame.leftHand, rightHand: frame.rightHand,
+      faceBlendshapes: frame.faceBlendshapes ?? null,
     }
   }
 
@@ -215,6 +230,8 @@ export default class SignoraPlayer {
     this.queue = []
     this.segments = []
     this.segmentIndex = -1
+    this.appliedMarkers.clear()
+    this.reportedSigns.clear()
   }
 
   stop() {
@@ -233,17 +250,41 @@ export default class SignoraPlayer {
     if (this.raf === null) this.raf = requestAnimationFrame(this.#tick)
   }
 
-  #emit(pose, leftHand, rightHand, state) {
+  #emit(pose, leftHand, rightHand, faceBlendshapes, state) {
     this.sequence += 1
     const now = performance.now()
+    const segment = this.segments.find((entry) => entry.kind === 'sign'
+      && this.frameIndex >= entry.startFrame && this.frameIndex < entry.endFrame)
+    let marker = segment ? this.activeMarker : -1
+    if (state === 'playing' && segment && !this.reportedSigns.has(segment.occurrenceIndex)) {
+      this.reportedSigns.add(segment.occurrenceIndex)
+      marker = this.sequence
+      this.activeMarker = marker
+      const detail = { frameSequence: marker, occurrenceIndex: segment.occurrenceIndex,
+        gloss: segment.gloss, sourceEndAt: this.track?.liveTiming?.sourceEndAt, at: now }
+      this.appliedMarkers.set(marker, detail)
+      if (this.appliedMarkers.size > 128) this.appliedMarkers.delete(this.appliedMarkers.keys().next().value)
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('signsure-sign-submitted', { detail }))
+    }
     this.send(RUNTIME_OBJECT, 'ReceiveFrame', buildFrame({
-      sequence: this.sequence, timeMs: now, pose, leftHand, rightHand, state,
+      sequence: this.sequence, timeMs: now, pose, leftHand, rightHand,
+      faceBlendshapeNames: this.faceBlendshapeNames, faceBlendshapes, state,
+      signMarker: marker,
+    }))
+  }
+
+  handleApplied(marker) {
+    const detail = this.appliedMarkers.get(marker)
+    if (!detail) return
+    this.appliedMarkers.delete(marker)
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('signsure-sign-applied', {
+      detail: { ...detail, at: performance.now() },
     }))
   }
 
   /** Linear blend between the two frames bracketing a time, so playback is not quantised to rAF. */
   #sample(time) {
-    const { pose, leftHand, rightHand, frameCount, fps } = this.track
+    const { pose, leftHand, rightHand, faceBlendshapes, frameCount, fps } = this.track
     const exact = Math.max(time * fps, 0)
     const i = Math.min(Math.floor(exact), frameCount - 1)
     const j = Math.min(i + 1, frameCount - 1)
@@ -256,21 +297,25 @@ export default class SignoraPlayer {
       p[1] + (b[k][1] - p[1]) * f,
       p[2] + (b[k][2] - p[2]) * f,
     ]))
+    const mixScalars = (a, b) => (f <= 0 || i === j ? a : a.map(
+      (value, k) => value + (b[k] - value) * f,
+    ))
 
     return {
       index: i,
       pose: mix(pose[i], pose[j]),
       leftHand: mix(leftHand[i], leftHand[j]),
       rightHand: mix(rightHand[i], rightHand[j]),
+      faceBlendshapes: faceBlendshapes ? mixScalars(faceBlendshapes[i], faceBlendshapes[j]) : null,
     }
   }
 
   #announce(index) {
-    const at = this.segments.findIndex((s) => index >= s.startFrame && index < s.endFrame)
-    if (at === this.segmentIndex) return
-    this.segmentIndex = at
-    const segment = this.segments[at]
-    if (segment?.kind === 'sign') this.onSignStart?.(segment.gloss, segment.occurrenceIndex)
+    // Walk every crossed segment, including a boundary crossed between two rAF callbacks.
+    while (this.segmentIndex + 1 < this.segments.length && this.segments[this.segmentIndex + 1].startFrame <= index) {
+      const segment = this.segments[++this.segmentIndex]
+      if (segment.kind === 'sign') this.onSignStart?.(segment.gloss, segment.occurrenceIndex)
+    }
   }
 
   #tick = () => {
@@ -279,8 +324,8 @@ export default class SignoraPlayer {
 
     // Hold the reference pose steady until the runtime confirms it calibrated on it.
     if (!this.calibrated) {
-      const { pose, leftHand, rightHand } = this.calibrationPose
-      this.#emit(pose, leftHand, rightHand, 'calibrating')
+      const { pose, leftHand, rightHand, faceBlendshapes } = this.calibrationPose
+      this.#emit(pose, leftHand, rightHand, faceBlendshapes, 'calibrating')
       return
     }
 
@@ -292,10 +337,11 @@ export default class SignoraPlayer {
         this.frameIndex = frame.index
         this.#announce(frame.index)
         this.lastPose = frame
-        this.#emit(frame.pose, frame.leftHand, frame.rightHand, 'playing')
+        this.#emit(frame.pose, frame.leftHand, frame.rightHand, frame.faceBlendshapes, 'playing')
         return
       }
       const final = this.#sample((this.track.frameCount - 1) / this.track.fps)
+      this.#announce(this.track.frameCount - 1)
       this.lastPose = final
       this.frameIndex = final.index
       const spilloverMs = Math.max(elapsed - duration, 0) * 1000 / this.playbackRate
@@ -317,6 +363,6 @@ export default class SignoraPlayer {
     // Nothing playing. Hold the pose the avatar actually reached - resending the calibration pose
     // here would snap it back to the avatar's T-pose the moment a sentence ended.
     const resting = this.lastPose ?? this.idlePose ?? this.calibrationPose
-    this.#emit(resting.pose, resting.leftHand, resting.rightHand, 'idle')
+    this.#emit(resting.pose, resting.leftHand, resting.rightHand, resting.faceBlendshapes, 'idle')
   }
 }

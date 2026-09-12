@@ -10,10 +10,23 @@
 export const SCHEMA_VERSION = 1
 export const POSE_LANDMARK_COUNT = 33
 export const HAND_LANDMARK_COUNT = 21
+export const FACE_BLENDSHAPE_COUNT = 52
+export const ARKIT_BLENDSHAPES = [
+  'browDownLeft', 'browDownRight', 'browInnerUp', 'browOuterUpLeft', 'browOuterUpRight',
+  'cheekPuff', 'cheekSquintLeft', 'cheekSquintRight', 'eyeBlinkLeft', 'eyeBlinkRight',
+  'eyeLookDownLeft', 'eyeLookDownRight', 'eyeLookInLeft', 'eyeLookInRight', 'eyeLookOutLeft',
+  'eyeLookOutRight', 'eyeLookUpLeft', 'eyeLookUpRight', 'eyeSquintLeft', 'eyeSquintRight',
+  'eyeWideLeft', 'eyeWideRight', 'jawForward', 'jawLeft', 'jawOpen', 'jawRight', 'mouthClose',
+  'mouthDimpleLeft', 'mouthDimpleRight', 'mouthFrownLeft', 'mouthFrownRight', 'mouthFunnel',
+  'mouthLeft', 'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthPressLeft', 'mouthPressRight',
+  'mouthPucker', 'mouthRight', 'mouthRollLower', 'mouthRollUpper', 'mouthShrugLower',
+  'mouthShrugUpper', 'mouthSmileLeft', 'mouthSmileRight', 'mouthStretchLeft',
+  'mouthStretchRight', 'mouthUpperUpLeft', 'mouthUpperUpRight', 'noseSneerLeft',
+  'noseSneerRight', 'tongueOut',
+]
 
-// The suit carries no face capture. The transform still has to be 16 floats or the frame is
-// rejected outright, so send identity and mark the channel absent; HeadRetargeter then falls back
-// to its pose-derived rotation.
+// FBX supplies expression coefficients, while head orientation continues to come from pose
+// landmarks. Unity still requires a 16-float face transform, so identity is the correct transform.
 const IDENTITY_4X4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 
 // Mocap, not inference: every point is exact. Must clear the runtime's 0.45 minimum.
@@ -28,13 +41,19 @@ function landmarks(points) {
   return out
 }
 
-export function buildFrame({ sequence, timeMs, pose, leftHand, rightHand, state = 'playing' }) {
+export function buildFrame({
+  sequence, timeMs, pose, leftHand, rightHand, faceBlendshapeNames = [], faceBlendshapes = null,
+  state = 'playing', signMarker = -1,
+}) {
+  const hasFace = Array.isArray(faceBlendshapes) && faceBlendshapes.length === FACE_BLENDSHAPE_COUNT
+    && faceBlendshapeNames.length === FACE_BLENDSHAPE_COUNT
   return JSON.stringify({
     schemaVersion: SCHEMA_VERSION,
     sequence,
+    signMarker,
     captureTimeMs: timeMs,
     inferenceEndTimeMs: timeMs,
-    source: 'rokoko',
+    source: 'rokoko-fbx',
     state,
     pose: { present: true, confidence: CONFIDENCE, landmarks: landmarks(pose) },
     leftHand: {
@@ -43,7 +62,14 @@ export function buildFrame({ sequence, timeMs, pose, leftHand, rightHand, state 
     rightHand: {
       present: true, confidence: CONFIDENCE, handedness: 'Right', landmarks: landmarks(rightHand),
     },
-    face: { present: false, confidence: 0, transform: IDENTITY_4X4, blendshapes: [] },
+    face: {
+      present: hasFace,
+      confidence: hasFace ? CONFIDENCE : 0,
+      transform: IDENTITY_4X4,
+      blendshapes: hasFace
+        ? faceBlendshapeNames.map((name, index) => ({ name, score: faceBlendshapes[index] }))
+        : [],
+    },
   })
 }
 
@@ -65,6 +91,19 @@ export function assertPayloadShape(payload) {
   for (const side of ['leftHand', 'rightHand']) {
     if (payload?.[side]?.[0]?.length !== HAND_LANDMARK_COUNT) {
       problems.push(`${side} has ${payload?.[side]?.[0]?.length} landmarks, expected ${HAND_LANDMARK_COUNT}`)
+    }
+  }
+  const face = payload?.faceBlendshapes
+  const faceNames = payload?.faceBlendshapeNames
+  if (face !== undefined || faceNames !== undefined) {
+    if (!Array.isArray(faceNames) || faceNames.length !== FACE_BLENDSHAPE_COUNT
+        || faceNames.some((name, index) => name !== ARKIT_BLENDSHAPES[index])) {
+      problems.push(`faceBlendshapeNames must use the canonical ${FACE_BLENDSHAPE_COUNT}-channel ARKit order`)
+    }
+    if (!Array.isArray(face) || face.length !== counts[0] || face.some((frame) =>
+      !Array.isArray(frame) || frame.length !== FACE_BLENDSHAPE_COUNT
+      || frame.some((value) => !Number.isFinite(value) || value < 0 || value > 1))) {
+      problems.push(`faceBlendshapes must contain ${counts[0]} frames of ${FACE_BLENDSHAPE_COUNT} normalized scores`)
     }
   }
   if (!Number.isInteger(payload?.frameCount) || payload.frameCount < 1) problems.push('invalid frameCount')

@@ -25,8 +25,10 @@ def _serialise(clip: SignClip) -> dict:
         "take": clip.take, "isCanonical": clip.is_canonical,
         "durationMs": int(clip.duration * 1000), "frameCount": clip.frame_count,
         "fps": clip.fps, "byteSize": clip.byte_size, "rigDigest": clip.rig_digest,
-        "url": f"/api/v1/clips/{clip.content_hash}.signclip",
-        "landmarksUrl": f"/api/v1/clips/{clip.content_hash}.landmarks.json",
+        "url": f"/api/v1/clips/{clip.content_hash}.motion.json",
+        "motionUrl": f"/api/v1/clips/{clip.content_hash}.motion.json",
+        # Compatibility alias for browser builds made before the FBX motion schema.
+        "landmarksUrl": f"/api/v1/clips/{clip.content_hash}.motion.json",
         "qc": clip.qc, "contentHash": clip.content_hash,
         "rawUrl": f"/api/v1/signs/{clip.id}/raw",
     }
@@ -140,20 +142,35 @@ def _artifact_path(content_hash: str, session: Session) -> Path | None:
     return None
 
 
-@router.get("/clips/{content_hash}.landmarks.json")
-def get_landmarks(content_hash: str, session: Session = Depends(get_session)):
-    """Landmark frames for the Signora Unity runtime (MediaPipe layout)."""
+def _motion_path(content_hash: str, session: Session) -> Path:
     artifact = _artifact_path(content_hash, session)
     if artifact is None:
         raise HTTPException(404, "no such clip")
-    path = artifact.with_suffix(".landmarks.json")
+    path = artifact if artifact.suffix == ".json" else artifact.with_suffix(".landmarks.json")
     if not path.exists():
-        raise HTTPException(404, "this clip has no landmark frames; re-ingest the capture")
+        raise HTTPException(404, "this clip has no normalized motion; re-ingest the capture")
+    return path
+
+
+def _motion_response(content_hash: str, session: Session) -> FileResponse:
+    path = _motion_path(content_hash, session)
     return FileResponse(
         path,
         media_type="application/json",
         headers={"Cache-Control": "public, max-age=31536000, immutable", "ETag": content_hash},
     )
+
+
+@router.get("/clips/{content_hash}.motion.json")
+def get_motion(content_hash: str, session: Session = Depends(get_session)):
+    """Normalized body, hand, head, and ARKit expression motion for the Unity runtime."""
+    return _motion_response(content_hash, session)
+
+
+@router.get("/clips/{content_hash}.landmarks.json")
+def get_landmarks(content_hash: str, session: Session = Depends(get_session)):
+    """Compatibility route for clients built against the landmark-only capture format."""
+    return _motion_response(content_hash, session)
 
 
 @router.get("/clips/{content_hash}.signclip")

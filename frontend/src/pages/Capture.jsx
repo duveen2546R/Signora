@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import MotionPhaseEditor from '../components/MotionPhaseEditor'
-import { inspectCaptureDuration, phaseDurations, snapPhaseDraft, validatePhaseDraft } from '../capturePhases'
+import { phaseDurations, snapPhaseDraft, validatePhaseDraft } from '../capturePhases'
 
-/** Upload rig profiles and motion captures, and watch ingest results come back. */
+/** Upload combined motion captures and watch ingest results come back. */
 export default function Capture({ onLibraryChanged }) {
-  const [rigs, setRigs] = useState([])
   const [jobs, setJobs] = useState([])
   const [drafts, setDrafts] = useState([])
   const [error, setError] = useState(null)
-
-  useEffect(() => { api.listRigs().then(setRigs).catch((e) => setError(e.message)) }, [])
 
   // Poll while anything is still ingesting.
   useEffect(() => {
@@ -26,21 +23,10 @@ export default function Capture({ onLibraryChanged }) {
     return () => clearInterval(timer)
   }, [jobs, onLibraryChanged])
 
-  async function handleRig(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    try {
-      await api.uploadRig(file)
-      setRigs(await api.listRigs())
-      setError(null)
-    } catch (e) { setError(e.message) }
-  }
-
   async function selectCaptures(event) {
     const files = Array.from(event.target.files ?? [])
     const inspected = await Promise.all(files.map(async (file) => {
       try {
-        await inspectCaptureDuration(file)
         const track = await api.previewCapture(file)
         const duration = track.durationSeconds ?? track.frameCount / track.fps
         return {
@@ -94,32 +80,16 @@ export default function Capture({ onLibraryChanged }) {
         <span>Build the vocabulary<br />one performance at a time.</span>
       </header>
       <div className="panel">
-        <h2>Avatar rig</h2>
-        <p className="hint">
-          Export once from Unity: select the avatar, then <code>SignSure &gt; Export Rig Profile</code>.
-          Motion cannot be retargeted until this is uploaded.
-        </p>
-        <input type="file" accept=".json" onChange={handleRig} />
-        <ul className="rigs">
-          {rigs.map((rig) => (
-            <li key={rig.digest}>
-              <strong>{rig.avatarName}</strong>
-              <span className="mono">{rig.digest}</span>
-              <span>hip height {rig.hipHeight?.toFixed?.(2)}m</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="panel">
         <h2>Motion captures</h2>
         <p className="hint">
-          Rokoko biomechanics CSV exports. Name each file for the sign it contains
-          (<code>hello_01.csv</code>) — the gloss and take number are read from the filename.
+          Combined Rokoko FBX exports with body, Smartglove, and face animation at 60 fps.
+          Name each file for the sign it contains (<code>hello_01.fbx</code>) — the gloss and take
+          number are read from the filename. The FBX supplies motion only; Unity keeps using the
+          single Signora avatar already included in the project.
         </p>
         <label className="capture__picker">
           <span>Select motion captures</span>
-          <input type="file" accept=".csv" multiple onChange={selectCaptures} />
+          <input type="file" accept=".fbx" multiple onChange={selectCaptures} />
         </label>
 
         {drafts.length > 0 && (
@@ -141,6 +111,10 @@ export default function Capture({ onLibraryChanged }) {
                   ) : (
                     <>
                       <p className="phase-draft__duration">Capture duration: {draft.duration.toFixed(3)}s</p>
+                      <p className="hint">
+                        Body, both hands, and {draft.track.faceBlendshapeNames?.length ?? 0} ARKit
+                        facial channels detected.
+                      </p>
                       <p className="hint">
                         Split the capture into three sections by entering the two boundary timestamps.
                       </p>
@@ -188,7 +162,7 @@ export default function Capture({ onLibraryChanged }) {
                     {job.error}
                     {job.qc?.warnings?.join('; ')}
                     {job.status === 'done' && !job.qc?.warnings?.length &&
-                      `${job.qc?.dominant_hand} hand, ${job.qc?.duration?.toFixed?.(1)}s`}
+                      `${job.qc?.dominant_hand} hand, ${job.qc?.duration?.toFixed?.(1)}s, ${job.qc?.face?.activeChannelCount ?? 0}/52 facial channels active`}
                   </td>
                 </tr>
               ))}

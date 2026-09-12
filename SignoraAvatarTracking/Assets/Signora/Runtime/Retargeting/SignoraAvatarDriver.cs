@@ -26,6 +26,8 @@ namespace Signora.Retargeting
         private FaceRetargeter _face;
         private CanonicalTrackingFrameV1 _currentFrame;
         private int _lastAppliedSequence = -1;
+        private int _pendingSignMarker = -1;
+        private int _lastReportedSignMarker = -1;
         private float _calibrationStartedAt = float.NegativeInfinity;
         private bool _calibrating;
         private bool _bodyCalibrated;
@@ -63,6 +65,7 @@ namespace Signora.Retargeting
             {
                 _currentFrame = _filter.Filter(latest, Time.realtimeSinceStartup);
                 _lastAppliedSequence = latest.sequence;
+                if (latest.signMarker >= 0) _pendingSignMarker = latest.signMarker;
                 if (_calibrating) _calibration.Add(_currentFrame, MinimumLandmarkConfidence);
             }
 
@@ -87,6 +90,13 @@ namespace Signora.Retargeting
             var faceAge = now - _store.LastFaceTime;
             if (faceAge <= HoldDurationSeconds) _face.Apply(_currentFrame.face);
             else _face.BlendToNeutral(NeutralStep(faceAge));
+            if (_pendingSignMarker > _lastReportedSignMarker)
+            {
+                _lastReportedSignMarker = _pendingSignMarker;
+#if UNITY_WEBGL && !UNITY_EDITOR
+                Signora_ReportSignApplied(_pendingSignMarker);
+#endif
+            }
         }
 
         private void CompleteCalibration()
@@ -139,6 +149,8 @@ namespace Signora.Retargeting
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")]
         private static extern void Signora_ReportCalibration(string state);
+        [DllImport("__Internal")]
+        private static extern void Signora_ReportSignApplied(int marker);
 #endif
     }
 }

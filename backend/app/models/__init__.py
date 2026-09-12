@@ -38,7 +38,11 @@ class Gloss(Base):
 
 
 class SignClip(Base):
-    """One retargeted take. A gloss may have several; exactly one is canonical."""
+    """One normalized motion take. A gloss may have several; exactly one is canonical.
+
+    `source_csv` and `clip_path` retain their original database column names so existing local
+    libraries migrate without destructive schema changes; new rows point to FBX and motion JSON.
+    """
 
     __tablename__ = "sign_clips"
     __table_args__ = (UniqueConstraint("gloss_id", "take", name="uq_gloss_take"),)

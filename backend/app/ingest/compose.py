@@ -20,11 +20,11 @@ import numpy as np
 
 from . import blend, filters, resample
 from .blend import Pose
-from .landmarks import LandmarkSkeleton, LandmarkTake, concat, slice_frames
+from .landmarks import FACE_BLENDSHAPE_COUNT, LandmarkSkeleton, LandmarkTake, concat, slice_frames
 from .segment import Phases, Stroke, boundary_candidates, find_phases, find_stroke, usable_range
 
 TARGET_FPS = 60.0
-ALGORITHM_VERSION = 9
+ALGORITHM_VERSION = 10
 
 # Stillness after each sign so one word reads as finished before the next begins.
 HOLD_SECONDS = 0.10
@@ -92,6 +92,7 @@ class Composition:
                 "pose": np.round(self.neutral.pose, decimals).tolist(),
                 "leftHand": np.round(self.neutral.left_hand, decimals).tolist(),
                 "rightHand": np.round(self.neutral.right_hand, decimals).tolist(),
+                "faceBlendshapes": [0.0] * FACE_BLENDSHAPE_COUNT,
             }
         if self.blend_quality:
             payload["blendQuality"] = self.blend_quality
@@ -118,6 +119,7 @@ def enforce_track(skel: LandmarkSkeleton, take: LandmarkTake) -> LandmarkTake:
         pose=np.stack([f.pose for f in frames]),
         left_hand=np.stack([f.left_hand for f in frames]),
         right_hand=np.stack([f.right_hand for f in frames]),
+        face_blendshapes=take.face_blendshapes.copy(),
         sign_start_s=take.sign_start_s,
         sign_end_s=take.sign_end_s,
         phase_source=take.phase_source,
@@ -154,20 +156,21 @@ def prepare(
     take = slice_frames(take, head, tail)
 
     times = take.times
-    # A CSV row occupies an interval, including the last row. Sampling only through
-    # times[-1] loses half a 30-fps interval when exporting at 60 fps.
+    # A captured frame occupies an interval, including the last one. Sampling only through
+    # times[-1] would lose that final interval on the playback timebase.
     target = np.arange(max(int(np.ceil(take.duration * fps - 1e-9)), 1)) / fps
 
     tracks = [
         resample.resample_positions(times, track, target)
-        for track in (take.pose, take.left_hand, take.right_hand)
+        for track in (take.pose, take.left_hand, take.right_hand, take.face_blendshapes)
     ]
     if smooth:
-        tracks = [filters.smooth_positions(t) for t in tracks]
+        tracks[:3] = [filters.smooth_positions(t) for t in tracks[:3]]
 
     result = enforce_track(skel, LandmarkTake(
         name=take.name, fps=fps,
         pose=tracks[0], left_hand=tracks[1], right_hand=tracks[2],
+        face_blendshapes=np.clip(tracks[3], 0.0, 1.0),
         sign_start_s=take.sign_start_s,
         sign_end_s=take.sign_end_s,
         phase_source=take.phase_source,
@@ -218,13 +221,15 @@ def _hold(take: LandmarkTake, index: int, frames: int, fps: float) -> LandmarkTa
         pose=np.repeat(repeat.pose, frames, axis=0),
         left_hand=np.repeat(repeat.left_hand, frames, axis=0),
         right_hand=np.repeat(repeat.right_hand, frames, axis=0),
+        face_blendshapes=np.repeat(repeat.face_blendshapes, frames, axis=0),
     )
 
 
 def _single(skel: LandmarkSkeleton, pose: Pose, fps: float, name: str) -> LandmarkTake:
     return LandmarkTake(name=name, fps=fps,
                         pose=pose.pose[None], left_hand=pose.left_hand[None],
-                        right_hand=pose.right_hand[None])
+                        right_hand=pose.right_hand[None],
+                        face_blendshapes=np.zeros((1, FACE_BLENDSHAPE_COUNT), dtype=np.float64))
 
 
 def compose(

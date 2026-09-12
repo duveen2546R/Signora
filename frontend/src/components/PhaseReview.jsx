@@ -10,13 +10,13 @@ export default function PhaseReview({ sign, onSaved, onClose }) {
   const [busy, setBusy] = useState(false)
   useEffect(() => {
     let cancelled = false
-    api.landmarks(sign.rawUrl ?? sign.landmarksUrl).then((raw) => {
+    api.motion(sign.rawUrl ?? sign.motionUrl ?? sign.landmarksUrl).then((raw) => {
       if (cancelled) return
       setTrack(raw)
       setDraft(initialPhaseDraft(raw))
     }).catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
-  }, [sign.rawUrl, sign.landmarksUrl])
+  }, [sign.rawUrl, sign.motionUrl, sign.landmarksUrl])
 
   async function save() {
     const validation = validatePhaseDraft({ ...draft, track, duration: track.durationSeconds ?? track.frameCount / track.fps })

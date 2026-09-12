@@ -76,10 +76,7 @@ export default function MotionPhaseEditor({ track, signStart, signEnd, onChange,
   return (
     <fieldset className="motion-editor" disabled={disabled}>
       <legend>Review captured movement</legend>
-      <p className="hint">Keep the full sign and its holds. Times are seconds from the first CSV Timestamp; each slider step selects a captured CSV row.</p>
-      {track.csvPhaseBounds && <p className="hint">CSV Phase column: {track.csvPhaseBounds.signStartSeconds.toFixed(6)}s → {track.csvPhaseBounds.signEndSeconds.toFixed(6)}s. {track.phaseSource === 'authored-ui'
-        ? 'This take has been re-timed here, so the boundaries below are the ones it plays with; the CSV values are shown only for reference.'
-        : 'These seed the boundaries below; anything you save replaces them for this take.'}</p>}
+      <p className="hint">Keep the full sign and its holds. Times are seconds from the first FBX animation frame; each slider step selects one captured 60 fps frame.</p>
       <div className="motion-editor__viewport">
         <div className="motion-editor__views" style={{ width: `${zoom * 100}%` }}>
           <Skeleton track={track} index={frame} axis={0} bounds={bounds} />

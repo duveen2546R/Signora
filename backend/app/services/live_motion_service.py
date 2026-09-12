@@ -144,13 +144,20 @@ def _sign_segments(payload: dict) -> list[dict]:
 def _slice_payload(payload: dict, start: int, end: int, occurrence: int | str | None) -> dict:
     if end <= start:
         raise ComposeError("compiled live motion contains an empty range")
+    face = payload.get("faceBlendshapes")
+    if not face:
+        face = [[0.0] * lm.FACE_BLENDSHAPE_COUNT for _ in range(payload["frameCount"])]
     result = {
         "fps": payload["fps"], "frameCount": end - start,
         "pose": payload["pose"][start:end],
         "leftHand": payload["leftHand"][start:end],
         "rightHand": payload["rightHand"][start:end],
+        "faceBlendshapeNames": payload.get("faceBlendshapeNames", list(lm.ARKIT_BLENDSHAPES)),
+        "faceBlendshapes": face[start:end],
+        "motionSchemaVersion": 2,
         "segments": [], "blendQuality": payload.get("blendQuality", {}),
         "maxPlaybackRate": payload.get("maxPlaybackRate", 1.0),
+        "warnings": payload.get("warnings", []),
     }
     if payload.get("neutral") is not None:
         result["neutral"] = payload["neutral"]
@@ -174,7 +181,9 @@ def _join_payloads(parts: list[dict], seams: list[dict]) -> dict:
         raise ComposeError("live motion needs at least one part")
     result = {
         "fps": parts[0]["fps"], "frameCount": 0,
-        "pose": [], "leftHand": [], "rightHand": [], "segments": [],
+        "pose": [], "leftHand": [], "rightHand": [], "faceBlendshapes": [], "segments": [],
+        "faceBlendshapeNames": parts[0].get("faceBlendshapeNames", list(lm.ARKIT_BLENDSHAPES)),
+        "motionSchemaVersion": 2,
         "neutral": parts[0].get("neutral"),
         "maxPlaybackRate": min(part.get("maxPlaybackRate", 1.0) for part in parts),
     }
@@ -184,6 +193,9 @@ def _join_payloads(parts: list[dict], seams: list[dict]) -> dict:
             raise ComposeError("compiled live motion uses inconsistent frame rates")
         for channel in ("pose", "leftHand", "rightHand"):
             result[channel].extend(part[channel])
+        result["faceBlendshapes"].extend(part.get("faceBlendshapes") or (
+            [[0.0] * lm.FACE_BLENDSHAPE_COUNT for _ in range(part["frameCount"])]
+        ))
         for segment in part["segments"]:
             result["segments"].append({
                 **segment,
@@ -358,7 +370,7 @@ def readiness(session: Session) -> dict:
         LiveMotionArtifact.from_clip_hash.in_(published_hashes),
         LiveMotionArtifact.to_clip_hash.in_(published_hashes),
     )).all() if published_hashes else []
-    current_rows = [row for row in rows if row.library_version == version]
+    current_rows = [row for row in rows if row.library_version == version and not (row.quality or {}).get("artifactRecord")]
     ready_pairs = sum(
         row.status == "ready" and Path(row.artifact_path).exists()
         and (row.from_clip_hash, row.to_clip_hash) in expected_pairs

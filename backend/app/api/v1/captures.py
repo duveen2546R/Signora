@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import SessionLocal, get_session
 from app.models import IngestJob
-from app.ingest.landmarks import to_landmarks
 from app.services.source_motion import raw_payload
-from app.ingest.rokoko import RokokoFormatError, parse_csv, with_phase_bounds
-from app.services.ingest_service import active_rig, create_job, run_ingest
+from app.ingest.fbx import FbxFormatError, parse_fbx
+from app.ingest.rokoko import RokokoFormatError, with_phase_bounds
+from app.services.ingest_service import create_job, run_ingest
 
 router = APIRouter(prefix="/captures", tags=["captures"])
 
@@ -31,13 +31,8 @@ async def upload_capture(
     sign_end_seconds: float | None = Form(None),
     session: Session = Depends(get_session),
 ):
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(400, "expected a .csv export from Rokoko Studio")
-
-    try:
-        active_rig(session)
-    except LookupError as exc:
-        raise HTTPException(409, str(exc)) from exc
+    if not file.filename or not file.filename.lower().endswith(".fbx"):
+        raise HTTPException(400, "expected a combined .fbx export from Rokoko Studio")
 
     source_dir = settings.upload_dir / uuid.uuid4().hex
     source_dir.mkdir(parents=True, exist_ok=True)
@@ -45,7 +40,7 @@ async def upload_capture(
     temporary = dest.with_name(f".{dest.name}.{uuid.uuid4().hex}.uploading")
     temporary.write_bytes(await file.read())
     try:
-        parsed = parse_csv(temporary, name=dest.stem)
+        parsed = parse_fbx(temporary, name=dest.stem)
         if (
             sign_start_seconds is None
             and sign_end_seconds is None
@@ -57,7 +52,7 @@ async def upload_capture(
         with_phase_bounds(
             parsed, sign_start_seconds, sign_end_seconds, snap=True, override_csv_phase=True,
         )
-    except RokokoFormatError as exc:
+    except (ValueError, IndexError, RokokoFormatError, FbxFormatError) as exc:
         temporary.unlink(missing_ok=True)
         raise HTTPException(400, str(exc)) from exc
     temporary.replace(dest)
@@ -69,17 +64,16 @@ async def upload_capture(
 
 @router.post("/preview")
 async def preview_capture(file: UploadFile):
-    """Inspect raw body/hand motion without creating a capture or requiring a rig."""
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(400, "expected a .csv export from Rokoko Studio")
+    """Inspect synchronized body, hand, and face motion without creating a capture."""
+    if not file.filename or not file.filename.lower().endswith(".fbx"):
+        raise HTTPException(400, "expected a combined .fbx export from Rokoko Studio")
     try:
-        with tempfile.NamedTemporaryFile(suffix=".csv") as temporary:
+        with tempfile.NamedTemporaryFile(suffix=".fbx") as temporary:
             temporary.write(await file.read())
             temporary.flush()
-            source = parse_csv(temporary.name, name=Path(file.filename).stem)
-            raw = to_landmarks(source)
-        return raw_payload(raw, source)
-    except (ValueError, IndexError) as exc:
+            raw = parse_fbx(temporary.name, name=Path(file.filename).stem)
+        return raw_payload(raw, raw)
+    except (ValueError, IndexError, FbxFormatError) as exc:
         raise HTTPException(400, str(exc)) from exc
 
 
