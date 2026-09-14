@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     clip_dir: Path = BASE_DIR / "data" / "clips"
     transition_dir: Path = BASE_DIR / "data" / "transitions"
+    video_plan_dir: Path = BASE_DIR / "data" / "video-plans"
     speech_model_dir: Path = BASE_DIR / "data" / "speech-model"
     speech_threads: int = 2
     # Vite dev server; tighten for deployment.
@@ -25,3 +26,4 @@ settings = Settings()
 settings.upload_dir.mkdir(parents=True, exist_ok=True)
 settings.clip_dir.mkdir(parents=True, exist_ok=True)
 settings.transition_dir.mkdir(parents=True, exist_ok=True)
+settings.video_plan_dir.mkdir(parents=True, exist_ok=True)

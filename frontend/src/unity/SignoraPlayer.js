@@ -33,6 +33,7 @@ export default class SignoraPlayer {
     this.frameIndex = 0
     this.startedAt = 0
     this.pausedAt = null
+    this.pauseReasons = new Set()
     this.raf = null
     this.calibrated = false
     this.awaitingResult = false
@@ -124,12 +125,7 @@ export default class SignoraPlayer {
     if (this.visibilityBound) return
     this.visibilityBound = true
     this.onVisibilityChange = () => {
-      const now = performance.now()
-      if (document.hidden && this.track && this.pausedAt === null) this.pausedAt = now
-      if (!document.hidden && this.pausedAt !== null) {
-        this.startedAt += now - this.pausedAt
-        this.pausedAt = null
-      }
+      this.#setPaused('visibility', document.hidden)
       // Coming back into view is the moment a starved calibration can finally succeed.
       if (!document.hidden && !this.calibrated && !this.awaitingResult) {
         this.attempts = 0
@@ -195,7 +191,8 @@ export default class SignoraPlayer {
       startedAt += Math.max(0, Math.min(100, deadline - startedAt - firstSign.startFrame / entry.payload.fps * 1000))
     }
     this.startedAt = startedAt
-    this.pausedAt = document.hidden ? startedAt : null
+    if (document.hidden) this.pauseReasons.add('visibility')
+    this.pausedAt = this.pauseReasons.size ? startedAt : null
     this.#watchVisibility()
     this.frameIndex = 0
   }
@@ -224,8 +221,36 @@ export default class SignoraPlayer {
     }
   }
 
+  #setPaused(reason, paused) {
+    const wasPaused = this.pauseReasons.size > 0
+    if (paused) this.pauseReasons.add(reason)
+    else this.pauseReasons.delete(reason)
+    const isPaused = this.pauseReasons.size > 0
+    const now = performance.now()
+    if (!wasPaused && isPaused && this.track) this.pausedAt = now
+    if (wasPaused && !isPaused && this.track && this.pausedAt !== null) {
+      this.startedAt += now - this.pausedAt
+      this.pausedAt = null
+    }
+  }
+
+  pause() {
+    this.#setPaused('media', true)
+  }
+
+  resume() {
+    this.#setPaused('media', false)
+  }
+
+  resetToIdle() {
+    this.clear()
+    this.lastPose = this.idlePose ?? this.calibrationPose
+    this.frameIndex = 0
+  }
+
   clear() {
     this.pausedAt = null
+    this.pauseReasons.clear()
     this.track = null
     this.queue = []
     this.segments = []

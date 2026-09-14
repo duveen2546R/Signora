@@ -94,6 +94,16 @@ export const api = {
   // Normalized body, hand, head, and facial motion; the Unity runtime retargets it in-engine.
   motion: (url) => request(url.replace('/api/v1', '')),
   landmarks: (url) => request(url.replace('/api/v1', '')),
+
+  createVideoPlan: (youtubeUrl, subtitle) => {
+    const form = new FormData()
+    form.append('youtube_url', youtubeUrl)
+    form.append('subtitle', subtitle)
+    return request('/video-plans', { method: 'POST', body: form })
+  },
+  videoPlan: (planId) => request(`/video-plans/${planId}`),
+  deleteVideoPlan: (planId) => request(`/video-plans/${planId}`, { method: 'DELETE' }),
+  videoUnitMotion: (motionUrl) => request(motionUrl.replace('/api/v1', '')),
 }
 
 export const clipUrl = (contentPath) => `${BASE.replace('/api/v1', '')}${contentPath}`

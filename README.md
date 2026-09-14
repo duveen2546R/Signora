@@ -67,6 +67,21 @@ Open [http://localhost:5173](http://localhost:5173). Wait for the avatar badge t
 Vite proxies `/api` to the backend on port 8000. Override the API location with
 `VITE_API_BASE` when the services are hosted separately.
 
+## YouTube subtitle signing
+
+Open **Watch** and provide a YouTube URL plus the video's matching UTF-8 SRT or WebVTT subtitle
+file. SignSure groups captions into complete units, resolves reviewed ISL patterns first, and then
+uses a clearly labelled literal preview when the available vocabulary permits it. Articles are
+omitted, while copulas are removed only in simple affirmative present-tense statements. Questions,
+negation, and tense-bearing forms are not silently simplified. An unknown word is fingerspelled only
+when the complete A–Z library is available; otherwise the entire unit is skipped.
+
+The official YouTube iframe remains the timing master. Pausing or buffering freezes the avatar,
+seeking resets it to neutral and starts at the next complete unit, and the video automatically pauses
+when a sign needs more time. The uploaded subtitle bytes are parsed in memory and are not retained;
+only normalized plan text and content-addressed compressed motion are stored locally. Set
+`VITE_YOUTUBE_SIGNING=false` to hide the Watch page.
+
 ## Live microphone signing
 
 The Studio defaults to free **local streaming recognition** (Sherpa-ONNX, English), not Chrome's

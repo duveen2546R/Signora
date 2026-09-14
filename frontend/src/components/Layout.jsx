@@ -7,6 +7,7 @@ import ThemeToggle from './ThemeToggle'
 // visitor is somewhere else, so the target always exists by the time we scroll.
 const NAV = [
   { label: 'Product', to: '/sign' },
+  ...(import.meta.env.VITE_YOUTUBE_SIGNING !== 'false' ? [{ label: 'Watch', to: '/watch' }] : []),
   { label: 'Technology', section: 'technology' },
   { label: 'Process', section: 'process' },
   { label: 'Library', to: '/capture' },

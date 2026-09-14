@@ -98,3 +98,54 @@ class LiveMotionArtifact(Base):
     quality: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+
+
+class VideoPlan(Base):
+    """A subtitle-derived signing plan for one YouTube video."""
+
+    __tablename__ = "video_plans"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    youtube_video_id: Mapped[str] = mapped_column(String(11), index=True)
+    subtitle_hash: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    language: Mapped[str] = mapped_column(String(16), default="ISL")
+    policy_version: Mapped[int] = mapped_column(Integer)
+    pattern_version: Mapped[int] = mapped_column(Integer)
+    library_version: Mapped[str] = mapped_column(String(64), index=True)
+    motion_algorithm_version: Mapped[int] = mapped_column(Integer)
+    total_units: Mapped[int] = mapped_column(Integer, default=0)
+    signed_units: Mapped[int] = mapped_column(Integer, default=0)
+    fingerspelled_units: Mapped[int] = mapped_column(Integer, default=0)
+    function_only_units: Mapped[int] = mapped_column(Integer, default=0)
+    unsupported_units: Mapped[int] = mapped_column(Integer, default=0)
+    coverage: Mapped[float] = mapped_column(Float, default=0)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+    finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+
+    units: Mapped[list["VideoPlanUnit"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan", order_by="VideoPlanUnit.ordinal"
+    )
+
+
+class VideoPlanUnit(Base):
+    __tablename__ = "video_plan_units"
+    __table_args__ = (UniqueConstraint("plan_id", "ordinal", name="uq_video_plan_unit"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("video_plans.id"), index=True)
+    ordinal: Mapped[int] = mapped_column(Integer)
+    start_ms: Mapped[int] = mapped_column(Integer)
+    end_ms: Mapped[int] = mapped_column(Integer)
+    source_text: Mapped[str] = mapped_column(Text)
+    normalized_text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    glosses: Mapped[list] = mapped_column(JSON, default=list)
+    fingerspelled_words: Mapped[list] = mapped_column(JSON, default=list)
+    issues: Mapped[list] = mapped_column(JSON, default=list)
+    source_cue_ids: Mapped[list] = mapped_column(JSON, default=list)
+    motion_path: Mapped[str] = mapped_column(String(512), default="")
+    motion_duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+
+    plan: Mapped[VideoPlan] = relationship(back_populates="units")
