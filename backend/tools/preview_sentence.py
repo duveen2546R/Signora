@@ -10,9 +10,7 @@ person moving. This does, without needing Unity or a browser that will run its r
 from __future__ import annotations
 
 import argparse
-import glob
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -22,12 +20,12 @@ import numpy as np  # noqa: E402
 
 from app.ingest import landmarks as lm  # noqa: E402
 from app.ingest.compose import compose, prepare  # noqa: E402
-from app.ingest.landmarks import LandmarkSkeleton, to_landmarks  # noqa: E402
-from app.ingest.rokoko import parse_csv  # noqa: E402
-
-EXPORTS = os.path.expanduser(
-    "~/Library/Application Support/com.RokokoElectronics.RokokoStudio/Exports"
-)
+from app.ingest.landmarks import LandmarkSkeleton  # noqa: E402
+from app.core.db import SessionLocal  # noqa: E402
+from app.models import Gloss, SignClip  # noqa: E402
+from app.services.compose_service import _raw, landmark_path  # noqa: E402
+from app.services.artifact_paths import source_file  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
 # Drawn in pose-landmark space. Hands are appended per frame after the 33 pose points.
 POSE_EDGES = [(11, 12), (11, 23), (12, 24), (23, 24), (11, 13), (13, 15), (12, 14), (14, 16)]
@@ -211,13 +209,17 @@ def main() -> None:
     ap.add_argument("-o", "--out", type=Path, default=Path("sentence.html"))
     args = ap.parse_args()
 
-    available = {os.path.basename(p)[:-4].lower(): p for p in sorted(glob.glob(f"{EXPORTS}/*.csv"))}
     chosen = []
-    for name in args.glosses:
-        path = available.get(name.lower())
-        if path is None:
-            raise SystemExit(f"no recording named {name!r}; have: {', '.join(sorted(available))}")
-        chosen.append((name.upper(), to_landmarks(parse_csv(path))))
+    with SessionLocal() as session:
+        available = {gloss.name: clip for gloss, clip in session.execute(
+            select(Gloss, SignClip).join(SignClip).where(SignClip.is_canonical.is_(True))
+        )}
+        for name in args.glosses:
+            clip = available.get(name.upper())
+            if clip is None:
+                raise SystemExit(f"no uploaded sign named {name!r}; have: {', '.join(sorted(available))}")
+            chosen.append((name.upper(), _raw(str(landmark_path(clip)),
+                str(source_file(clip.source_csv)), clip.content_hash)))
 
     skeleton = LandmarkSkeleton.from_takes([t for _, t in chosen])
     prepared = [(g, prepare(t, skeleton)) for g, t in chosen]

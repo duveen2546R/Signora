@@ -22,7 +22,7 @@ binds to the scene object named `SignoraNewAvatar`. No scene wiring is required.
 The browser sends `CanonicalTrackingFrameV1` as JSON to `SignoraTrackingRuntime.ReceiveFrame`.
 `CanonicalTrackingFrameV1.IsStructurallyValid` rejects anything that does not match the schema,
 and `TrackingFrameStore` additionally rejects out-of-order sequences. The frontend validates the
-same five invariants before sending, in `frontend/src/tracking/canonical.js` - keep the two in
+same five invariants before sending, in `frontend/src/unity/canonicalFrame.js` - keep the two in
 step.
 
 ## Running without a browser

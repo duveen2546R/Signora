@@ -151,11 +151,7 @@ def run_ingest(session: Session, job_id: str) -> None:
             select(SignClip).where(SignClip.gloss_id == gloss.id, SignClip.take == take)
         ).first()
         was_canonical = existing.is_canonical if existing is not None else False
-        if existing is not None:
-            session.delete(existing)
-            session.flush()
-
-        row = SignClip(
+        values = dict(
             gloss_id=gloss.id, rig_digest="fbx-motion-v2", take=take,
             is_canonical=was_canonical or not any(
                 c.is_canonical and c is not existing for c in gloss.clips
@@ -164,13 +160,22 @@ def run_ingest(session: Session, job_id: str) -> None:
             fps=landmarks.fps, frame_count=landmarks.frame_count, duration=landmarks.duration,
             byte_size=len(encoded), qc=qc,
         )
-        session.add(row)
+        if existing is None:
+            row = SignClip(**values)
+            session.add(row)
+        else:
+            # Keep clip IDs stable: jobs and queued plans may reference the replaced take.
+            row = existing
+            for key, value in values.items():
+                setattr(row, key, value)
         session.flush()
 
         job.clip_id = row.id
         job.qc = qc
         job.status = "done"
     except Exception as exc:  # surfaced to the admin UI rather than swallowed
+        session.rollback()
+        job = session.get(IngestJob, job_id)
         job.status = "failed"
         job.error = f"{type(exc).__name__}: {exc}"
     finally:

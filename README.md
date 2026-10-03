@@ -16,15 +16,13 @@ normalized motion to Unity, which retargets it onto the existing `SignoraNewAvat
 Annotate Start/Sign/End once per recording. The backend retains phases by sentence position and
 automatically blends neighbouring signs into one quality-gated motion track. There are no
 pair-specific settings or required pair approvals. Unsafe joins are rejected with diagnostics;
-sentences never fall back through neutral or play degraded motion. See [docs/sentence-blending.md](docs/sentence-blending.md) for the algorithm and preview
-workflow.
+sentences never fall back through neutral or play degraded motion. Use **Preview automatic transitions** to inspect joins before sentence playback.
 
 English sentence signing uses a versioned registry of reviewed ISL patterns. The bundled patterns
 are candidates awaiting fluent ISL review; a unique candidate can play as an explicitly labelled
 literal sign preview but is not presented as an approved translation. Missing signs, ambiguous
 patterns, and unsupported sentences never play partially. Use individual recording previews,
-**Edit timestamps**, and **Preview automatic transitions** to prepare recordings for review. See
-[ISL review and release workflow](docs/isl-review.md) for approval and validation steps.
+**Edit timestamps**, and **Preview automatic transitions** to prepare recordings for review. Fluent ISL review is required before publishing these patterns as approved translations.
 
 ## Requirements
 
@@ -115,7 +113,7 @@ If the recordings cannot keep up, the UI shows buffered motion instead of hiding
 The UI separately labels transcript-to-queue, estimated audio-to-sign submission, and (with a rebuilt
 Unity runtime) estimated audio-to-Unity-applied sign. Token timing is approximate; neither submission
 nor a Unity acknowledgement proves visible onset. **Sub-second performance remains unverified** until
-held-out audio and recorded browser output pass the release gate. See [live streaming details](docs/live-streaming.md).
+held-out audio and recorded browser output pass the release gate. The live readiness panel reports library and recognizer preparation status.
 
 Live requests only read compiled artifacts and retain a bounded in-memory cache of decoded frames;
 they never run the motion compiler while the microphone is active. Missing artifacts produce an
@@ -140,8 +138,17 @@ while known phrases remain available as previews. Set `VITE_LIVE_SIGNING=false` 
 
 ## Uploading motion captures
 
-Open the **Capture** tab and upload a combined Rokoko Studio **FBX** containing body, Smartglove,
-and ARKit face animation at 60 fps. Use one sign per file.
+Open the **Capture** tab and select one or more combined Rokoko Studio **FBX** files containing body,
+Smartglove, and all 52 ARKit facial channels. Choose the **Mixamo** skeleton and **60 fps** when
+exporting; use one sign per file, up to 100 MB each. Keep **Use Clip start time as time zero** on,
+and leave **Include reference pose** and **Extract root motion** off. Face capture must have been
+recorded; selecting FBX cannot add missing facial animation.
+
+The app inspects files sequentially and previews each recording. After entering both timestamps,
+use **Upload capture** for one file or **Upload all ready captures** for the batch. Invalid or
+incomplete drafts stay in the editor with a specific error. Files are saved in isolated upload
+folders; replacing the same gloss/take keeps its library ID. Failed validation leaves no source
+file or job behind.
 For each selected file, enter the timestamps where the meaning-bearing sign starts and ends. The
 Capture screen shows the derived `start`, `sign`, and `end` ranges before upload. Both boundaries
 are required; captures without timestamps are rejected. These authored
@@ -168,6 +175,14 @@ intentionally ignored by Git. The `.gitkeep` files preserve the required empty d
 
 Captures are registered only through the Capture screen/API; copying an FBX directly into
 `backend/data/uploads/` does not import it.
+
+## Research validation
+
+The separate [FBX/video validation toolkit](backend/VALIDATION.md) compares matched suit and
+non-suit captures with an independent reference video. It checks pairing and provenance, produces
+auditable 2D wrist-error scores, and runs the prespecified mixed-effects comparison. SPM1D,
+functional agreement curves, and pilot power simulation are available as secondary research tools.
+No superiority result is reported until real matched trials pass the documented quality checks.
 
 ## Avatar calibration
 
@@ -215,15 +230,15 @@ cd frontend && npm test && npm run lint && npm run build
 | `backend/app/api/v1/` | Capture upload, sign library, clip serving, and text translation APIs |
 | `frontend/` | Vite/React application and browser-side Unity frame player |
 | `SignoraAvatarTracking/` | Active Unity avatar project and retargeting runtime |
-| `unity/SignSureAvatar/` | Earlier baked-rotation `.signclip` player retained as a fallback |
-| `docs/` | Capture protocol, integration details, and clip format documentation |
 
 ## Retargeting paths
 
 The active path is Rokoko combined FBX → normalized body/hand/face motion JSON → Signora Unity
 runtime → the existing `SignoraNewAvatar.glb`.
 
-`unity/SignSureAvatar/` and the `.signclip` format in `backend/app/ingest/` are an earlier fallback
-that bakes bone rotations in Python. The browser application does not currently play that format.
+The unused CSV-to-baked-rotation pipeline and its earlier Unity player have been removed.
+Read-only compatibility remains for existing CSV-backed library recordings and their stored motion.
+Your existing library and backups are retained until you replace those takes with FBX captures.
 
-Read [docs/capture-protocol.md](docs/capture-protocol.md) before recording vocabulary at scale.
+For offline sentence diagnostics, run `python tools/preview_sentence.py HELLO FATHER` from
+`backend/`; it reads canonical recordings and their authored timestamps from the app library.

@@ -68,16 +68,8 @@ export const api = {
     signal,
   }),
 
-  listRigs: () => request('/rigs'),
-
   // The avatar's bind pose, used as the retargeting reference.
   calibration: () => request('/rigs/calibration'),
-
-  uploadRig: (file) => {
-    const form = new FormData()
-    form.append('file', file)
-    return request('/rigs', { method: 'POST', body: form })
-  },
 
   uploadCapture: (file, phases = null) => {
     const form = new FormData()
@@ -105,5 +97,3 @@ export const api = {
   deleteVideoPlan: (planId) => request(`/video-plans/${planId}`, { method: 'DELETE' }),
   videoUnitMotion: (motionUrl) => request(motionUrl.replace('/api/v1', '')),
 }
-
-export const clipUrl = (contentPath) => `${BASE.replace('/api/v1', '')}${contentPath}`

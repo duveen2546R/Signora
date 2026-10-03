@@ -1,0 +1,550 @@
+; FBX 7.4.0 project file
+FBXHeaderExtension: {
+ FBXHeaderVersion: 1003
+ FBXVersion: 7400
+}
+GlobalSettings: {
+ Version: 1000
+ Properties70: {
+ P: "TimeMode", "enum", "", "", 3
+ P: "UnitScaleFactor", "double", "Number", "", 1
+ }
+}
+Objects: {
+Model: 100, "Model::mixamorig:Head", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -0.36317947829799246,67.09154354741689,7.280218172233632
+ }
+ }
+Model: 101, "Model::mixamorig:LeftArm", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -20.30406,48.146365,-5.118449999999997
+ }
+ }
+Model: 102, "Model::mixamorig:LeftFoot", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -7.769000000000004,-85.239936,-5.380950000000007
+ }
+ }
+Model: 103, "Model::mixamorig:LeftForeArm", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -24.650660000000002,22.71736499999999,-4.503849999999998
+ }
+ }
+Model: 104, "Model::mixamorig:LeftHand", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -26.497130000000002,-4.981995000000006,1.5599499999999988
+ }
+ }
+Model: 105, "Model::mixamorig:LeftHandIndex1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -25.745550000000005,-11.569985000000004,6.879349999999995
+ }
+ }
+Model: 106, "Model::mixamorig:LeftHandIndex2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -23.70257,-15.652675000000006,7.000350000000011
+ }
+ }
+Model: 107, "Model::mixamorig:LeftHandIndex3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -21.589360000000003,-17.48660500000001,6.744850000000002
+ }
+ }
+Model: 108, "Model::mixamorig:LeftHandMiddle1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -26.17081,-12.504245000000013,4.630050000000008
+ }
+ }
+Model: 109, "Model::mixamorig:LeftHandMiddle2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -23.841900000000006,-16.569635000000005,4.456750000000009
+ }
+ }
+Model: 110, "Model::mixamorig:LeftHandMiddle3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -21.230630000000005,-18.171765000000008,4.03595000000001
+ }
+ }
+Model: 111, "Model::mixamorig:LeftHandPinky1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -26.40812,-12.503495000000008,-0.05025000000000723
+ }
+ }
+Model: 112, "Model::mixamorig:LeftHandPinky2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -24.957790000000003,-15.733405000000012,-0.19365000000000077
+ }
+ }
+Model: 113, "Model::mixamorig:LeftHandPinky3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -23.139980000000005,-17.019795000000006,-0.23534999999998973
+ }
+ }
+Model: 114, "Model::mixamorig:LeftHandRing1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -26.333680000000005,-12.867475000000006,2.2049500000000055
+ }
+ }
+Model: 115, "Model::mixamorig:LeftHandRing2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -24.068870000000008,-16.614295000000013,2.109150000000004
+ }
+ }
+Model: 116, "Model::mixamorig:LeftHandRing3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -21.629940000000005,-18.031435000000005,1.9688499999999998
+ }
+ }
+Model: 117, "Model::mixamorig:LeftHandThumb1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -25.88068,-6.073205000000003,4.793249999999993
+ }
+ }
+Model: 118, "Model::mixamorig:LeftHandThumb2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -23.044510000000006,-8.494085000000007,6.096750000000006
+ }
+ }
+Model: 119, "Model::mixamorig:LeftHandThumb3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -22.68502,-11.323245000000004,7.02195000000001
+ }
+ }
+Model: 120, "Model::mixamorig:LeftLeg", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -7.752500000000007,-42.80901500000001,0.3090500000000107
+ }
+ }
+Model: 121, "Model::mixamorig:LeftUpLeg", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", -8.00786,-0.09898500000000698,0.006449999999991185
+ }
+ }
+Model: 122, "Model::mixamorig:RightArm", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 19.220720000000004,48.87666499999999,-6.202649999999998
+ }
+ }
+Model: 123, "Model::mixamorig:RightFoot", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 4.999299999999995,-85.12820700000002,-5.421849999999995
+ }
+ }
+Model: 124, "Model::mixamorig:RightForeArm", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 23.691819999999996,23.46526499999999,-6.6207499999999975
+ }
+ }
+Model: 125, "Model::mixamorig:RightHand", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 25.57952,-4.541605000000004,-2.206550000000007
+ }
+ }
+Model: 126, "Model::mixamorig:RightHandIndex1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 23.880920000000007,-11.394035000000013,2.528550000000007
+ }
+ }
+Model: 127, "Model::mixamorig:RightHandIndex2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 22.265520000000006,-15.636225000000003,2.027650000000003
+ }
+ }
+Model: 128, "Model::mixamorig:RightHandIndex3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 20.53792,-17.685955000000007,1.1859499999999912
+ }
+ }
+Model: 129, "Model::mixamorig:RightHandMiddle1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 24.605719999999998,-12.211785000000008,0.3106500000000123
+ }
+ }
+Model: 130, "Model::mixamorig:RightHandMiddle2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 22.66022,-16.406785000000013,-0.46275000000000066
+ }
+ }
+Model: 131, "Model::mixamorig:RightHandMiddle3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 20.313020000000005,-18.165335000000006,-1.443250000000007
+ }
+ }
+Model: 132, "Model::mixamorig:RightHandPinky1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 25.525720000000007,-11.949995000000014,-4.2769499999999905
+ }
+ }
+Model: 133, "Model::mixamorig:RightHandPinky2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 24.181719999999995,-15.177445000000011,-4.854549999999991
+ }
+ }
+Model: 134, "Model::mixamorig:RightHandPinky3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 22.546619999999994,-16.684965000000005,-4.976249999999993
+ }
+ }
+Model: 135, "Model::mixamorig:RightHandRing1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 25.112220000000008,-12.440355000000014,-2.083349999999995
+ }
+ }
+Model: 136, "Model::mixamorig:RightHandRing2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 23.335819999999995,-16.373015000000013,-2.828950000000008
+ }
+ }
+Model: 137, "Model::mixamorig:RightHandRing3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 21.031719999999986,-17.89536500000001,-3.420549999999989
+ }
+ }
+Model: 138, "Model::mixamorig:RightHandThumb1", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 24.467319999999994,-5.7945450000000065,0.8295500000000011
+ }
+ }
+Model: 139, "Model::mixamorig:RightHandThumb2", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 21.70591999999999,-8.476485000000011,1.7158500000000076
+ }
+ }
+Model: 140, "Model::mixamorig:RightHandThumb3", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 21.123520000000006,-11.417045000000003,1.772449999999992
+ }
+ }
+Model: 141, "Model::mixamorig:RightLeg", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 6.535589999999991,-42.57644500000001,-0.9781499999999888
+ }
+ }
+Model: 142, "Model::mixamorig:RightUpLeg", "LimbNode" {
+ Version: 232
+ Properties70: {
+ P: "Lcl Translation", "Lcl Translation", "", "A", 8.00786,0.09898499999999588,-0.006449999999991185
+ }
+ }
+Deformer: 1000, "SubDeformer::browDownLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1001, "SubDeformer::browDownRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1002, "SubDeformer::browInnerUp", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1003, "SubDeformer::browOuterUpLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1004, "SubDeformer::browOuterUpRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1005, "SubDeformer::cheekPuff", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1006, "SubDeformer::cheekSquintLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1007, "SubDeformer::cheekSquintRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1008, "SubDeformer::eyeBlinkLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1009, "SubDeformer::eyeBlinkRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1010, "SubDeformer::eyeLookDownLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1011, "SubDeformer::eyeLookDownRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1012, "SubDeformer::eyeLookInLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1013, "SubDeformer::eyeLookInRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1014, "SubDeformer::eyeLookOutLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1015, "SubDeformer::eyeLookOutRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1016, "SubDeformer::eyeLookUpLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1017, "SubDeformer::eyeLookUpRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1018, "SubDeformer::eyeSquintLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1019, "SubDeformer::eyeSquintRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1020, "SubDeformer::eyeWideLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1021, "SubDeformer::eyeWideRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1022, "SubDeformer::jawForward", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1023, "SubDeformer::jawLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1024, "SubDeformer::jawOpen", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1025, "SubDeformer::jawRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1026, "SubDeformer::mouthClose", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1027, "SubDeformer::mouthDimpleLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1028, "SubDeformer::mouthDimpleRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1029, "SubDeformer::mouthFrownLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1030, "SubDeformer::mouthFrownRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1031, "SubDeformer::mouthFunnel", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1032, "SubDeformer::mouthLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1033, "SubDeformer::mouthLowerDownLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1034, "SubDeformer::mouthLowerDownRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1035, "SubDeformer::mouthPressLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1036, "SubDeformer::mouthPressRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1037, "SubDeformer::mouthPucker", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1038, "SubDeformer::mouthRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1039, "SubDeformer::mouthRollLower", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1040, "SubDeformer::mouthRollUpper", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1041, "SubDeformer::mouthShrugLower", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1042, "SubDeformer::mouthShrugUpper", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1043, "SubDeformer::mouthSmileLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1044, "SubDeformer::mouthSmileRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1045, "SubDeformer::mouthStretchLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1046, "SubDeformer::mouthStretchRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1047, "SubDeformer::mouthUpperUpLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1048, "SubDeformer::mouthUpperUpRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1049, "SubDeformer::noseSneerLeft", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1050, "SubDeformer::noseSneerRight", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+Deformer: 1051, "SubDeformer::tongueOut", "BlendShapeChannel" {
+ Version: 100
+ DeformPercent: 50
+ }
+AnimationStack: 2000, "AnimStack::Take 001", "" {
+ Properties70: {
+ P: "LocalStart", "KTime", "Time", "", 0
+ P: "LocalStop", "KTime", "Time", "", 46186158000
+ }
+ }
+AnimationCurveNode: 3000, "AnimCurveNode::FaceWeight", "" {
+ Properties70: {
+ P: "d|DeformPercent", "Number", "", "A", 0
+ }
+ }
+ AnimationCurve: 3001, "AnimCurve::FaceWeight", "" {
+ Default: 0
+ KeyVer: 4008
+ KeyTime: *3 { a: 0,23093079000,46186158000 }
+ KeyValueFloat: *3 { a: 0,100,0 }
+ KeyAttrFlags: *1 { a: 4 }
+ KeyAttrDataFloat: *4 { a: 0,0,0,0 }
+ KeyAttrRefCount: *1 { a: 3 }
+ }
+AnimationLayer: 2001, "AnimLayer::BaseLayer", "" { }
+}
+Connections: {
+C: "OO", 100, 0
+C: "OO", 101, 0
+C: "OO", 102, 0
+C: "OO", 103, 0
+C: "OO", 104, 0
+C: "OO", 105, 0
+C: "OO", 106, 0
+C: "OO", 107, 0
+C: "OO", 108, 0
+C: "OO", 109, 0
+C: "OO", 110, 0
+C: "OO", 111, 0
+C: "OO", 112, 0
+C: "OO", 113, 0
+C: "OO", 114, 0
+C: "OO", 115, 0
+C: "OO", 116, 0
+C: "OO", 117, 0
+C: "OO", 118, 0
+C: "OO", 119, 0
+C: "OO", 120, 0
+C: "OO", 121, 0
+C: "OO", 122, 0
+C: "OO", 123, 0
+C: "OO", 124, 0
+C: "OO", 125, 0
+C: "OO", 126, 0
+C: "OO", 127, 0
+C: "OO", 128, 0
+C: "OO", 129, 0
+C: "OO", 130, 0
+C: "OO", 131, 0
+C: "OO", 132, 0
+C: "OO", 133, 0
+C: "OO", 134, 0
+C: "OO", 135, 0
+C: "OO", 136, 0
+C: "OO", 137, 0
+C: "OO", 138, 0
+C: "OO", 139, 0
+C: "OO", 140, 0
+C: "OO", 141, 0
+C: "OO", 142, 0
+C: "OO", 2001, 2000
+C: "OO", 3000, 2001
+C: "OP", 3000, 1024, "DeformPercent"
+C: "OP", 3001, 3000, "d|DeformPercent"
+}

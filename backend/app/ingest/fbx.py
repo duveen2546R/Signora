@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -72,11 +73,11 @@ def _vec(value) -> np.ndarray:
     return np.array([value.x, value.y, value.z], dtype=np.float64)
 
 
-def _node_maps(scene) -> tuple[dict[str, int], dict[str, list[str]]]:
+def _node_maps(scene_nodes) -> tuple[dict[str, int], dict[str, list[str]]]:
     indices: dict[str, int] = {}
     duplicates: dict[str, list[str]] = {}
-    for index in range(len(scene.nodes)):
-        raw = scene.nodes[index].name
+    for index in range(len(scene_nodes)):
+        raw = scene_nodes[index].name
         name = _clean_name(raw)
         if name in indices:
             duplicates.setdefault(name, []).append(raw)
@@ -85,10 +86,10 @@ def _node_maps(scene) -> tuple[dict[str, int], dict[str, list[str]]]:
     return indices, duplicates
 
 
-def _face_channels(scene) -> dict[str, list[int]]:
+def _face_channels(channels) -> dict[str, list[int]]:
     found: dict[str, list[int]] = {}
-    for index in range(len(scene.blend_channels)):
-        canonical = _canonical_face_name(scene.blend_channels[index].name)
+    for index in range(len(channels)):
+        canonical = _canonical_face_name(channels[index].name)
         if canonical is not None:
             found.setdefault(canonical, []).append(index)
     return found
@@ -98,13 +99,51 @@ def _matrix_axis(matrix, index: int) -> np.ndarray:
     return _vec((matrix.c0, matrix.c1, matrix.c2)[index])
 
 
+def _bind_axes(source_nodes, nodes):
+    """Align the source rest skeleton with the avatar's +X right, +Y up, +Z front."""
+    def position(bone):
+        return _vec(source_nodes[nodes[bone]].node_to_world.c3)
+
+    right = position("RightArm") - position("LeftArm")
+    right[1] = 0.0
+    length = np.linalg.norm(right)
+    if length < 1e-8:
+        raise FbxFormatError("The FBX rest skeleton has degenerate shoulder positions.")
+    right /= length
+    up = np.array([0.0, 1.0, 0.0])
+    basis = np.column_stack((right, up, np.cross(right, up)))
+    head_matrix = source_nodes[nodes["Head"]].node_to_world
+    head_basis = np.column_stack([_matrix_axis(head_matrix, i) for i in range(3)])
+    # Mixamo bone-local axes are not anatomical face axes. Preserve animated head rotation
+    # relative to its rest transform while placing synthetic facial points anatomically.
+    return basis.T, np.linalg.solve(head_basis, basis)
+
+
+def _snapshot_scene(scene):
+    """Copy native node matrices before any child wrappers can be released."""
+    native_list = scene.nodes
+    native_nodes = [native_list[i] for i in range(len(native_list))]
+    matrices = [node.node_to_world for node in native_nodes]
+    copied = []
+    for node, matrix in zip(native_nodes, matrices):
+        columns = [matrix.c0, matrix.c1, matrix.c2, matrix.c3]
+        copied.append(SimpleNamespace(name=node.name, node_to_world=SimpleNamespace(**{
+            f"c{i}": SimpleNamespace(x=column.x, y=column.y, z=column.z)
+            for i, column in enumerate(columns)
+        })))
+    return SimpleNamespace(nodes=copied, _owners=(scene, native_list, native_nodes, matrices))
+
+
 def _tip_axis_signatures(scene, nodes: dict[str, int]) -> dict[str, tuple[int, float]]:
     """Find the terminal bone's local direction from its first-frame world basis."""
     signatures = {}
+    scene_nodes = scene.nodes
     for side in ("Left", "Right"):
         for finger in FINGER_BASE:
-            near = scene.nodes[nodes[f"{side}Hand{finger}2"]].node_to_world.c3
-            far_node = scene.nodes[nodes[f"{side}Hand{finger}3"]]
+            near_node = scene_nodes[nodes[f"{side}Hand{finger}2"]]
+            near_matrix = near_node.node_to_world
+            near = near_matrix.c3
+            far_node = scene_nodes[nodes[f"{side}Hand{finger}3"]]
             direction = _vec(far_node.node_to_world.c3) - _vec(near)
             norm = np.linalg.norm(direction)
             if norm < 1e-8:
@@ -121,16 +160,17 @@ def _tip_axis_signatures(scene, nodes: dict[str, int]) -> dict[str, tuple[int, f
 
 
 def _sample_hand(evaluated, nodes: dict[str, int], tips, side: str) -> np.ndarray:
+    scene_nodes = evaluated.nodes
     hand = np.zeros((HAND_LANDMARK_COUNT, 3), dtype=np.float64)
-    hand[0] = _vec(evaluated.nodes[nodes[f"{side}Hand"]].node_to_world.c3)
+    hand[0] = _vec(scene_nodes[nodes[f"{side}Hand"]].node_to_world.c3)
     for finger, base in FINGER_BASE.items():
         points = [
-            _vec(evaluated.nodes[nodes[f"{side}Hand{finger}{joint}"]].node_to_world.c3)
+            _vec(scene_nodes[nodes[f"{side}Hand{finger}{joint}"]].node_to_world.c3)
             for joint in (1, 2, 3)
         ]
         hand[base:base + 3] = points
         segment_length = np.linalg.norm(points[2] - points[1]) * TIP_LENGTH_RATIO
-        node = evaluated.nodes[nodes[f"{side}Hand{finger}3"]]
+        node = scene_nodes[nodes[f"{side}Hand{finger}3"]]
         axis, sign = tips[f"{side}Hand{finger}3"]
         direction = _matrix_axis(node.node_to_world, axis) * sign
         direction /= max(np.linalg.norm(direction), 1e-12)
@@ -148,7 +188,9 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
             str(path),
             target_axes=ufbx.axes_left_handed_y_up,
             target_unit_meters=1.0,
-            space_conversion=ufbx.SpaceConversion.ADJUST_TRANSFORMS,
+            # Apply handedness/unit conversion at the scene root. Adjusting each animated
+            # transform can invert Rokoko's Y axis when rotation curves are evaluated.
+            space_conversion=ufbx.SpaceConversion.TRANSFORM_ROOT,
             ignore_embedded=True,
             load_external_files=False,
         )
@@ -160,16 +202,23 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
         raise FbxFormatError(
             f"{path.name}: expected a 60 FPS Rokoko export, but the FBX declares {fps:g} FPS."
         )
-    if len(scene.anim_stacks) != 1:
+    # Keep native list owners alive while their children are accessed (ufbx-python 0.0.5).
+    stacks = scene.anim_stacks
+    native_nodes = scene.nodes
+    source_nodes = [native_nodes[i] for i in range(len(native_nodes))]
+    native_channels = scene.blend_channels
+    channels = [native_channels[i] for i in range(len(native_channels))]
+    if len(stacks) != 1:
         raise FbxFormatError(
-            f"{path.name}: expected exactly one animation take, found {len(scene.anim_stacks)}."
+            f"{path.name}: expected exactly one animation take, found {len(stacks)}."
         )
-    stack = scene.anim_stacks[0]
+    stack = stacks[0]
+    animation = stack.anim
     duration = float(stack.time_end - stack.time_begin)
     if not np.isfinite(duration) or duration <= 0:
         raise FbxFormatError(f"{path.name}: the animation take is empty.")
 
-    nodes, duplicate_nodes = _node_maps(scene)
+    nodes, duplicate_nodes = _node_maps(source_nodes)
     missing_bones = sorted(REQUIRED_BONES - nodes.keys())
     ambiguous = sorted(REQUIRED_BONES & duplicate_nodes.keys())
     if missing_bones or ambiguous:
@@ -178,7 +227,7 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
             f"Missing bones: {missing_bones[:8]}; ambiguous bones: {ambiguous[:8]}."
         )
 
-    face_channels = _face_channels(scene)
+    face_channels = _face_channels(channels)
     missing_face = [channel for channel in ARKIT_BLENDSHAPES if channel not in face_channels]
     if missing_face:
         raise FbxFormatError(
@@ -186,11 +235,14 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
             f"including {missing_face[:8]}. Export the combined body+face FBX."
         )
 
+    alignment, head_offsets_basis = _bind_axes(source_nodes, nodes)
+
     frame_count = int(round(duration * fps)) + 1
     times = np.arange(frame_count, dtype=np.float64) / fps
     absolute_times = stack.time_begin + times
-    first = ufbx.evaluate_scene(scene, stack.anim, float(absolute_times[0]))
-    tips = _tip_axis_signatures(first, nodes)
+    first = ufbx.evaluate_scene(scene, animation, float(absolute_times[0]))
+    first_snapshot = _snapshot_scene(first)
+    tips = _tip_axis_signatures(first_snapshot, nodes)
 
     pose_frames = np.zeros((frame_count, POSE_LANDMARK_COUNT, 3), dtype=np.float64)
     left_frames = np.zeros((frame_count, HAND_LANDMARK_COUNT, 3), dtype=np.float64)
@@ -198,23 +250,28 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
     face_frames = np.zeros((frame_count, FACE_BLENDSHAPE_COUNT), dtype=np.float64)
 
     for frame, at in enumerate(absolute_times):
-        evaluated = ufbx.evaluate_scene(scene, stack.anim, float(at))
+        evaluated_scene = ufbx.evaluate_scene(scene, animation, float(at))
+        evaluated = _snapshot_scene(evaluated_scene)
+        evaluated_nodes = evaluated.nodes
         pose = pose_frames[frame]
         for index, bone in POSE_BONES.items():
-            pose[index] = _vec(evaluated.nodes[nodes[bone]].node_to_world.c3)
+            pose[index] = _vec(evaluated_nodes[nodes[bone]].node_to_world.c3)
 
-        head_matrix = evaluated.nodes[nodes["Head"]].node_to_world
+        head_node = evaluated_nodes[nodes["Head"]]
+        head_matrix = head_node.node_to_world
         head = _vec(head_matrix.c3)
-        right = _matrix_axis(head_matrix, 0)
-        up = _matrix_axis(head_matrix, 1)
-        forward = _matrix_axis(head_matrix, 2)
+        anatomical_head = np.column_stack([
+            _matrix_axis(head_matrix, i) for i in range(3)
+        ]) @ head_offsets_basis
+        right, up, forward = anatomical_head.T
         right /= max(np.linalg.norm(right), 1e-12)
         up /= max(np.linalg.norm(up), 1e-12)
         forward /= max(np.linalg.norm(forward), 1e-12)
         for index, (along_forward, along_right, along_up) in HEAD_OFFSETS.items():
             pose[index] = head + forward * along_forward + right * along_right + up * along_up
         for index, (_segment, along) in FOOT_OFFSETS.items():
-            foot = evaluated.nodes[nodes["LeftFoot" if index % 2 else "RightFoot"]].node_to_world
+            foot_node = evaluated_nodes[nodes["LeftFoot" if index % 2 else "RightFoot"]]
+            foot = foot_node.node_to_world
             direction = _matrix_axis(foot, 2)
             direction /= max(np.linalg.norm(direction), 1e-12)
             pose[index] = _vec(foot.c3) + direction * along
@@ -224,7 +281,7 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
 
         for column, canonical in enumerate(ARKIT_BLENDSHAPES):
             values = np.array([
-                scene.blend_channels[channel].evaluate_blend_weight(stack.anim, float(at)) / 100.0
+                ufbx.evaluate_blend_weight(animation, channels[channel], float(at))
                 for channel in face_channels[canonical]
             ])
             if not np.all(np.isfinite(values)):
@@ -235,13 +292,16 @@ def parse_fbx(path: str | Path, name: str | None = None) -> LandmarkTake:
                 )
             face_frames[frame, column] = np.clip(values.mean(), 0.0, 1.0)
 
+    if not all(np.all(np.isfinite(track)) for track in (pose_frames, left_frames, right_frames)):
+        raise FbxFormatError(f"{path.name}: body or hand motion contains NaN or infinity.")
+
     origin = ((pose_frames[:, 23] + pose_frames[:, 24]) / 2.0)[:, None, :]
     return LandmarkTake(
         name=name or path.stem,
         fps=fps,
-        pose=pose_frames - origin,
-        left_hand=left_frames - origin,
-        right_hand=right_frames - origin,
+        pose=(pose_frames - origin) @ alignment.T,
+        left_hand=(left_frames - origin) @ alignment.T,
+        right_hand=(right_frames - origin) @ alignment.T,
         face_blendshapes=face_frames,
         timestamps=times,
     )

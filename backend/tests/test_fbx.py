@@ -40,7 +40,7 @@ def fake_rokoko_scene():
         if name == "Head":
             position = [0.0, 1.7, 0.0]
         nodes.append(SimpleNamespace(name=f"mixamorig:{name}", node_to_world=matrix(position)))
-    channels = [Channel(f"Face.{name}", index + 1) for index, name in enumerate(ARKIT_BLENDSHAPES)]
+    channels = [Channel(f"Face.{name}", (index + 1) / 100) for index, name in enumerate(ARKIT_BLENDSHAPES)]
     stack = SimpleNamespace(time_begin=2.0, time_end=2.0 + 2 / 60, anim=object())
     return SimpleNamespace(
         settings=SimpleNamespace(frames_per_second=60.0), nodes=nodes,
@@ -51,9 +51,10 @@ def fake_rokoko_scene():
 def fake_module(scene):
     return SimpleNamespace(
         axes_left_handed_y_up=object(),
-        SpaceConversion=SimpleNamespace(ADJUST_TRANSFORMS=object()),
+        SpaceConversion=SimpleNamespace(TRANSFORM_ROOT=object()),
         load_file=lambda *_args, **_kwargs: scene,
         evaluate_scene=lambda source, _anim, _time: source,
+        evaluate_blend_weight=lambda anim, channel, time: channel.evaluate_blend_weight(anim, time),
     )
 
 
@@ -79,6 +80,27 @@ def test_combined_fbx_requires_every_arkit_expression(monkeypatch, tmp_path):
 
     with pytest.raises(fbx.FbxFormatError, match="face capture is incomplete"):
         fbx.parse_fbx(tmp_path / "hello.fbx")
+
+
+@pytest.mark.parametrize("yaw", [0, np.pi, np.pi / 2])
+def test_source_rest_facing_and_bone_axes_match_avatar_calibration(monkeypatch, tmp_path, yaw):
+    scene = fake_rokoko_scene()
+    rotation = np.array([
+        [np.cos(yaw), 0, np.sin(yaw)], [0, 1, 0],
+        [-np.sin(yaw), 0, np.cos(yaw)],
+    ])
+    # Bone-local axes intentionally remain identity: their orientation cannot be assumed
+    # to describe anatomical head axes, even when the rest skeleton faces another direction.
+    for node in scene.nodes:
+        node.node_to_world.c3 = Vec(*(rotation @ fbx._vec(node.node_to_world.c3)))
+    monkeypatch.setattr(fbx, "ufbx", fake_module(scene))
+    take = fbx.parse_fbx(tmp_path / "rotated.fbx")
+    pose = take.pose[0]
+    assert pose[11, 0] < pose[12, 0]
+    assert pose[7, 0] > pose[8, 0]
+    assert pose[0, 2] > (pose[7, 2] + pose[8, 2]) / 2
+    np.testing.assert_allclose(take.left_hand[:, 0], take.pose[:, 15])
+    np.testing.assert_allclose(take.right_hand[:, 0], take.pose[:, 16])
 
 
 def test_single_checked_in_avatar_maps_every_captured_expression():

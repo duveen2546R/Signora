@@ -83,3 +83,6 @@ sysinfo.txt
 /SignoraAvatarTracking/Data/
 # Downloaded speech models are local artifacts, not source code.
 backend/data/speech-model/
+
+# Local research manifests, reference-video landmarks, and statistical results.
+backend/study/

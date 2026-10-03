@@ -8,6 +8,9 @@ export default function Capture({ onLibraryChanged }) {
   const [jobs, setJobs] = useState([])
   const [drafts, setDrafts] = useState([])
   const [error, setError] = useState(null)
+  const [inspecting, setInspecting] = useState(false)
+  const [batchUploading, setBatchUploading] = useState(false)
+  const readyDrafts = drafts.filter((draft) => !draft.invalid && !draft.uploading && !validatePhaseDraft(draft))
 
   // Poll while anything is still ingesting.
   useEffect(() => {
@@ -15,9 +18,9 @@ export default function Capture({ onLibraryChanged }) {
     if (pending.length === 0) return
     const timer = setInterval(async () => {
       const updated = await Promise.all(
-        jobs.map((j) => (j.status === 'pending' ? api.captureStatus(j.jobId).catch(() => j) : j)),
+        pending.map((j) => api.captureStatus(j.jobId).then((result) => ({ ...j, ...result })).catch(() => j)),
       )
-      setJobs(updated)
+      setJobs((current) => current.map((job) => updated.find((item) => item.jobId === job.jobId) ?? job))
       if (updated.some((j) => j.status === 'done')) onLibraryChanged?.()
     }, 1000)
     return () => clearInterval(timer)
@@ -25,21 +28,25 @@ export default function Capture({ onLibraryChanged }) {
 
   async function selectCaptures(event) {
     const files = Array.from(event.target.files ?? [])
-    const inspected = await Promise.all(files.map(async (file) => {
+    event.target.value = ''
+    setInspecting(true)
+    // Inspect one native FBX at a time, keeping memory bounded for large selections.
+    for (const file of files) {
+      let draft
       try {
         const track = await api.previewCapture(file)
         const duration = track.durationSeconds ?? track.frameCount / track.fps
-        return {
+        draft = {
           id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
           file, track, duration, signStart: track.signStartSeconds ?? '', signEnd: track.signEndSeconds ?? '',
           touched: false, error: null, uploading: false,
         }
       } catch (e) {
-        return { id: `${file.name}-${crypto.randomUUID()}`, file, error: e.message, invalid: true }
+        draft = { id: `${file.name}-${crypto.randomUUID()}`, file, error: e.message, invalid: true }
       }
-    }))
-    setDrafts((previous) => [...previous, ...inspected])
-    event.target.value = ''
+      setDrafts((previous) => [...previous, draft])
+    }
+    setInspecting(false)
   }
 
   function updateDraft(id, update) {
@@ -72,6 +79,15 @@ export default function Capture({ onLibraryChanged }) {
     }
   }
 
+  async function uploadReadyDrafts() {
+    setBatchUploading(true)
+    try {
+      for (const draft of readyDrafts) await uploadDraft(draft.id)
+    } finally {
+      setBatchUploading(false)
+    }
+  }
+
   return (
     <section className="capture">
       <header className="page-masthead">
@@ -82,22 +98,32 @@ export default function Capture({ onLibraryChanged }) {
       <div className="panel">
         <h2>Motion captures</h2>
         <p className="hint">
-          Combined Rokoko FBX exports with body, Smartglove, and face animation at 60 fps.
+          Combined Rokoko FBX exports using the Mixamo skeleton, with body, Smartglove,
+          and face animation at 60 fps (up to 100 MB per file).
           Name each file for the sign it contains (<code>hello_01.fbx</code>) — the gloss and take
           number are read from the filename. The FBX supplies motion only; Unity keeps using the
           single Signora avatar already included in the project.
         </p>
         <label className="capture__picker">
           <span>Select motion captures</span>
-          <input type="file" accept=".fbx" multiple onChange={selectCaptures} />
+          <input type="file" accept=".fbx" multiple disabled={inspecting || batchUploading} onChange={selectCaptures} />
         </label>
+        {inspecting && <p className="hint" role="status">Inspecting FBX files… each capture appears when ready.</p>}
+        {drafts.length > 0 && (
+          <div className="phase-draft__actions">
+            <button type="button" disabled={!readyDrafts.length || batchUploading || inspecting || drafts.some((draft) => draft.uploading)} onClick={uploadReadyDrafts}>
+              {batchUploading ? 'Uploading captures…' : `Upload all ready captures (${readyDrafts.length})`}
+            </button>
+            <p className="hint">Enter both timestamps for each file to include it in the batch.</p>
+          </div>
+        )}
 
         {drafts.length > 0 && (
           <div className="phase-drafts" aria-label="Capture phase timestamps">
             {drafts.map((draft) => {
               const durations = draft.invalid ? null : phaseDurations(draft)
               return (
-                <fieldset className="phase-draft" key={draft.id} disabled={draft.uploading}>
+                <fieldset className="phase-draft" key={draft.id} disabled={draft.uploading || batchUploading}>
                   <legend>{draft.file.name}</legend>
                   {draft.invalid ? (
                     <>
