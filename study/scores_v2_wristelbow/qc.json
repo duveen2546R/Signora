@@ -1,0 +1,108 @@
+{
+  "manifest_sha256": "dc0b1b28bb505e00a5fc583ac2079fd1dafe038322a1101e367b7ef9b0dc4317",
+  "n_trials": 1,
+  "metric": "wrist_position_error_2d_normalized",
+  "phase_samples": 101,
+  "minimum_video_confidence": 0.7,
+  "minimum_common_wrist_coverage": 0.8,
+  "trials": [
+    {
+      "performance_id": "P01-ACTION-01",
+      "pairing_verified_by": "REPLACE-WITH-REVIEWER-NAME",
+      "video_landmarks_sha256": "de05dee64f0c548a3a1f40d325b36e09753ba571274e4b1952f83a5d43ae8f85",
+      "source_sha256": {
+        "suit_fbx": "6c013aeb7ea0da407a3eb5ec4671ff196c1a28860ca46a8e412392445bf16d1e",
+        "non_suit_fbx": "b9be2e517c3bff2c2657c9c8ebb4840aa467abc1887cbad60e7d23599f5512f7",
+        "reference_video": "5505b0379f808b3baca28a84f2b730b4d0b541b6917e8e1b11ff86dcaabbef91",
+        "video_landmarks": "de05dee64f0c548a3a1f40d325b36e09753ba571274e4b1952f83a5d43ae8f85"
+      },
+      "reference_shoulder_width_image_fraction": 0.4048941875477604,
+      "common_wrist_coverage": 1.0,
+      "calibration_phase": [
+        0.0,
+        0.15
+      ],
+      "calibration": {
+        "suit": {
+          "fbx_profile": "mixamo_30",
+          "fbx_fps": 30.0,
+          "source_shoulder_width_m": 0.3447434825883873,
+          "rotation_vector_rad": [
+            3.9540965868215676,
+            0.12610787561362355,
+            0.1235253245292528
+          ],
+          "scale": 1.0780940777648422,
+          "torso_fit_rmse_shoulder_widths": 0.04915762806843503
+        },
+        "non_suit": {
+          "fbx_profile": "blender_25",
+          "fbx_fps": 25.0,
+          "source_shoulder_width_m": 0.26312943399644495,
+          "rotation_vector_rad": [
+            4.104270639238359,
+            0.07190738005523663,
+            0.018374423729593806
+          ],
+          "scale": 0.9283691327482565,
+          "torso_fit_rmse_shoulder_widths": 0.03552127958714038
+        }
+      },
+      "calibration_ambiguity": {
+        "suit": {
+          "equally_supported_fits": 5,
+          "wrist_error_range": [
+            0.5662787996502676,
+            0.7262810093400154
+          ],
+          "wrist_error_spread": 0.16000220968974777
+        },
+        "non_suit": {
+          "equally_supported_fits": 5,
+          "wrist_error_range": [
+            0.6180031502954118,
+            0.6983543517118054
+          ],
+          "wrist_error_spread": 0.08035120141639363
+        },
+        "method_difference": 0.13207555178077168,
+        "spread_exceeds_method_difference": true
+      },
+      "durations_s": {
+        "suit": 2.4,
+        "non_suit": 2.3499999999999996,
+        "video": 4.75
+      },
+      "duration_error_s": {
+        "suit": -2.35,
+        "non_suit": -2.4000000000000004
+      },
+      "mean_wrist_error": {
+        "suit": 0.5662787996502676,
+        "non_suit": 0.6983543514310393
+      },
+      "upper_body_errors": {
+        "suit": {
+          "wrist": 0.5662787996502675,
+          "elbow": 0.1755245850289813,
+          "upper_body": 0.37090169233962444,
+          "left_wrist": 0.6258992379263526,
+          "right_wrist": 0.5066583613741825,
+          "left_elbow": 0.2197387550920357,
+          "right_elbow": 0.13131041496592694
+        },
+        "non_suit": {
+          "wrist": 0.6983543514310393,
+          "elbow": 0.27891497513368235,
+          "upper_body": 0.4886346632823608,
+          "left_wrist": 0.6524750431601193,
+          "right_wrist": 0.7442336597019594,
+          "left_elbow": 0.2283972876294677,
+          "right_elbow": 0.329432662637897
+        }
+      },
+      "trace_file": "traces\\6c013aeb7ea0da40.csv",
+      "overlay_file": "traces\\6c013aeb7ea0da40.svg"
+    }
+  ]
+}
