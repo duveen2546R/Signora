@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     clip_dir: Path = BASE_DIR / "data" / "clips"
     transition_dir: Path = BASE_DIR / "data" / "transitions"
     video_plan_dir: Path = BASE_DIR / "data" / "video-plans"
+    analysis_dir: Path = BASE_DIR / "data" / "analyses"
+    analysis_pose_model: Path = BASE_DIR.parent / "study" / "models" / "pose_landmarker_full.task"
+    analysis_hand_model: Path = BASE_DIR.parent / "study" / "models" / "hand_landmarker.task"
     speech_model_dir: Path = BASE_DIR / "data" / "speech-model"
     speech_threads: int = 2
     # Vite dev server; tighten for deployment.

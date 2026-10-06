@@ -41,7 +41,9 @@ def _path(base: Path, value: object, label: str, suffix: str | tuple[str, ...]) 
     path = (base / value).resolve()
     allowed = (suffix,) if isinstance(suffix, str) else suffix
     if path.suffix.lower() not in allowed or not path.is_file():
-        raise ValidationError(f"{label} must point to an existing {suffix} file: {path}")
+        raise ValidationError(
+            f"{label} must point to an existing {suffix} file: {path}"
+        )
     return path
 
 
@@ -57,7 +59,12 @@ def _interval(value: object, label: str) -> tuple[float, float]:
     return start, end
 
 
-def load_manifest(path: str | Path, *, require_landmarks: bool = False) -> list[Trial]:
+def load_manifest(
+    path: str | Path,
+    *,
+    require_landmarks: bool = False,
+    allow_unpaired_case: bool = False,
+) -> list[Trial]:
     """Read a study manifest; file hashes and human pairing attestation are mandatory."""
     path = Path(path).resolve()
     try:
@@ -80,69 +87,141 @@ def load_manifest(path: str | Path, *, require_landmarks: bool = False) -> list[
     for index, item in enumerate(entries):
         if not isinstance(item, dict):
             raise ValidationError(f"Trial {index + 1} must be an object.")
-        labels = ("performance_id", "action_id", "performer_id", "repetition", "pairing_verified_by")
+        relationship = item.get("recording_relationship", "same_performance")
+        if not isinstance(relationship, str) or relationship not in {
+            "same_performance",
+            "separate_repetitions",
+            "unknown",
+        }:
+            raise ValidationError("Invalid recording relationship.")
+        if relationship != "same_performance" and not allow_unpaired_case:
+            raise ValidationError(
+                "Separate or unverified performances cannot enter matched accuracy scoring or LMEM. Use case-study for descriptive movement similarity."
+            )
+        labels = (
+            "performance_id",
+            "action_id",
+            "performer_id",
+            "repetition",
+            "pairing_verified_by",
+        )
         for label in labels:
             if not isinstance(item.get(label), str) or not item[label].strip():
                 raise ValidationError(f"Trial {index + 1}: {label} is required.")
         if item.get("reference_independent") is not True:
-            raise ValidationError(f"Trial {index + 1}: independent reference video must be attested.")
+            raise ValidationError(
+                f"Trial {index + 1}: independent reference video must be attested."
+            )
         performance = item["performance_id"].strip()
-        triplet = tuple(item[key].strip() for key in ("action_id", "performer_id", "repetition"))
+        triplet = tuple(
+            item[key].strip() for key in ("action_id", "performer_id", "repetition")
+        )
         if performance in ids or triplet in triplets:
-            raise ValidationError(f"Duplicate performance or action/performer/repetition: {performance}")
+            raise ValidationError(
+                f"Duplicate performance or action/performer/repetition: {performance}"
+            )
         ids.add(performance)
         triplets.add(triplet)
 
         files = {
             "suit_fbx": _path(path.parent, item.get("suit_fbx"), "suit_fbx", ".fbx"),
-            "non_suit_fbx": _path(path.parent, item.get("non_suit_fbx"), "non_suit_fbx", ".fbx"),
+            "non_suit_fbx": _path(
+                path.parent, item.get("non_suit_fbx"), "non_suit_fbx", ".fbx"
+            ),
             "reference_video": _path(
-                path.parent, item.get("reference_video"), "reference_video", (".mp4", ".mov", ".m4v")
+                path.parent,
+                item.get("reference_video"),
+                "reference_video",
+                (".mp4", ".mov", ".m4v"),
             ),
         }
         if files["suit_fbx"] == files["non_suit_fbx"]:
-            raise ValidationError(f"{performance}: suit and non-suit files are identical paths.")
+            raise ValidationError(
+                f"{performance}: suit and non-suit files are identical paths."
+            )
         if files["suit_fbx"] in motion_files or files["non_suit_fbx"] in motion_files:
-            raise ValidationError(f"{performance}: an FBX is reused across independent performances.")
+            raise ValidationError(
+                f"{performance}: an FBX is reused across independent performances."
+            )
         motion_files.update((files["suit_fbx"], files["non_suit_fbx"]))
         if files["reference_video"] in videos:
-            raise ValidationError(f"{performance}: reference video is assigned to another performance.")
+            raise ValidationError(
+                f"{performance}: reference video is assigned to another performance."
+            )
         videos.add(files["reference_video"])
         hashes = item.get("sha256")
         if not isinstance(hashes, dict):
-            raise ValidationError(f"{performance}: sha256 hashes are required for all three source files.")
+            raise ValidationError(
+                f"{performance}: sha256 hashes are required for all three source files."
+            )
         for label, file in files.items():
             expected = hashes.get(label)
-            if not isinstance(expected, str) or len(expected) != 64 or expected.lower() != sha256(file):
-                raise ValidationError(f"{performance}: {label} SHA-256 is missing or does not match.")
+            if (
+                not isinstance(expected, str)
+                or len(expected) != 64
+                or expected.lower() != sha256(file)
+            ):
+                raise ValidationError(
+                    f"{performance}: {label} SHA-256 is missing or does not match."
+                )
         current_motion = {hashes["suit_fbx"].lower(), hashes["non_suit_fbx"].lower()}
         if len(current_motion) != 2 or current_motion & source_digests:
-            raise ValidationError(f"{performance}: FBX contents are duplicated within or across trials.")
+            raise ValidationError(
+                f"{performance}: FBX contents are duplicated within or across trials."
+            )
         source_digests.update(current_motion)
         if hashes["reference_video"].lower() in video_digests:
-            raise ValidationError(f"{performance}: reference video contents are reused across trials.")
+            raise ValidationError(
+                f"{performance}: reference video contents are reused across trials."
+            )
         video_digests.add(hashes["reference_video"].lower())
         landmarks = item.get("video_landmarks")
-        pose_path = _path(path.parent, landmarks, "video_landmarks", ".csv") if landmarks else None
+        pose_path = (
+            _path(path.parent, landmarks, "video_landmarks", ".csv")
+            if landmarks
+            else None
+        )
         if require_landmarks and pose_path is None:
-            raise ValidationError(f"{performance}: extract and review video_landmarks before scoring.")
+            raise ValidationError(
+                f"{performance}: extract and review video_landmarks before scoring."
+            )
         if pose_path is not None:
             expected = hashes.get("video_landmarks")
             if not isinstance(expected, str) or expected.lower() != sha256(pose_path):
-                raise ValidationError(f"{performance}: video_landmarks SHA-256 is missing or does not match.")
+                raise ValidationError(
+                    f"{performance}: video_landmarks SHA-256 is missing or does not match."
+                )
 
         windows = item.get("windows")
         if not isinstance(windows, dict):
-            raise ValidationError(f"{performance}: windows are required for all three sources.")
-        bounds = {key: _interval(windows.get(key), f"{performance}: windows.{key}")
-                  for key in ("suit", "non_suit", "video")}
-        calibration = _interval(item.get("calibration_phase"), f"{performance}: calibration_phase")
+            raise ValidationError(
+                f"{performance}: windows are required for all three sources."
+            )
+        bounds = {
+            key: _interval(windows.get(key), f"{performance}: windows.{key}")
+            for key in ("suit", "non_suit", "video")
+        }
+        calibration = _interval(
+            item.get("calibration_phase"), f"{performance}: calibration_phase"
+        )
         if calibration[1] > 1:
-            raise ValidationError(f"{performance}: calibration phase must be within [0, 1].")
-        trials.append(Trial(
-            performance, triplet[0], triplet[1], triplet[2], files["suit_fbx"],
-            files["non_suit_fbx"], files["reference_video"], pose_path,
-            {key: value.lower() for key, value in hashes.items()}, bounds, calibration,
-            item["pairing_verified_by"].strip(),
-        ))
+            raise ValidationError(
+                f"{performance}: calibration phase must be within [0, 1]."
+            )
+        trials.append(
+            Trial(
+                performance,
+                triplet[0],
+                triplet[1],
+                triplet[2],
+                files["suit_fbx"],
+                files["non_suit_fbx"],
+                files["reference_video"],
+                pose_path,
+                {key: value.lower() for key, value in hashes.items()},
+                bounds,
+                calibration,
+                item["pairing_verified_by"].strip(),
+            )
+        )
     return trials

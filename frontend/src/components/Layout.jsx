@@ -11,6 +11,7 @@ const NAV = [
   { label: 'Technology', section: 'technology' },
   { label: 'Process', section: 'process' },
   { label: 'Library', to: '/capture' },
+  { label: 'Analysis', to: '/analysis' },
   { label: 'About', section: 'about' },
   { label: 'Contact', section: 'contact' },
 ]
@@ -125,6 +126,7 @@ export default function Layout() {
         <div>
           <ul>
             <li><NavLink to="/capture" className="link link--muted">Capture library</NavLink></li>
+            <li><NavLink to="/analysis" className="link link--muted">Motion analysis</NavLink></li>
           </ul>
         </div>
         <div className="foot__col--end">

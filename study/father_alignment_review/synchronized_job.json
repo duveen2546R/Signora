@@ -1,0 +1,30 @@
+{
+  "jobId": "b2bd4b148138467bacc97ba5992ba837",
+  "previousJobId": "7b1cc812854148b281abaef06689adc9",
+  "events": {
+    "suit": {
+      "fbx_minus_video_offset_s": 0.6238682023945528,
+      "independent_lowering_residual_s": 0.008467635295603237,
+      "source_events": {
+        "baseline_height": -0.46641952601630843,
+        "raised_height": 0.18973067574572022,
+        "half_excursion_level": -0.1383444251352941,
+        "rise_midpoint_s": 1.7808756267307284,
+        "fall_midpoint_s": 3.8574117865618907,
+        "sampling_interval_s": 0.016666666666666607
+      }
+    },
+    "non_suit": {
+      "fbx_minus_video_offset_s": 0.014302805771033933,
+      "independent_lowering_residual_s": 0.0680910135467272,
+      "source_events": {
+        "baseline_height": -0.5359153386459298,
+        "raised_height": 0.23688568741190474,
+        "half_excursion_level": -0.14951482561701251,
+        "rise_midpoint_s": 1.1713102301072096,
+        "fall_midpoint_s": 3.307469768189496,
+        "sampling_interval_s": 0.016666666666666607
+      }
+    }
+  }
+}

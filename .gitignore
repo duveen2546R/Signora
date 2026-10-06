@@ -38,6 +38,7 @@ backend/data/*.sqlite
 backend/data/*.sqlite-*
 backend/data/*.sqlite3
 backend/data/*.sqlite3-*
+backend/data/analyses/
 
 # Node / Vite
 node_modules/

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "trials": [
+    {
+      "performance_id": "P01-ADDITION-01",
+      "action_id": "ADDITION",
+      "performer_id": "P01",
+      "repetition": "01",
+      "pairing_verified_by": "User confirmed in Codex chat: exact same physical Addition take",
+      "recording_relationship": "same_performance",
+      "reference_independent": true,
+      "suit_fbx": "data/ADDITION/rokoko.fbx",
+      "non_suit_fbx": "data/ADDITION/deepmotion.fbx",
+      "reference_video": "data/ADDITION/reference.mp4",
+      "video_landmarks": "data/ADDITION/reference_pose.csv",
+      "sha256": {
+        "suit_fbx": "23585b636f35fbc3371d409c35fb726ddc455370b318ab32accdf42547cd968f",
+        "non_suit_fbx": "5596c3c3704114cd757d2cfd46f625d220c82ac553cfc039ab8bdb5becc78c5e",
+        "reference_video": "638c010eeb193477e25035ac2e5608e65f9561f53bdfde591be689abade796cd",
+        "video_landmarks": "5ff4abcfdae3bd328d1e8afc5dc0f87fc37df268b3065ed6fd5a738c6a1c7a4b"
+      },
+      "windows": {
+        "video": [0.5, 4.4],
+        "suit": [1.05, 4.95],
+        "non_suit": [0.46562128135109604, 4.365621281351096]
+      },
+      "calibration_phase": [0, 0.07]
+    }
+  ],
+  "case_study": {
+    "video_metadata": "data/ADDITION/reference_pose.metadata.json",
+    "video_metadata_sha256": "fb3b1a749496b23f8ba7261e331da2a6298349a6658167ffaff3a1729830bad1",
+    "pose_model": "../models/pose_landmarker_full.task",
+    "review": {
+      "tracking": "provisional",
+      "boundaries": "reviewed",
+      "calibration": "provisional"
+    },
+    "review_notes": ["User confirmed exact same performance"],
+    "synchronization": {
+      "suit": {
+        "clock_verified": true,
+        "clock_evidence": "User confirmed Addition video is exact Rokoko take",
+        "event": {
+          "reviewed": true,
+          "description": "Half vertical wrist excursion",
+          "video_seconds": 1.2470657044235316,
+          "fbx_seconds": 1.7575948515959503
+        },
+        "video_seconds_per_fbx_second": 1.0,
+        "rate_evidence": "normal speed"
+      },
+      "non_suit": {
+        "clock_verified": true,
+        "clock_evidence": "User confirmed Addition video is exact Rokoko take",
+        "event": {
+          "reviewed": true,
+          "description": "Half vertical wrist excursion",
+          "video_seconds": 1.2470657044235316,
+          "fbx_seconds": 1.2126869857746276
+        },
+        "video_seconds_per_fbx_second": 1.0,
+        "rate_evidence": "normal speed"
+      }
+    },
+    "tolerance_policy": "exploratory"
+  }
+}

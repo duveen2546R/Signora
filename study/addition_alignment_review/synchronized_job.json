@@ -1,0 +1,67 @@
+{
+  "jobId": "8d09948d31e5433680cf8a07a734f45b",
+  "previousJobId": "e3cc06739ccf4c25a333b6603a6c8656",
+  "audit": {
+    "definition": "Half vertical wrist excursion. Baseline median native 0.1\u20130.6 s; raised level median upper 20% wrist heights over clip. Linear crossing interpolation. Right raise anchors alignment; lowering and left raise are separate checks.",
+    "sampling_intervals_s": {
+      "video": 0.041666666666666664,
+      "fbx": 0.016666666666666666
+    },
+    "methods": {
+      "suit": {
+        "offset_s": 0.5105291471724187,
+        "lowering_residual_s": 0.08420300838118067,
+        "left_raise_residual_s": -0.015674769070254557,
+        "events": {
+          "left": {
+            "baseline_height": -0.447444780304614,
+            "raised_height": 0.08485982070879405,
+            "rise_midpoint_s": 1.7923298790143378,
+            "fall_midpoint_s": 4.034303003136653,
+            "all_crossings": [
+              1.7923298790143378,
+              4.034303003136653
+            ]
+          },
+          "right": {
+            "baseline_height": -0.4643147790282909,
+            "raised_height": -0.05475671765936885,
+            "rise_midpoint_s": 1.7575948515959503,
+            "fall_midpoint_s": 4.079331580913422,
+            "all_crossings": [
+              1.7575948515959503,
+              4.079331580913422
+            ]
+          }
+        }
+      },
+      "non_suit": {
+        "offset_s": -0.03437871864890396,
+        "lowering_residual_s": 0.1481984709795987,
+        "left_raise_residual_s": -0.020995283307182033,
+        "events": {
+          "left": {
+            "baseline_height": -0.5283354315506561,
+            "raised_height": 0.011484834948775058,
+            "rise_midpoint_s": 1.2421014989560877,
+            "fall_midpoint_s": 3.4978228916379166,
+            "all_crossings": [
+              1.2421014989560877,
+              3.4978228916379166
+            ]
+          },
+          "right": {
+            "baseline_height": -0.5416286471026686,
+            "raised_height": -0.00022466579884894422,
+            "rise_midpoint_s": 1.2126869857746276,
+            "fall_midpoint_s": 3.5984191776905172,
+            "all_crossings": [
+              1.2126869857746276,
+              3.5984191776905172
+            ]
+          }
+        }
+      }
+    }
+  }
+}

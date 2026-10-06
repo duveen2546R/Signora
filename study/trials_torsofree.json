@@ -6,7 +6,8 @@
       "action_id": "ACTION",
       "performer_id": "P01",
       "repetition": "01",
-      "pairing_verified_by": "REPLACE-WITH-REVIEWER-NAME",
+      "pairing_verified_by": "User correction in Codex chat on 2026-10-05: separate repetitions of the same action",
+      "recording_relationship": "separate_repetitions",
       "reference_independent": true,
       "suit_fbx": "../MotionCaptureFbx/action.fbx",
       "non_suit_fbx": "../oldfbx/action.fbx",
@@ -16,7 +17,7 @@
         "suit_fbx": "6c013aeb7ea0da407a3eb5ec4671ff196c1a28860ca46a8e412392445bf16d1e",
         "non_suit_fbx": "b9be2e517c3bff2c2657c9c8ebb4840aa467abc1887cbad60e7d23599f5512f7",
         "reference_video": "5505b0379f808b3baca28a84f2b730b4d0b541b6917e8e1b11ff86dcaabbef91",
-        "video_landmarks": "de05dee64f0c548a3a1f40d325b36e09753ba571274e4b1952f83a5d43ae8f85"
+        "video_landmarks": "07221abc6071ebeda3bbd151dc34de39de16526a9dc5b3f2868c83b380b6d146"
       },
       "windows": {
         "suit": [
@@ -37,5 +38,32 @@
         0.15
       ]
     }
-  ]
+  ],
+  "case_study": {
+    "video_metadata": "landmarks/action_pose.metadata.json",
+    "video_metadata_sha256": "3d0722c14b2a7a346ac4064bc806381211a6a908f29eb5744f79c2fa686d0cdd",
+    "pose_model": "models/pose_landmarker_full.task",
+    "review": {
+      "tracking": "sampled",
+      "boundaries": "provisional",
+      "calibration": "provisional"
+    },
+    "review_notes": [
+      "Codex inspected eight video frames at 0.625, 1.292, 2.083, 2.792, 3.500, 4.208, 4.917, and 5.375 seconds with shoulder, hip, wrist, and elbow overlays. No left/right identity swap was visible in these sampled frames. This is not exhaustive expert reference validation.",
+      "The video shows neutral arms near both annotated endpoints. Source-window correspondence and physical playback speed remain unverified.",
+      "Original study windows retained for exploratory phase-normalized comparison. No wrist-error optimization was used to select synchronization or source windows."
+    ],
+    "synchronization": {
+      "suit": {
+        "clock_verified": false,
+        "reason": "Recording speed and synchronization events not verified"
+      },
+      "non_suit": {
+        "clock_verified": false,
+        "reason": "Recording speed and synchronization events not verified"
+      }
+    },
+    "tolerance_policy": "exploratory; no justified equivalence bounds",
+    "historical_results": "scores_prev, scores_wristonly, scores_v2_wristelbow and scores_v3 are retained historical artifacts; their provenance is not reassigned to these regenerated inputs."
+  }
 }

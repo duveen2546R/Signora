@@ -1,2 +1,4 @@
 -r requirements-validation.txt
 mediapipe==0.10.35
+matplotlib==3.11.2
+opencv-contrib-python==5.0.0.93

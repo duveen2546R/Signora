@@ -4,6 +4,7 @@ import Landing from './pages/Landing'
 import SignPage from './pages/SignPage'
 import Capture from './pages/Capture'
 import Watch from './pages/Watch'
+import Analysis from './pages/Analysis'
 import './App.css'
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
           <Route index element={<Landing />} />
           <Route path="sign" element={<SignPage />} />
           <Route path="capture" element={<Capture />} />
+          <Route path="analysis" element={<Analysis />} />
           {youtubeSigning && <Route path="watch" element={<Watch />} />}
         </Route>
       </Routes>

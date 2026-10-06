@@ -18,6 +18,17 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  analysisReadiness: () => request('/analyses/readiness'),
+  createAnalysis: (files, options) => {
+    const form = new FormData()
+    form.append('motioncapture_fbx', files.suit)
+    form.append('old_fbx', files.non_suit)
+    form.append('reference_video', files.video)
+    form.append('options', JSON.stringify(options))
+    return request('/analyses', { method: 'POST', body: form })
+  },
+  analysisStatus: (jobId, signal) => request(`/analyses/${encodeURIComponent(jobId)}`, { signal }),
+  analysisFile: (jobId, name, download = false) => `${BASE}/analyses/${encodeURIComponent(jobId)}/files/${encodeURIComponent(name)}${download ? '?download=true' : ''}`,
   health: () => request('/health'),
 
   listSigns: ({ q = '', limit = 200 } = {}) =>

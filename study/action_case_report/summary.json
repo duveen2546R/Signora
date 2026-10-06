@@ -1,0 +1,747 @@
+{
+  "analysis_version": "single-performance-case-v1",
+  "performance_id": "P01-ACTION-01",
+  "conclusion": "statistical equivalence not established",
+  "agreement_status": "indeterminate",
+  "n_independent_performances": 1,
+  "labels": {
+    "suit": "MotionCaptureFBX",
+    "non_suit": "oldFBX"
+  },
+  "interpretation": "Observed 2D agreement for one recording. No population inference, p-values, or frame-based confidence intervals.",
+  "units": {
+    "position": "reference shoulder widths in the image plane",
+    "angle": "projected degrees",
+    "time": "seconds"
+  },
+  "pairing_attestation": "User confirmation in Codex chat on 2026-10-05: all three sources represent the exact same physical performance",
+  "provenance": {
+    "manifest_sha256": "c5f7dec4f367a7b1de0d0455e19b8fb7a45f16ccea1cc38566f1a8a38bd237ff",
+    "trial": {
+      "action_id": "ACTION",
+      "performer_id": "P01",
+      "repetition": "01",
+      "windows": {
+        "suit": [
+          0.45,
+          2.85
+        ],
+        "non_suit": [
+          0.2,
+          2.55
+        ],
+        "video": [
+          0.63,
+          5.38
+        ]
+      },
+      "calibration_phase": [
+        0.0,
+        0.15
+      ],
+      "source_paths": {
+        "suit_fbx": "../MotionCaptureFbx/action.fbx",
+        "non_suit_fbx": "../oldfbx/action.fbx",
+        "reference_video": "../videos/action.mp4",
+        "video_landmarks": "landmarks/action_pose.csv"
+      },
+      "reference_independent_attestation": true
+    },
+    "source_sha256": {
+      "suit_fbx": "6c013aeb7ea0da407a3eb5ec4671ff196c1a28860ca46a8e412392445bf16d1e",
+      "non_suit_fbx": "b9be2e517c3bff2c2657c9c8ebb4840aa467abc1887cbad60e7d23599f5512f7",
+      "reference_video": "5505b0379f808b3baca28a84f2b730b4d0b541b6917e8e1b11ff86dcaabbef91",
+      "video_landmarks": "07221abc6071ebeda3bbd151dc34de39de16526a9dc5b3f2868c83b380b6d146"
+    },
+    "video_metadata_sha256": "3d0722c14b2a7a346ac4064bc806381211a6a908f29eb5744f79c2fa686d0cdd",
+    "video": {
+      "video": "action.mp4",
+      "landmarks": "action_pose.csv",
+      "frames": 139,
+      "frame_rate": 24.0,
+      "width": 576,
+      "height": 1024,
+      "pose_model": "pose_landmarker_full.task",
+      "pose_model_sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1",
+      "video_sha256": "5505b0379f808b3baca28a84f2b730b4d0b541b6917e8e1b11ff86dcaabbef91",
+      "landmarks_sha256": "07221abc6071ebeda3bbd151dc34de39de16526a9dc5b3f2868c83b380b6d146",
+      "timestamp_policy": "decoder milliseconds; frame_index/fps fallback",
+      "joint_names": [
+        "left_shoulder",
+        "right_shoulder",
+        "left_hip",
+        "right_hip",
+        "left_wrist",
+        "right_wrist",
+        "left_elbow",
+        "right_elbow"
+      ],
+      "tracking_review": "unreviewed",
+      "mediapipe_version": "0.10.35",
+      "opencv_version": "5.0.0.93"
+    },
+    "native_motion": {
+      "suit": {
+        "profile": "mixamo_30",
+        "fps": 30.0,
+        "duration_s": 3.9,
+        "frames": 118
+      },
+      "non_suit": {
+        "profile": "blender_25",
+        "fps": 25.0,
+        "duration_s": 3.1599996948219853,
+        "frames": 80
+      }
+    },
+    "configuration": {
+      "video_metadata": "landmarks/action_pose.metadata.json",
+      "video_metadata_sha256": "3d0722c14b2a7a346ac4064bc806381211a6a908f29eb5744f79c2fa686d0cdd",
+      "pose_model": "models/pose_landmarker_full.task",
+      "review": {
+        "tracking": "sampled",
+        "boundaries": "provisional",
+        "calibration": "provisional"
+      },
+      "review_notes": [
+        "Codex inspected eight video frames at 0.625, 1.292, 2.083, 2.792, 3.500, 4.208, 4.917, and 5.375 seconds with shoulder, hip, wrist, and elbow overlays. No left/right identity swap was visible in these sampled frames. This is not exhaustive expert reference validation.",
+        "The video shows neutral arms near both annotated endpoints. Source-window correspondence and physical playback speed remain unverified.",
+        "Original study windows retained for exploratory phase-normalized comparison. No wrist-error optimization was used to select synchronization or source windows."
+      ],
+      "synchronization": {
+        "suit": {
+          "clock_verified": false,
+          "reason": "Recording speed and synchronization events not verified"
+        },
+        "non_suit": {
+          "clock_verified": false,
+          "reason": "Recording speed and synchronization events not verified"
+        }
+      },
+      "tolerance_policy": "exploratory; no justified equivalence bounds",
+      "historical_results": "scores_prev, scores_wristonly, scores_v2_wristelbow and scores_v3 are retained historical artifacts; their provenance is not reassigned to these regenerated inputs."
+    },
+    "runtime_versions": {
+      "numpy": "2.2.1",
+      "scipy": "1.18.1",
+      "ufbx": "0.0.5",
+      "matplotlib": "3.11.2"
+    },
+    "code_sha256": {
+      "case_study.py": "edecceb388ea110c092326224107b5731756c0caa7e775065f926269a0164cf3",
+      "fbx_motion.py": "accf938d0958aa517865ad0f5b780687557cc56d2a283d612398358994540507",
+      "fbx_worker.py": "22579aae46829d37fb73e0fa883f17e716c85b86bc2d4ff6ffa6ab690ee73e68",
+      "video_pose.py": "996f49b4e12d9f72275a881e18159657e5b10449b650e7369b69ddd72d94bb78",
+      "scoring.py": "6d95dc44792247d73f9beb13c92710b6dbef1fe22e70f2ec235d15140258dab8",
+      "trials.py": "cb86aff00be5c21addd2930f6c9779f1fc8e77c3ecf5429f94d59e4faf679df2"
+    }
+  },
+  "qc": {
+    "status": "provisional",
+    "issues": [
+      "Tracking, boundaries, or calibration remain provisional; inspect the review evidence.",
+      "phase_normalized: plausible camera solutions produce materially different position errors.",
+      "synchronized: Source clocks and synchronization events are not verified."
+    ],
+    "minimum_confidence": 0.7,
+    "minimum_coverage": 0.8,
+    "maximum_interpolation_gap_s": 0.15
+  },
+  "durations_s": {
+    "suit": 2.4,
+    "non_suit": 2.3499999999999996,
+    "video": 4.75
+  },
+  "native_duration_difference_vs_video_s": {
+    "suit": -2.35,
+    "non_suit": -2.4000000000000004
+  },
+  "timing_status": "indeterminate",
+  "clock_adjusted_duration_difference_vs_video_s": null,
+  "timing_tolerance_sensitivity": [
+    {
+      "tolerance_ms": 50,
+      "duration_discrepancy_within": {
+        "suit": null,
+        "non_suit": null
+      },
+      "status": "indeterminate"
+    },
+    {
+      "tolerance_ms": 100,
+      "duration_discrepancy_within": {
+        "suit": null,
+        "non_suit": null
+      },
+      "status": "indeterminate"
+    },
+    {
+      "tolerance_ms": 200,
+      "duration_discrepancy_within": {
+        "suit": null,
+        "non_suit": null
+      },
+      "status": "indeterminate"
+    },
+    {
+      "tolerance_ms": 500,
+      "duration_discrepancy_within": {
+        "suit": null,
+        "non_suit": null
+      },
+      "status": "indeterminate"
+    }
+  ],
+  "analyses": {
+    "phase_normalized": {
+      "status": "descriptive",
+      "alignment": "phase_normalized",
+      "common_coverage": 1.0,
+      "n_common_frames": 101,
+      "temporal_common_coverage": 1.0,
+      "reference_shoulder_width_pixels": 233.755396244055,
+      "methods": {
+        "suit": {
+          "position": {
+            "left_wrist": {
+              "n": 101,
+              "mean": 0.7195978969562914,
+              "median": 0.7627480191323283,
+              "p95": 1.0502969282801138,
+              "signed_bias_x": -0.656983907649718,
+              "signed_bias_y": 0.03280138907261262
+            },
+            "right_wrist": {
+              "n": 101,
+              "mean": 0.6465426038926809,
+              "median": 0.6674245590032235,
+              "p95": 0.8938185439115832,
+              "signed_bias_x": -0.5839141082480267,
+              "signed_bias_y": 0.16838236557988867
+            },
+            "left_elbow": {
+              "n": 101,
+              "mean": 0.2418031936939218,
+              "median": 0.2857924975682343,
+              "p95": 0.3533226708884864,
+              "signed_bias_x": -0.22404678343421694,
+              "signed_bias_y": -0.03588017213726636
+            },
+            "right_elbow": {
+              "n": 101,
+              "mean": 0.13860097379164074,
+              "median": 0.13455106599361621,
+              "p95": 0.24514553469296904,
+              "signed_bias_x": -0.09168621372310023,
+              "signed_bias_y": -0.05698283353582021
+            }
+          },
+          "combined_position": {
+            "n": 404,
+            "mean": 0.4366361670836338,
+            "median": 0.32934698927534445,
+            "p95": 0.8980001522933541
+          },
+          "elbow_angle": {
+            "left": {
+              "n": 101,
+              "mean": 46.285121599696524,
+              "median": 53.928778115291266,
+              "p95": 87.27120447650844
+            },
+            "right": {
+              "n": 101,
+              "mean": 69.34605144702513,
+              "median": 76.58236520515582,
+              "p95": 129.55766061606377
+            }
+          }
+        },
+        "non_suit": {
+          "position": {
+            "left_wrist": {
+              "n": 101,
+              "mean": 0.7546134667992619,
+              "median": 0.7272450308847102,
+              "p95": 1.286867557515961,
+              "signed_bias_x": -0.043665571979457606,
+              "signed_bias_y": 0.13008465495979554
+            },
+            "right_wrist": {
+              "n": 101,
+              "mean": 0.5331403625299453,
+              "median": 0.5512373251023567,
+              "p95": 0.8393342548050204,
+              "signed_bias_x": 0.032645248778472316,
+              "signed_bias_y": -0.44006076529531035
+            },
+            "left_elbow": {
+              "n": 101,
+              "mean": 0.21391821785653667,
+              "median": 0.23128960543545002,
+              "p95": 0.30840168340120044,
+              "signed_bias_x": 0.026427629860089254,
+              "signed_bias_y": -0.027740908385626227
+            },
+            "right_elbow": {
+              "n": 101,
+              "mean": 0.29303083967726573,
+              "median": 0.30030202659806987,
+              "p95": 0.3924486878511447,
+              "signed_bias_x": -0.11142550849334196,
+              "signed_bias_y": -0.1730461156654171
+            }
+          },
+          "combined_position": {
+            "n": 404,
+            "mean": 0.4486757217157524,
+            "median": 0.3391587884938722,
+            "p95": 1.1687417295392029
+          },
+          "elbow_angle": {
+            "left": {
+              "n": 101,
+              "mean": 83.39576927063665,
+              "median": 71.84134321247507,
+              "p95": 176.4070613487646
+            },
+            "right": {
+              "n": 101,
+              "mean": 33.5105282772946,
+              "median": 11.97089538058075,
+              "p95": 142.67770035452955
+            }
+          }
+        }
+      },
+      "comparison": {
+        "combined_position": {
+          "old_minus_motioncapture": 0.012039554632118588,
+          "percentage_reduction_from_old": 2.6833532659353376
+        },
+        "position": {
+          "left_wrist": {
+            "old_minus_motioncapture": 0.035015569842970495,
+            "percentage_reduction_from_old": 4.640199437665899
+          },
+          "right_wrist": {
+            "old_minus_motioncapture": -0.11340224136273558,
+            "percentage_reduction_from_old": -21.27061639538988
+          },
+          "left_elbow": {
+            "old_minus_motioncapture": -0.02788497583738514,
+            "percentage_reduction_from_old": -13.035344122063544
+          },
+          "right_elbow": {
+            "old_minus_motioncapture": 0.154429865885625,
+            "percentage_reduction_from_old": 52.70089184323017
+          }
+        },
+        "elbow_angle": {
+          "left": {
+            "old_minus_motioncapture": 37.110647670940125,
+            "percentage_reduction_from_old": 44.49943683654784
+          },
+          "right": {
+            "old_minus_motioncapture": -35.835523169730536,
+            "percentage_reduction_from_old": -106.93810277533363
+          }
+        }
+      },
+      "calibration": {
+        "suit": {
+          "source_shoulder_width_m": 0.3447434825883873,
+          "solutions": [
+            {
+              "rotation_vector_rad": [
+                3.0410482709190116,
+                0.06654442661725306,
+                0.8001367318197606
+              ],
+              "scale": 1.240324370428611,
+              "torso_rmse": 0.05357380353730153,
+              "metrics": {
+                "position": {
+                  "left_wrist": {
+                    "n": 101,
+                    "mean": 0.7195978969562914,
+                    "median": 0.7627480191323283,
+                    "p95": 1.0502969282801138,
+                    "signed_bias_x": -0.656983907649718,
+                    "signed_bias_y": 0.03280138907261262
+                  },
+                  "right_wrist": {
+                    "n": 101,
+                    "mean": 0.6465426038926809,
+                    "median": 0.6674245590032235,
+                    "p95": 0.8938185439115832,
+                    "signed_bias_x": -0.5839141082480267,
+                    "signed_bias_y": 0.16838236557988867
+                  },
+                  "left_elbow": {
+                    "n": 101,
+                    "mean": 0.2418031936939218,
+                    "median": 0.2857924975682343,
+                    "p95": 0.3533226708884864,
+                    "signed_bias_x": -0.22404678343421694,
+                    "signed_bias_y": -0.03588017213726636
+                  },
+                  "right_elbow": {
+                    "n": 101,
+                    "mean": 0.13860097379164074,
+                    "median": 0.13455106599361621,
+                    "p95": 0.24514553469296904,
+                    "signed_bias_x": -0.09168621372310023,
+                    "signed_bias_y": -0.05698283353582021
+                  }
+                },
+                "combined_position": {
+                  "n": 404,
+                  "mean": 0.4366361670836338,
+                  "median": 0.32934698927534445,
+                  "p95": 0.8980001522933541
+                },
+                "elbow_angle": {
+                  "left": {
+                    "n": 101,
+                    "mean": 46.285121599696524,
+                    "median": 53.928778115291266,
+                    "p95": 87.27120447650844
+                  },
+                  "right": {
+                    "n": 101,
+                    "mean": 69.34605144702513,
+                    "median": 76.58236520515582,
+                    "p95": 129.55766061606377
+                  }
+                }
+              },
+              "mean_target_error": 0.4366361670836338
+            },
+            {
+              "rotation_vector_rad": [
+                2.9342912418833778,
+                0.10370835810866713,
+                -0.7786541104691518
+              ],
+              "scale": 1.239132248157609,
+              "torso_rmse": 0.05613319842391794,
+              "metrics": {
+                "position": {
+                  "left_wrist": {
+                    "n": 101,
+                    "mean": 0.4172010108373469,
+                    "median": 0.4080568994825433,
+                    "p95": 0.7779128808175151,
+                    "signed_bias_x": 0.27844447370742054,
+                    "signed_bias_y": 0.15759800004224034
+                  },
+                  "right_wrist": {
+                    "n": 101,
+                    "mean": 0.45033206335799425,
+                    "median": 0.4398716658092354,
+                    "p95": 0.6805880506982462,
+                    "signed_bias_x": 0.27797679026849537,
+                    "signed_bias_y": 0.2837170827706193
+                  },
+                  "left_elbow": {
+                    "n": 101,
+                    "mean": 0.06818567914084674,
+                    "median": 0.06316190786464045,
+                    "p95": 0.14428746538813503,
+                    "signed_bias_x": 0.03346730742184924,
+                    "signed_bias_y": -0.002237650962052234
+                  },
+                  "right_elbow": {
+                    "n": 101,
+                    "mean": 0.10034099150511655,
+                    "median": 0.09827535463799458,
+                    "p95": 0.17525683071490103,
+                    "signed_bias_x": 0.0037532976610456497,
+                    "signed_bias_y": -0.044571890099300876
+                  }
+                },
+                "combined_position": {
+                  "n": 404,
+                  "mean": 0.2590149362103261,
+                  "median": 0.15302636170036324,
+                  "p95": 0.67770511874214
+                },
+                "elbow_angle": {
+                  "left": {
+                    "n": 101,
+                    "mean": 46.501334133906774,
+                    "median": 23.209299174654685,
+                    "p95": 144.76669621974332
+                  },
+                  "right": {
+                    "n": 101,
+                    "mean": 45.42305976884022,
+                    "median": 44.67438186162397,
+                    "p95": 81.96754739043767
+                  }
+                }
+              },
+              "mean_target_error": 0.2590149362103261
+            }
+          ]
+        },
+        "non_suit": {
+          "source_shoulder_width_m": 0.26312943399644495,
+          "solutions": [
+            {
+              "rotation_vector_rad": [
+                3.5438550536723104,
+                0.04273944558792073,
+                0.045145468563823815
+              ],
+              "scale": 0.9310314378585347,
+              "torso_rmse": 0.04234799622374394,
+              "metrics": {
+                "position": {
+                  "left_wrist": {
+                    "n": 101,
+                    "mean": 0.7546134667992619,
+                    "median": 0.7272450308847102,
+                    "p95": 1.286867557515961,
+                    "signed_bias_x": -0.043665571979457606,
+                    "signed_bias_y": 0.13008465495979554
+                  },
+                  "right_wrist": {
+                    "n": 101,
+                    "mean": 0.5331403625299453,
+                    "median": 0.5512373251023567,
+                    "p95": 0.8393342548050204,
+                    "signed_bias_x": 0.032645248778472316,
+                    "signed_bias_y": -0.44006076529531035
+                  },
+                  "left_elbow": {
+                    "n": 101,
+                    "mean": 0.21391821785653667,
+                    "median": 0.23128960543545002,
+                    "p95": 0.30840168340120044,
+                    "signed_bias_x": 0.026427629860089254,
+                    "signed_bias_y": -0.027740908385626227
+                  },
+                  "right_elbow": {
+                    "n": 101,
+                    "mean": 0.29303083967726573,
+                    "median": 0.30030202659806987,
+                    "p95": 0.3924486878511447,
+                    "signed_bias_x": -0.11142550849334196,
+                    "signed_bias_y": -0.1730461156654171
+                  }
+                },
+                "combined_position": {
+                  "n": 404,
+                  "mean": 0.4486757217157524,
+                  "median": 0.3391587884938722,
+                  "p95": 1.1687417295392029
+                },
+                "elbow_angle": {
+                  "left": {
+                    "n": 101,
+                    "mean": 83.39576927063665,
+                    "median": 71.84134321247507,
+                    "p95": 176.4070613487646
+                  },
+                  "right": {
+                    "n": 101,
+                    "mean": 33.5105282772946,
+                    "median": 11.97089538058075,
+                    "p95": 142.67770035452955
+                  }
+                }
+              },
+              "mean_target_error": 0.4486757217157524
+            },
+            {
+              "rotation_vector_rad": [
+                2.5681877573521517,
+                0.01958694518421164,
+                -0.10934479293655351
+              ],
+              "scale": 0.92942710344078,
+              "torso_rmse": 0.042799818624832724,
+              "metrics": {
+                "position": {
+                  "left_wrist": {
+                    "n": 101,
+                    "mean": 0.6527992058616126,
+                    "median": 0.5502639902669001,
+                    "p95": 1.4155439228310023,
+                    "signed_bias_x": -0.00971333342781814,
+                    "signed_bias_y": 0.4873155249599563
+                  },
+                  "right_wrist": {
+                    "n": 101,
+                    "mean": 0.441186994350122,
+                    "median": 0.38885738504177186,
+                    "p95": 0.8155829075564252,
+                    "signed_bias_x": 0.10461219173631421,
+                    "signed_bias_y": 0.2679428283634159
+                  },
+                  "left_elbow": {
+                    "n": 101,
+                    "mean": 0.1750680208644108,
+                    "median": 0.18341280628538956,
+                    "p95": 0.27510264342480756,
+                    "signed_bias_x": 0.029185107522167707,
+                    "signed_bias_y": 0.02125622214224081
+                  },
+                  "right_elbow": {
+                    "n": 101,
+                    "mean": 0.2212521720807925,
+                    "median": 0.2262264830056639,
+                    "p95": 0.3256771619862868,
+                    "signed_bias_x": -0.0901112428972543,
+                    "signed_bias_y": 0.027517087511438703
+                  }
+                },
+                "combined_position": {
+                  "n": 404,
+                  "mean": 0.37257659828923445,
+                  "median": 0.274861914859311,
+                  "p95": 1.1115906714967552
+                },
+                "elbow_angle": {
+                  "left": {
+                    "n": 101,
+                    "mean": 86.77188712761154,
+                    "median": 71.06339402290799,
+                    "p95": 176.06052782177892
+                  },
+                  "right": {
+                    "n": 101,
+                    "mean": 47.51936742890332,
+                    "median": 43.56461680810793,
+                    "p95": 92.31446201702238
+                  }
+                }
+              },
+              "mean_target_error": 0.37257659828923445
+            }
+          ]
+        }
+      },
+      "calibration_sensitivity": {
+        "fit_rmse_slack": 0.005,
+        "error_spread_flag_shoulder_widths": 0.01,
+        "error_ranges": {
+          "suit": [
+            0.2590149362103261,
+            0.4366361670836338
+          ],
+          "non_suit": [
+            0.37257659828923445,
+            0.4486757217157524
+          ]
+        },
+        "old_minus_motioncapture_range": [
+          -0.06405956879439934,
+          0.18966078550542625
+        ],
+        "ranking_changes": true,
+        "unresolved": true,
+        "sensitivity_not_confidence_interval": true
+      },
+      "position_tolerance_sensitivity": [
+        {
+          "tolerance_shoulder_widths": 0.05,
+          "suit": {
+            "fraction_joint_samples_within": 0.03712871287128713,
+            "fraction_frames_all_targets_within": 0.0
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.007425742574257425,
+            "fraction_frames_all_targets_within": 0.0
+          }
+        },
+        {
+          "tolerance_shoulder_widths": 0.1,
+          "suit": {
+            "fraction_joint_samples_within": 0.09653465346534654,
+            "fraction_frames_all_targets_within": 0.0
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.03217821782178218,
+            "fraction_frames_all_targets_within": 0.0
+          }
+        },
+        {
+          "tolerance_shoulder_widths": 0.2,
+          "suit": {
+            "fraction_joint_samples_within": 0.30198019801980197,
+            "fraction_frames_all_targets_within": 0.0
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.1311881188118812,
+            "fraction_frames_all_targets_within": 0.0
+          }
+        },
+        {
+          "tolerance_shoulder_widths": 0.3,
+          "suit": {
+            "fraction_joint_samples_within": 0.4405940594059406,
+            "fraction_frames_all_targets_within": 0.0594059405940594
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.40594059405940597,
+            "fraction_frames_all_targets_within": 0.0
+          }
+        },
+        {
+          "tolerance_shoulder_widths": 0.5,
+          "suit": {
+            "fraction_joint_samples_within": 0.5915841584158416,
+            "fraction_frames_all_targets_within": 0.13861386138613863
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.6955445544554455,
+            "fraction_frames_all_targets_within": 0.2079207920792079
+          }
+        },
+        {
+          "tolerance_shoulder_widths": 0.75,
+          "suit": {
+            "fraction_joint_samples_within": 0.7821782178217822,
+            "fraction_frames_all_targets_within": 0.33663366336633666
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.8415841584158416,
+            "fraction_frames_all_targets_within": 0.48514851485148514
+          }
+        },
+        {
+          "tolerance_shoulder_widths": 1.0,
+          "suit": {
+            "fraction_joint_samples_within": 0.9826732673267327,
+            "fraction_frames_all_targets_within": 0.9306930693069307
+          },
+          "non_suit": {
+            "fraction_joint_samples_within": 0.9207920792079208,
+            "fraction_frames_all_targets_within": 0.6831683168316832
+          }
+        }
+      ]
+    },
+    "synchronized": {
+      "status": "indeterminate",
+      "reason": "Source clocks and synchronization events are not verified."
+    }
+  },
+  "artifacts": {
+    "html": "report.html",
+    "summary": "summary.json",
+    "traces": {
+      "phase_normalized": "phase_normalized_traces.csv"
+    },
+    "reference_review": "reference_review.png",
+    "figures": [
+      "phase_normalized_angle_errors.svg",
+      "phase_normalized_angles.svg",
+      "phase_normalized_position_errors.svg",
+      "phase_normalized_trajectories.svg"
+    ]
+  }
+}

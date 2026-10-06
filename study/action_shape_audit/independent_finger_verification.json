@@ -1,0 +1,42 @@
+{
+  "addition": {
+    "suit_left": {
+      "independent_atan2_max_excursion_deg": 71.78389692179134,
+      "reported_max_excursion_deg": 71.78389692179134
+    },
+    "suit_right": {
+      "independent_atan2_max_excursion_deg": 85.2040672302071,
+      "reported_max_excursion_deg": 85.20406723020713
+    },
+    "suit_hierarchy_verified": 40,
+    "non_suit_left": {
+      "independent_atan2_max_excursion_deg": 3.623972372679418e-05,
+      "reported_max_excursion_deg": 3.623972372679418e-05
+    },
+    "non_suit_right": {
+      "independent_atan2_max_excursion_deg": 3.242519929358423e-05,
+      "reported_max_excursion_deg": 3.242519929358423e-05
+    },
+    "non_suit_hierarchy_verified": 40
+  },
+  "father": {
+    "suit_left": {
+      "independent_atan2_max_excursion_deg": 4.821750640391656,
+      "reported_max_excursion_deg": 4.8217506403916275
+    },
+    "suit_right": {
+      "independent_atan2_max_excursion_deg": 31.666889430531285,
+      "reported_max_excursion_deg": 31.66688943053137
+    },
+    "suit_hierarchy_verified": 40,
+    "non_suit_left": {
+      "independent_atan2_max_excursion_deg": 3.051770522688457e-05,
+      "reported_max_excursion_deg": 3.051770525530628e-05
+    },
+    "non_suit_right": {
+      "independent_atan2_max_excursion_deg": 3.2424925990426345e-05,
+      "reported_max_excursion_deg": 3.2424925933582927e-05
+    },
+    "non_suit_hierarchy_verified": 40
+  }
+}

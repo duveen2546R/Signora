@@ -14,7 +14,9 @@ from app.validation.mixed_effects import ValidationError  # noqa: E402
 from app.validation.power import simulate_power  # noqa: E402
 from app.validation.scoring import run_manifest  # noqa: E402
 from app.validation.secondary import (  # noqa: E402
-    constrained_dtw_sensitivity, functional_limits_of_agreement, spm1d_paired_curves,
+    constrained_dtw_sensitivity,
+    functional_limits_of_agreement,
+    spm1d_paired_curves,
 )
 from app.validation.trials import load_manifest, sha256  # noqa: E402
 from app.validation.video_pose import extract_video_pose  # noqa: E402
@@ -35,13 +37,29 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     digest = sub.add_parser("hash", help="SHA-256 hashes for source files")
     digest.add_argument("files", nargs="+", type=Path)
-    verify = sub.add_parser("verify", help="Check matches, files, hashes, and study windows")
+    verify = sub.add_parser(
+        "verify", help="Check matches, files, hashes, and study windows"
+    )
     verify.add_argument("manifest", type=Path)
-    extract = sub.add_parser("extract-video", help="Write editable MediaPipe pose landmarks")
+    extract = sub.add_parser(
+        "extract-video", help="Write editable MediaPipe pose landmarks"
+    )
     extract.add_argument("video", type=Path)
     extract.add_argument("--pose-model", required=True, type=Path)
     extract.add_argument("--output", required=True, type=Path)
-    score = sub.add_parser("score", help="Score every matched trial or fail the whole batch")
+    extract.add_argument(
+        "--include-elbows",
+        action="store_true",
+        help="Eight-joint case study CSV and metadata",
+    )
+    case = sub.add_parser(
+        "case-study", help="Descriptive single-performance video/FBX agreement report"
+    )
+    case.add_argument("manifest", type=Path)
+    case.add_argument("--output", required=True, type=Path)
+    score = sub.add_parser(
+        "score", help="Score every matched trial or fail the whole batch"
+    )
     score.add_argument("manifest", type=Path)
     score.add_argument("--output", required=True, type=Path)
     floa = sub.add_parser("floa", help="Action-specific descriptive functional LoA")
@@ -54,7 +72,9 @@ def main(argv: list[str] | None = None) -> int:
     dtw = sub.add_parser("dtw", help="Constrained two-wrist spatial sensitivity")
     dtw.add_argument("scores_dir", type=Path)
     dtw.add_argument("--output", required=True, type=Path)
-    power = sub.add_parser("power", help="Pilot-informed held-out sample-size simulation")
+    power = sub.add_parser(
+        "power", help="Pilot-informed held-out sample-size simulation"
+    )
     power.add_argument("pilot_scores", type=Path)
     power.add_argument("--output", required=True, type=Path)
     power.add_argument("--actions", type=int, nargs="+", default=[8, 16, 32, 48])
@@ -69,33 +89,64 @@ def main(argv: list[str] | None = None) -> int:
             result = {str(path): sha256(path) for path in args.files}
         elif args.command == "verify":
             trials = load_manifest(args.manifest)
-            result = {"verified_trials": len(trials), "performance_ids": [t.performance_id for t in trials]}
+            result = {
+                "verified_trials": len(trials),
+                "performance_ids": [t.performance_id for t in trials],
+            }
         elif args.command == "extract-video":
-            result = extract_video_pose(args.video, args.pose_model, args.output)
+            result = extract_video_pose(
+                args.video,
+                args.pose_model,
+                args.output,
+                include_elbows=args.include_elbows,
+            )
+        elif args.command == "case-study":
+            from app.validation.case_study import run_case_study
+
+            report = run_case_study(args.manifest, args.output)
+            result = {
+                "report": str((args.output / "report.html").resolve()),
+                "summary": str((args.output / "summary.json").resolve()),
+                "conclusion": report["conclusion"],
+                "timing_status": report["timing_status"],
+                "qc": report["qc"],
+            }
         elif args.command == "score":
             result = run_manifest(args.manifest, args.output)
         elif args.command == "floa":
-            result = functional_limits_of_agreement(args.scores_dir, bootstraps=args.bootstraps)
+            result = functional_limits_of_agreement(
+                args.scores_dir, bootstraps=args.bootstraps
+            )
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n")
+            args.output.write_text(
+                json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n"
+            )
         elif args.command == "spm1d":
             result = spm1d_paired_curves(args.scores_dir)
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n")
+            args.output.write_text(
+                json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n"
+            )
         elif args.command == "dtw":
             result = constrained_dtw_sensitivity(args.scores_dir)
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n")
+            args.output.write_text(
+                json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n"
+            )
         else:
             result = simulate_power(
-                str(args.pilot_scores), action_counts=tuple(args.actions),
-                performers=args.performers, repetitions=args.repetitions,
+                str(args.pilot_scores),
+                action_counts=tuple(args.actions),
+                performers=args.performers,
+                repetitions=args.repetitions,
                 assumed_true_reduction=args.assumed_true_reduction,
                 meaningful_threshold=args.meaningful_threshold,
                 simulations=args.simulations,
             )
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n")
+            args.output.write_text(
+                json.dumps(_json_safe(result), indent=2, allow_nan=False) + "\n"
+            )
     except (ValidationError, OSError) as exc:
         parser.exit(2, f"Validation error: {exc}\n")
     print(json.dumps(_json_safe(result), indent=2, allow_nan=False))
