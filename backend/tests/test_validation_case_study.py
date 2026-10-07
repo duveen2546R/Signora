@@ -143,7 +143,7 @@ def test_reference_sampling_does_not_bridge_long_gaps_or_use_low_confidence():
 
 def synthetic_case(tmp_path):
     t = np.linspace(0, 1, 101)
-    xyz = np.zeros((101, 8, 3))
+    xyz = np.zeros((101, len(CASE_JOINTS), 3))
     xyz[:, 0] = [-0.2, 0, 0]
     xyz[:, 1] = [0.2, 0, 0]
     xyz[:, 2] = [-0.15, -0.5, 0]
@@ -154,8 +154,10 @@ def synthetic_case(tmp_path):
     xyz[:, 4, 1] = -0.4 + 0.1 * np.cos(t * 6)
     xyz[:, 5, 0] = 0.3 + 0.1 * np.sin(t * 6)
     xyz[:, 5, 1] = -0.4 + 0.1 * np.cos(t * 6)
+    xyz[:, 8] = xyz[:, 4] + [0.03, 0, 0]
+    xyz[:, 9] = xyz[:, 5] + [0.03, 0, 0]
     xy = xyz[:, :, :2] * [1, -1] + [0.5, 0.2]
-    pose = VideoPose(t, xy, np.ones((101, 8)))
+    pose = VideoPose(t, xy, np.ones((101, len(CASE_JOINTS))))
     paths = {
         key: tmp_path / name
         for key, name in {
@@ -225,20 +227,20 @@ def test_case_shape_uses_common_frames_and_unknown_clocks_remain_indeterminate(
     trial, pose, motions, metadata = synthetic_case(tmp_path)
     pose.confidence[:10, 4] = 0
     result, artifact = score_mode(
-        trial, pose, motions, metadata, {}, "phase_normalized"
+        trial, pose, None, motions, metadata, {}, "phase_normalized"
     )
     assert result["n_common_frames"] == 91
     assert result["comparison"]["combined_position"]["old_minus_motioncapture"] > 0
     assert sum(row["valid"] for row in artifact[0]) == 91
-    result, artifact = score_mode(trial, pose, motions, metadata, {}, "synchronized")
+    result, artifact = score_mode(trial, pose, None, motions, metadata, {}, "synchronized")
     assert result["status"] == "indeterminate" and artifact is None
     pose.confidence[:30, 4] = 0
     with pytest.raises(ValidationError, match="coverage"):
-        score_mode(trial, pose, motions, metadata, {}, "phase_normalized")
+        score_mode(trial, pose, None, motions, metadata, {}, "phase_normalized")
 
 
 def test_camera_ambiguity_is_not_hidden_by_best_torso_fit():
-    xyz = np.zeros((101, 8, 3))
+    xyz = np.zeros((101, len(CASE_JOINTS), 3))
     xyz[:, 0] = [-0.5, 0, 0]
     xyz[:, 1] = [0.5, 0, 0]
     xyz[:, 2] = [-0.4, -1, 0]
@@ -264,7 +266,7 @@ def test_real_native_profiles_complete_without_lifetime_crash():
     ]:
         motion = load_motion(root / relative, include_elbows=True)
         assert motion.profile == profile and motion.fps == fps
-        assert motion.joints.shape[1:] == (8, 3)
+        assert motion.joints.shape[1:] == (len(CASE_JOINTS), 3)
         assert np.isfinite(motion.joints).all()
         np.testing.assert_allclose(np.diff(motion.times), 1 / fps, atol=1e-6)
 
@@ -377,6 +379,7 @@ def test_synchronized_shorter_action_keeps_duration_discrepancy_visible(
     result, artifact = score_mode(
         trial,
         pose,
+        None,
         motions,
         metadata,
         {"synchronization": {"suit": entry, "non_suit": entry}},

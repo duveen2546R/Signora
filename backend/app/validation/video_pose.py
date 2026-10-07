@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import json
-from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,7 +13,8 @@ from .fbx_motion import JOINTS, CASE_JOINTS
 from .trials import sha256
 from .mixed_effects import ValidationError
 
-POSE_INDICES = (11, 12, 23, 24, 15, 16)
+
+# Public six-joint CSV schema retained for validation-pipeline callers.
 COLUMNS = (
     "time_s",
     *(f"{joint}_{field}" for joint in JOINTS for field in ("x", "y", "confidence")),
@@ -24,7 +24,7 @@ COLUMNS = (
 @dataclass(frozen=True)
 class VideoPose:
     times: np.ndarray
-    xy: np.ndarray  # frames x six joints x image-normalized xy
+    xy: np.ndarray  # frames x joints x image-normalized xy
     confidence: np.ndarray
 
 
@@ -80,250 +80,172 @@ def read_pose_csv(path: str | Path, *, include_elbows: bool = False) -> VideoPos
 
 def extract_video_pose(
     video: str | Path,
-    model: str | Path,
+    model: str | Path,  # Keeping signature, though DWPose pulls its own weights
     output: str | Path,
     *,
     include_elbows: bool = False,
     hand_model: str | Path | None = None,
 ) -> dict:
-    """Run MediaPipe Pose Landmarker in VIDEO mode; missing joints stay missing."""
+    """Run DWPose (via rtmlib) to extract highly robust 2D landmarks."""
     try:
         import cv2
-        import mediapipe as mp
+        from rtmlib import Wholebody
     except ImportError as exc:
         raise ValidationError(
-            "Video extraction requires OpenCV and MediaPipe; "
-            "install backend/requirements-validation-video.txt."
+            "Video extraction requires OpenCV and rtmlib; "
+            "install onnxruntime and rtmlib."
         ) from exc
-    video, model, output = Path(video), Path(model), Path(output)
-    if not video.is_file() or not model.is_file():
-        raise ValidationError(
-            "Both reference video and MediaPipe pose model must exist."
-        )
+    video, output = Path(video), Path(output)
+    if not video.is_file():
+        raise ValidationError("Reference video must exist.")
+
     capture = cv2.VideoCapture(str(video))
     if not capture.isOpened():
         raise ValidationError(f"Could not decode {video}.")
     fps = float(capture.get(cv2.CAP_PROP_FPS))
-    width, height = (
-        int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
-        int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-    )
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    if not np.isfinite(fps) or fps <= 0 or width <= 0 or height <= 0:
+        capture.release()
+        raise ValidationError(f"{video.name}: invalid video frame rate.")
+
     joints = CASE_JOINTS if include_elbows else JOINTS
-    indices = (*POSE_INDICES, 13, 14, 19, 20) if include_elbows else POSE_INDICES
+
+    # Mapping our joints to COCO-WholeBody (133 points)
+    # 5: l_sh, 6: r_sh, 7: l_el, 8: r_el, 9: l_wr, 10: r_wr, 11: l_hip, 12: r_hip
+    # 96: l_index (MCP), 117: r_index (MCP)
+    mapping = {
+        "left_shoulder": 5,
+        "right_shoulder": 6,
+        "left_hip": 11,
+        "right_hip": 12,
+        "left_wrist": 9,
+        "right_wrist": 10,
+        "left_elbow": 7,
+        "right_elbow": 8,
+        "left_index": 96,
+        "right_index": 117
+    }
+
+    # We map requested joints to their DWPose indices
+    indices = [mapping[j] for j in joints]
+
     columns = (
         "time_s",
         *(f"{joint}_{field}" for joint in joints for field in ("x", "y", "confidence")),
     )
-    if not np.isfinite(fps) or fps <= 0:
-        capture.release()
-        raise ValidationError(f"{video.name}: invalid video frame rate.")
-    options = mp.tasks.vision.PoseLandmarkerOptions(
-        base_options=mp.tasks.BaseOptions(
-            model_asset_path=str(model), delegate=mp.tasks.BaseOptions.Delegate.CPU
-        ),
-        running_mode=mp.tasks.vision.RunningMode.VIDEO,
-        num_poses=1,
-    )
-    rows = []
-    upper_pose, upper_hands = [], []
-    previous_ms = -1
-    previous_clock_ms = -1.0
+
+    print(f"Initializing DWPose via rtmlib for {video.name}...")
     try:
-        with ExitStack() as stack:
-            landmarker = stack.enter_context(
-                mp.tasks.vision.PoseLandmarker.create_from_options(options)
-            )
-            hand_tracker = None
-            crop_tracker = None
-            if hand_model is not None and Path(hand_model).is_file():
-                hand_tracker = stack.enter_context(
-                    mp.tasks.vision.HandLandmarker.create_from_options(
-                        mp.tasks.vision.HandLandmarkerOptions(
-                            base_options=mp.tasks.BaseOptions(
-                                model_asset_path=str(hand_model),
-                                delegate=mp.tasks.BaseOptions.Delegate.CPU,
-                            ),
-                            running_mode=mp.tasks.vision.RunningMode.VIDEO,
-                            num_hands=2,
-                            min_hand_detection_confidence=0.7,
-                            min_hand_presence_confidence=0.7,
-                            min_tracking_confidence=0.7,
-                        )
-                    )
-                )
-                crop_tracker = stack.enter_context(
-                    mp.tasks.vision.HandLandmarker.create_from_options(
-                        mp.tasks.vision.HandLandmarkerOptions(
-                            base_options=mp.tasks.BaseOptions(
-                                model_asset_path=str(hand_model),
-                                delegate=mp.tasks.BaseOptions.Delegate.CPU,
-                            ),
-                            running_mode=mp.tasks.vision.RunningMode.IMAGE,
-                            num_hands=2,
-                            min_hand_detection_confidence=0.7,
-                            min_hand_presence_confidence=0.7,
-                        )
-                    )
-                )
-            frame_index = 0
-            while True:
-                ok, frame = capture.read()
-                if not ok:
-                    break
-                # Decoder timestamps may be unset; frame_index/fps remains reproducible.
-                clock_ms = float(capture.get(cv2.CAP_PROP_POS_MSEC))
-                if not np.isfinite(clock_ms) or clock_ms <= previous_clock_ms:
-                    clock_ms = frame_index * 1000.0 / fps
-                if clock_ms <= previous_clock_ms:
-                    raise ValidationError(
-                        "Video decoder timestamps are not strictly increasing."
-                    )
-                previous_clock_ms = clock_ms
-                timestamp_ms = max(previous_ms + 1, int(round(clock_ms)))
-                previous_ms = timestamp_ms
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-                result = landmarker.detect_for_video(image, timestamp_ms)
-                # MediaPipe needs integer milliseconds; the analysis clock retains
-                # the decoder's precision rather than inheriting that rounding.
-                row = {"time_s": clock_ms / 1000.0}
-                landmarks = (
-                    result.pose_landmarks[0]
-                    if len(result.pose_landmarks) == 1
-                    else None
-                )
-                full_pose = np.full((33, 3), np.nan)
-                if landmarks is not None:
-                    for j, point in enumerate(landmarks):
-                        full_pose[j] = (
-                            point.x,
-                            point.y,
-                            min(point.visibility, point.presence),
-                        )
+        wholebody = Wholebody(
+            mode='performance',  # RTMW / DWPose whole-body model
+            to_openpose=False,  # COCO-WholeBody 133 format
+            backend='onnxruntime',
+            device='cpu'
+        )
+    except Exception as exc:
+        capture.release()
+        raise ValidationError(f'DWPose ONNX models could not load: {exc}') from exc
+
+    rows = []
+    upper_pose = []
+    upper_hands = []
+
+    previous_clock_ms = -1.0
+    frame_index = 0
+
+    try:
+        while True:
+            ok, frame = capture.read()
+            if not ok:
+                break
+
+            clock_ms = float(capture.get(cv2.CAP_PROP_POS_MSEC))
+            if not np.isfinite(clock_ms) or clock_ms <= previous_clock_ms:
+                clock_ms = frame_index * 1000.0 / fps
+            if clock_ms <= previous_clock_ms:
+                raise ValidationError("Video decoder timestamps are not strictly increasing.")
+            previous_clock_ms = clock_ms
+
+            # Infer
+            keypoints, scores = wholebody(frame)
+
+            row = {"time_s": clock_ms / 1000.0}
+
+            # Find the largest person bounding box if multiple people are detected
+            best_person_idx = 0
+            if len(keypoints) > 1:
+                # Heuristic: person with highest average score across body joints
+                body_scores = [np.mean(s[:17]) for s in scores]
+                best_person_idx = np.argmax(body_scores)
+
+            person_kpts = keypoints[best_person_idx] if len(keypoints) > 0 else None
+            person_scores = scores[best_person_idx] if len(scores) > 0 else None
+
+            # Populate requested CSV joints
+            for name, pose_index in zip(joints, indices):
+                if person_kpts is None:
+                    row.update({f"{name}_{axis}": "" for axis in ("x", "y", "confidence")})
+                    continue
+
+                x, y = person_kpts[pose_index]
+                score = person_scores[pose_index]
+
+                # Normalize to 0-1
+                x_norm, y_norm = x / width, y / height
+
+                if not np.isfinite([x_norm, y_norm, score]).all() or not (0 <= x_norm <= 1 and 0 <= y_norm <= 1):
+                    row.update({f"{name}_{axis}": "" for axis in ("x", "y", "confidence")})
+                else:
+                    row.update({
+                        f"{name}_x": float(x_norm),
+                        f"{name}_y": float(y_norm),
+                        f"{name}_confidence": float(max(0.0, min(1.0, score))),
+                    })
+
+            rows.append(row)
+
+            # Optionally populate upper_hands data
+            if include_elbows:
+                # upper_pose historically had 33 mediapipe points. We only really need it to be
+                # shape (33, 3) for compatibility in the rest of the code, but the rest of the code
+                # in case_study.py does NOT use `upper_pose`. It only uses `upper_hands` which is (2, 21, 2).
+                # We'll save empty `upper_pose` just to satisfy the npz format expectations.
+                full_pose = np.zeros((33, 3), dtype=np.float32)
+
                 hands = np.full((2, 21, 2), np.nan)
-                if hand_tracker is not None:
-                    detected = hand_tracker.detect_for_video(image, timestamp_ms)
-                    candidates = [
-                        np.array([[p.x, p.y] for p in hand])
-                        for hand in detected.hand_landmarks
-                    ]
-                    # Anatomical identity comes from pose wrists, not mirrored-image handedness labels.
-                    if (
-                        candidates
-                        and np.isfinite(full_pose[[11, 12, 15, 16]]).all()
-                        and np.all(full_pose[[11, 12, 15, 16], 2] >= 0.7)
-                    ):
-                        sw = np.linalg.norm(
-                            (full_pose[11, :2] - full_pose[12, :2]) * [width, height]
-                        )
-                        wrists = full_pose[[15, 16], :2] * [width, height]
-                        distances = np.array(
-                            [
-                                np.linalg.norm(
-                                    wrists - hand[0] * [width, height], axis=1
-                                )
-                                / max(sw, 1)
-                                for hand in candidates
-                            ]
-                        )
-                        for side in range(2):
-                            eligible = [
-                                k
-                                for k, hand in enumerate(candidates)
-                                if distances[k, side] < 0.35
-                                and distances[k, 1 - side] - distances[k, side] > 0.10
-                                and np.isfinite(hand).all()
-                                and np.all((hand >= 0) & (hand <= 1))
-                            ]
-                            if len(eligible) == 1:
-                                hands[side] = candidates[eligible[0]]
-                    # Fixed-size pose-guided crops help when hands occupy few pixels
-                    # in a full-body frame. Same policy for both sides and recordings.
-                    if np.isfinite(full_pose[[11, 12, 15, 16]]).all() and np.all(
-                        full_pose[[11, 12, 15, 16], 2] >= 0.7
-                    ):
-                        sw = np.linalg.norm(
-                            (full_pose[11, :2] - full_pose[12, :2]) * [width, height]
-                        )
-                        wrists = full_pose[[15, 16], :2] * [width, height]
-                        for side in range(2):
-                            if np.isfinite(hands[side]).all():
-                                continue
-                            x, y = wrists[side]
-                            radius = max(32, int(0.6 * sw))
-                            x0, y0 = max(0, int(x) - radius), max(0, int(y) - radius)
-                            x1, y1 = (
-                                min(width, int(x) + radius),
-                                min(height, int(y) + radius),
-                            )
-                            if x1 - x0 < 32 or y1 - y0 < 32:
-                                continue
-                            crop = mp.Image(
-                                image_format=mp.ImageFormat.SRGB,
-                                data=np.ascontiguousarray(rgb[y0:y1, x0:x1]),
-                            )
-                            cropped = crop_tracker.detect(crop)
-                            accepted = []
-                            for hand in cropped.hand_landmarks:
-                                pts = np.array(
-                                    [
-                                        [p.x * (x1 - x0) + x0, p.y * (y1 - y0) + y0]
-                                        for p in hand
-                                    ]
-                                )
-                                distances = np.linalg.norm(
-                                    wrists - pts[0], axis=1
-                                ) / max(sw, 1)
-                                normalized = pts / [width, height]
-                                if (
-                                    distances[side] < 0.35
-                                    and distances[1 - side] - distances[side] > 0.10
-                                    and np.isfinite(normalized).all()
-                                    and np.all((normalized >= 0) & (normalized <= 1))
-                                ):
-                                    accepted.append(normalized)
-                            if len(accepted) == 1:
-                                hands[side] = accepted[0]
+                if person_kpts is not None:
+                    # Left hand: 91:112
+                    lh = person_kpts[91:112] / [width, height]
+                    lh_scores = person_scores[91:112]
+                    # Only accept if average hand score is reasonable
+                    if np.mean(lh_scores) > 0.1:
+                        hands[0] = lh
+
+                    # Right hand: 112:133
+                    rh = person_kpts[112:133] / [width, height]
+                    rh_scores = person_scores[112:133]
+                    if np.mean(rh_scores) > 0.1:
+                        hands[1] = rh
+
                 upper_pose.append(full_pose)
                 upper_hands.append(hands)
-                for name, pose_index in zip(joints, indices):
-                    if landmarks is None:
-                        row.update(
-                            {f"{name}_{axis}": "" for axis in ("x", "y", "confidence")}
-                        )
-                        continue
-                    point = landmarks[pose_index]
-                    visibility = getattr(point, "visibility", None)
-                    presence = getattr(point, "presence", None)
-                    score = min(
-                        float(1.0 if visibility is None else visibility),
-                        float(1.0 if presence is None else presence),
-                    )
-                    if not np.isfinite([point.x, point.y, score]).all() or not (
-                        0 <= point.x <= 1 and 0 <= point.y <= 1
-                    ):
-                        row.update(
-                            {f"{name}_{axis}": "" for axis in ("x", "y", "confidence")}
-                        )
-                    else:
-                        row.update(
-                            {
-                                f"{name}_x": point.x,
-                                f"{name}_y": point.y,
-                                f"{name}_confidence": max(0.0, min(1.0, score)),
-                            }
-                        )
-                rows.append(row)
-                frame_index += 1
+
+            frame_index += 1
+
     finally:
         capture.release()
+
     if len(rows) < 2:
         raise ValidationError(f"{video.name}: no usable frames were decoded.")
+
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
         writer.writerows(rows)
+
     metadata = {
         "video": video.name,
         "landmarks": output.name,
@@ -331,16 +253,14 @@ def extract_video_pose(
         "frame_rate": fps,
         "width": width,
         "height": height,
-        "pose_model": model.name,
-        "pose_model_sha256": sha256(model),
+        "pose_model": "rtmlib_dwpose_wholebody",
         "video_sha256": sha256(video),
         "landmarks_sha256": sha256(output),
-        "timestamp_policy": "unrounded decoder seconds; frame_index/fps fallback; integer milliseconds for inference only",
-        "mediapipe_version": mp.__version__,
-        "opencv_version": cv2.__version__,
+        "timestamp_policy": "unrounded decoder seconds",
         "joint_names": list(joints),
         "tracking_review": "unreviewed",
     }
+
     if include_elbows:
         upper_path = output.with_suffix(".upper.npz")
         np.savez_compressed(
@@ -352,20 +272,16 @@ def extract_video_pose(
         metadata["upper_body"] = {
             "file": upper_path.name,
             "sha256": sha256(upper_path),
-            "hand_model_sha256": sha256(Path(hand_model))
-            if hand_model is not None and Path(hand_model).is_file()
-            else None,
-            "hand_model_available": hand_tracker is not None,
-            "hand_identity": "unique pose-wrist association within 0.35 shoulder widths; opposite wrist at least 0.10 widths farther away",
-            "hand_quality": "detection/presence/IoU thresholds 0.70; no per-landmark confidence supplied; tracking remains provisional",
-            "hand_crop_policy": "full-frame video detection, then missing-hand fallback to image detection on pose-wrist crop, radius 0.60 shoulder widths; unchanged thresholds and identity check",
+            "hand_model_available": True,
+            "hand_quality": "DWPose ONNX Direct Output",
             "hand_observed_frame_fraction": np.isfinite(np.array(upper_hands))
             .all(axis=(2, 3))
             .mean(axis=0)
             .tolist(),
         }
-    if include_elbows:
-        output.with_suffix(".metadata.json").write_text(
-            json.dumps(metadata, indent=2) + "\n"
-        )
+
+    output.with_suffix(".metadata.json").write_text(
+        json.dumps(metadata, indent=2) + "\n"
+    )
+
     return metadata

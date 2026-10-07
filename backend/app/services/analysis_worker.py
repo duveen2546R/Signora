@@ -60,8 +60,9 @@ def process(directory: Path):
         capture.release()
     durations = {"video": duration}
     for label, key in (("suit", "suit_fbx"), ("non_suit", "non_suit_fbx")):
-        motion = load_motion(paths[key], include_elbows=True)
-        durations[label] = float(motion.times[-1])
+        if key in paths:
+            motion = load_motion(paths[key], include_elbows=True)
+            durations[label] = float(motion.times[-1])
     windows = {}
     for label, duration in durations.items():
         supplied = options.get("windows", {}).get(label)
@@ -124,6 +125,7 @@ def process(directory: Path):
                 "File labels supplied by the uploader: "
                 + json.dumps(options["original_names"]),
             ],
+            "reference_view": options.get("reference_view", "automatic"),
             "synchronization": options.get("synchronization", {}),
             "tolerance_policy": "exploratory; no justified equivalence bounds",
         },

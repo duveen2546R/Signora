@@ -13,7 +13,7 @@ function input() {
 
 test('full clip comparison leaves source clocks unverified and calibration provisional', () => {
   const result = buildAnalysisOptions(input())
-  assert.deepEqual(result, { action: 'Wave', pairing_confirmed: true, recording_relationship: 'same_performance', windows: {}, calibration_phase: [0, 0.15], synchronization: {} })
+  assert.deepEqual(result, { action: 'Wave', pairing_confirmed: true, recording_relationship: 'same_performance', reference_view: 'automatic', windows: {}, calibration_phase: [0, 0.15], synchronization: {} })
 })
 
 test('separate repetitions preserve their relationship and cannot claim synchronized accuracy', () => {
@@ -55,4 +55,12 @@ test('documented event offsets and playback rate reach the analysis unchanged', 
   assert.equal(result.synchronization.suit.video_seconds_per_fbx_second, 2)
   values.timing.suit.rateEvidence = ''
   assert.throws(() => buildAnalysisOptions(values), /documented/)
+})
+
+test('declared frontal reference is passed to backend and invalid views are rejected', () => {
+  const values = input()
+  values.referenceView = 'front'
+  assert.equal(buildAnalysisOptions(values).reference_view, 'front')
+  values.referenceView = 'sideways'
+  assert.throws(() => buildAnalysisOptions(values), /camera view/)
 })

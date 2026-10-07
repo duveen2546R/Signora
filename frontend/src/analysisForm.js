@@ -1,10 +1,9 @@
 export const SOURCES = [
   { key: 'suit', title: 'MotionCapture FBX', accept: '.fbx', hint: 'The motion capture recording · up to 100 MB' },
-  { key: 'non_suit', title: 'Old FBX', accept: '.fbx', hint: 'The reconstruction to compare · up to 100 MB' },
   { key: 'video', title: 'Reference video', accept: '.mp4,.mov,.m4v', hint: 'The real person performing the action · up to 250 MB and 2 minutes' },
 ]
 
-export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', windows, calibration, verifiedTiming, timing }) {
+export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', windows, calibration, verifiedTiming, timing }) {
   for (const source of SOURCES) {
     const file = files[source.key]
     if (!file) throw new Error(`Select ${source.title.toLowerCase()} to continue.`)
@@ -16,6 +15,7 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
   if (!pairing) throw new Error('Confirm the recording relationship and that the video shows the real person.')
   if (!['same_performance', 'separate_repetitions', 'unknown'].includes(relationship)) throw new Error('Select the recording relationship.')
   if (verifiedTiming && relationship !== 'same_performance') throw new Error('Synchronized accuracy requires the exact same performance.')
+  if (!['automatic', 'front'].includes(referenceView)) throw new Error('Select the reference camera view.')
   const selectedWindows = {}
   for (const source of SOURCES) {
     const entry = windows[source.key]
@@ -29,7 +29,7 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
   if (calibration.start === '' || calibration.end === '' || calibrationPhase.some((n) => !Number.isFinite(n)) || calibrationPhase[0] < 0 || calibrationPhase[1] > 1 || calibrationPhase[1] <= calibrationPhase[0]) throw new Error('Enter a neutral calibration interval within 0–100% of the selected action.')
   const synchronization = {}
   if (verifiedTiming) {
-    for (const key of ['suit', 'non_suit']) {
+    for (const key of ['suit']) {
       const entry = timing[key]
       const video = Number(entry.video), fbx = Number(entry.fbx), rate = Number(entry.rate)
       if (entry.video === '' || entry.fbx === '' || !Number.isFinite(video) || !Number.isFinite(fbx) || video < 0 || fbx < 0 || !Number.isFinite(rate) || rate <= 0 || !entry.description.trim() || !entry.evidence.trim()) throw new Error('Verified timing requires a matching event, its timestamps, and clock evidence for each FBX.')
@@ -41,5 +41,5 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
       }
     }
   }
-  return { action: action.trim() || 'Action comparison', pairing_confirmed: true, recording_relationship: relationship, windows: selectedWindows, calibration_phase: calibrationPhase, synchronization }
+  return { action: action.trim() || 'Action comparison', pairing_confirmed: true, recording_relationship: relationship, reference_view: referenceView, windows: selectedWindows, calibration_phase: calibrationPhase, synchronization }
 }

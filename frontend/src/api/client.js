@@ -22,7 +22,9 @@ export const api = {
   createAnalysis: (files, options) => {
     const form = new FormData()
     form.append('motioncapture_fbx', files.suit)
-    form.append('old_fbx', files.non_suit)
+    if (files.non_suit) {
+      form.append('old_fbx', files.non_suit)
+    }
     form.append('reference_video', files.video)
     form.append('options', JSON.stringify(options))
     return request('/analyses', { method: 'POST', body: form })

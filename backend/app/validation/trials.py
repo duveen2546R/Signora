@@ -26,7 +26,7 @@ class Trial:
     performer_id: str
     repetition: str
     suit_fbx: Path
-    non_suit_fbx: Path
+    non_suit_fbx: Path | None
     reference_video: Path
     video_landmarks: Path | None
     hashes: dict[str, str]
@@ -125,9 +125,6 @@ def load_manifest(
 
         files = {
             "suit_fbx": _path(path.parent, item.get("suit_fbx"), "suit_fbx", ".fbx"),
-            "non_suit_fbx": _path(
-                path.parent, item.get("non_suit_fbx"), "non_suit_fbx", ".fbx"
-            ),
             "reference_video": _path(
                 path.parent,
                 item.get("reference_video"),
@@ -135,46 +132,49 @@ def load_manifest(
                 (".mp4", ".mov", ".m4v"),
             ),
         }
-        if files["suit_fbx"] == files["non_suit_fbx"]:
+        if "non_suit_fbx" in item:
+            files["non_suit_fbx"] = _path(path.parent, item["non_suit_fbx"], "non_suit_fbx", ".fbx")
+
+        if "non_suit_fbx" in files and files["suit_fbx"] == files["non_suit_fbx"]:
             raise ValidationError(
                 f"{performance}: suit and non-suit files are identical paths."
             )
-        if files["suit_fbx"] in motion_files or files["non_suit_fbx"] in motion_files:
-            raise ValidationError(
-                f"{performance}: an FBX is reused across independent performances."
-            )
-        motion_files.update((files["suit_fbx"], files["non_suit_fbx"]))
+        for fbx_key in ("suit_fbx", "non_suit_fbx"):
+            if fbx_key in files:
+                if files[fbx_key] in motion_files:
+                    raise ValidationError(
+                        f"{performance}: an FBX is reused across independent performances."
+                    )
+                motion_files.add(files[fbx_key])
+
         if files["reference_video"] in videos:
             raise ValidationError(
                 f"{performance}: reference video is assigned to another performance."
             )
         videos.add(files["reference_video"])
-        hashes = item.get("sha256")
-        if not isinstance(hashes, dict):
-            raise ValidationError(
-                f"{performance}: sha256 hashes are required for all three source files."
-            )
+        hashes = item.get("sha256", {})
         for label, file in files.items():
             expected = hashes.get(label)
-            if (
-                not isinstance(expected, str)
-                or len(expected) != 64
-                or expected.lower() != sha256(file)
-            ):
-                raise ValidationError(
-                    f"{performance}: {label} SHA-256 is missing or does not match."
-                )
-        current_motion = {hashes["suit_fbx"].lower(), hashes["non_suit_fbx"].lower()}
-        if len(current_motion) != 2 or current_motion & source_digests:
+            if expected is not None:
+                if not isinstance(expected, str) or len(expected) != 64 or expected.lower() != sha256(file):
+                    raise ValidationError(
+                        f"{performance}: {label} SHA-256 is missing or does not match."
+                    )
+        current_motion = {hashes.get("suit_fbx", "a").lower()}
+        if "non_suit_fbx" in hashes:
+            current_motion.add(hashes["non_suit_fbx"].lower())
+            if hashes.get("suit_fbx", "a").lower() == hashes["non_suit_fbx"].lower():
+                raise ValidationError(f"{performance}: FBX contents are duplicated within this trial.")
+        if current_motion & source_digests:
             raise ValidationError(
                 f"{performance}: FBX contents are duplicated within or across trials."
             )
         source_digests.update(current_motion)
-        if hashes["reference_video"].lower() in video_digests:
+        if hashes.get("reference_video", "").lower() in video_digests:
             raise ValidationError(
                 f"{performance}: reference video contents are reused across trials."
             )
-        video_digests.add(hashes["reference_video"].lower())
+        video_digests.add(hashes.get("reference_video", "").lower())
         landmarks = item.get("video_landmarks")
         pose_path = (
             _path(path.parent, landmarks, "video_landmarks", ".csv")
@@ -187,20 +187,23 @@ def load_manifest(
             )
         if pose_path is not None:
             expected = hashes.get("video_landmarks")
-            if not isinstance(expected, str) or expected.lower() != sha256(pose_path):
-                raise ValidationError(
-                    f"{performance}: video_landmarks SHA-256 is missing or does not match."
-                )
+            if expected is not None:
+                if not isinstance(expected, str) or expected.lower() != sha256(pose_path):
+                    raise ValidationError(
+                        f"{performance}: video_landmarks SHA-256 is missing or does not match."
+                    )
 
         windows = item.get("windows")
         if not isinstance(windows, dict):
             raise ValidationError(
                 f"{performance}: windows are required for all three sources."
             )
-        bounds = {
-            key: _interval(windows.get(key), f"{performance}: windows.{key}")
-            for key in ("suit", "non_suit", "video")
-        }
+        bounds = {}
+        for key in ("suit", "non_suit", "video"):
+            if key == "non_suit" and "non_suit_fbx" not in files:
+                continue
+            bounds[key] = _interval(windows.get(key), f"{performance}: windows.{key}")
+
         calibration = _interval(
             item.get("calibration_phase"), f"{performance}: calibration_phase"
         )
@@ -215,7 +218,7 @@ def load_manifest(
                 triplet[1],
                 triplet[2],
                 files["suit_fbx"],
-                files["non_suit_fbx"],
+                files.get("non_suit_fbx"),
                 files["reference_video"],
                 pose_path,
                 {key: value.lower() for key, value in hashes.items()},

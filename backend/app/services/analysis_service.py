@@ -20,17 +20,17 @@ JOB_STAGES = {"queued", "inspecting", "extracting", "scoring"}
 def readiness():
     missing = [
         name
-        for name in ("ufbx", "cv2", "mediapipe", "matplotlib", "scipy")
+        for name in ("ufbx", "cv2", "rtmlib", "onnxruntime", "matplotlib", "scipy")
         if importlib.util.find_spec(name) is None
     ]
-    model = settings.analysis_pose_model.is_file()
+    model = not any(name in missing for name in ("rtmlib", "onnxruntime"))
     return {
         "ready": not missing and model,
         "missingDependencies": missing,
         "poseModelAvailable": model,
         "message": "Ready to compare video and FBX movement."
         if not missing and model
-        else "Prepare the backend with requirements-validation-video.txt and configure SIGNSURE_ANALYSIS_POSE_MODEL.",
+        else "Install requirements-validation-video.txt in the Python environment running the backend. DWPose downloads its ONNX weights on first use.",
     }
 
 

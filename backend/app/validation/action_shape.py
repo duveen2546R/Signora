@@ -203,6 +203,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
         project,
     )
 
+    methods = tuple(label for label in METHODS if label in motions)
     output = Path(output)
     phase = np.linspace(0, 1, 101)
     queries = {
@@ -219,7 +220,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
             "Upper-body action alignment requires at least 80% common torso and arm coverage."
         )
     predictions, paths, all_errors, diagnostics = {}, {}, {}, {}
-    for label in METHODS:
+    for label in methods:
         xyz, _ = normalize_motion(sample_motion(motions[label], queries[label]))
         fits = phase_result["calibration"][label]["solutions"]
         predictions[label] = [body_features(project(xyz, fit)) for fit in fits]
@@ -248,7 +249,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
 
     def add_region(name, refs, errors, columns, unit="degrees"):
         common = np.isfinite(refs[:, columns]).all(axis=1)
-        for label in METHODS:
+        for label in methods:
             for values in errors[label]:
                 common &= np.isfinite(values[:, columns]).all(axis=1)
         coverage = float(common.mean())
@@ -261,7 +262,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
             else "insufficient_coverage",
             "methods": {},
         }
-        for label in METHODS:
+        for label in methods:
             selected = errors[label][0][:, columns]
             metrics = (
                 summary(selected[common]) if coverage >= MIN_COVERAGE else summary([])
@@ -288,7 +289,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
                         else "",
                     }
                 )
-        if coverage >= MIN_COVERAGE:
+        if coverage >= MIN_COVERAGE and len(methods) == 2:
             a, b = (row["methods"][k] for k in METHODS)
             row["old_minus_motioncapture"] = b["mean"] - a["mean"]
             row["camera_difference_range"] = [
@@ -315,8 +316,10 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
             )
         if upper_info.get("hand_model_available"):
             hand_model = (model_root / config.get("hand_model", "")).resolve()
-            if not hand_model.is_file() or sha256(hand_model) != upper_info.get(
-                "hand_model_sha256"
+            if metadata.get("pose_model") != "rtmlib_dwpose_wholebody" and (
+                not hand_model.is_file() or sha256(hand_model) != upper_info.get(
+                    "hand_model_sha256"
+                )
             ):
                 raise ValidationError("Hand model is missing or hash mismatched.")
             with np.load(upper_path, allow_pickle=False) as data:
@@ -328,7 +331,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
             hand_reason = "Hand model unavailable; no finger or palm measurements."
     hand_animation = {}
     finger_rows = []
-    for label in METHODS:
+    for label in methods:
         motion = motions[label]
         window = trial.windows[label]
         chosen = (motion.times >= window[0]) & (motion.times <= window[1])
@@ -386,7 +389,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
                 hand_reference[np.any(lengths < 3, axis=1)] = np.nan
             hand_ref_features, feature_names = hand_features(hand_reference)
             errors = {}
-            for label in METHODS:
+            for label in methods:
                 motion = motions[label]
                 if motion.extras is None:
                     native = np.full((len(phase), 20, 3), np.nan)
@@ -482,7 +485,7 @@ def analyze(trial, pose, motions, metadata, phase_result, output, config, model_
                 "fbx_phase",
             ]
         )
-        for label in METHODS:
+        for label in methods:
             for i, j in paths[label]:
                 writer.writerow(
                     [
@@ -528,6 +531,8 @@ def plot(result, rows, paths, output):
         ("suit", "#126c9d", "MotionCapture"),
         ("non_suit", "#cb6031", "Old FBX"),
     ):
+        if label not in paths:
+            continue
         path = paths[label]
         axes[0].plot(path[:, 0] / 100, path[:, 1] / 100, color=color, label=name)
         for ax, region in zip(axes[1:], ("Left forearm", "Right forearm")):
@@ -642,6 +647,8 @@ def plot_fingers(rows, windows, output):
                     and r["side"] == side
                     and r["bend"] == f"{finger} bend 2"
                 ]
+                if label not in windows:
+                    continue
                 start, end = windows[label]
                 ax.plot(
                     [(r["native_time_s"] - start) / (end - start) for r in data],

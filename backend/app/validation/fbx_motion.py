@@ -34,8 +34,6 @@ BASE = {
     "right_shoulder": "RightArm",
     "left_wrist": "LeftHand",
     "right_wrist": "RightHand",
-    "left_index": "LeftHandIndex1",
-    "right_index": "RightHandIndex1",
 }
 PROFILES = {
     # Audited action.fbx: 30 FPS, mixamorig namespace, LeftUpLeg/RightUpLeg hips.
@@ -169,6 +167,7 @@ def _load_native(
         }
         if any(len(indices.get(bone, [])) != 1 for bone in mapping.values()):
             raise ValidationError(f"{path.name}: missing or ambiguous elbow bones.")
+        mapping = {**mapping, "left_index": "LeftHandIndex1", "right_index": "RightHandIndex1"}
     stacks = scene.anim_stacks
     if len(stacks) != 1:
         raise ValidationError(f"{path.name}: exactly one animation stack is required.")
@@ -183,8 +182,13 @@ def _load_native(
     times = times[times <= duration + 1e-6]
     times = np.minimum(times, duration)
     joints = CASE_JOINTS if include_elbows else JOINTS
-    result = np.empty((len(times), len(joints), 3), dtype=float)
-    indexes = [indices[mapping[key]][0] for key in joints]
+    result = np.full((len(times), len(joints), 3), np.nan, dtype=float)
+    # Fingerless exports can still support body scoring; their palm and hand
+    # domains remain inconclusive rather than rejecting the entire recording.
+    indexes = [
+        indices[mapping[key]][0] if len(indices.get(mapping[key], [])) == 1 else None
+        for key in joints
+    ]
     extra_indexes = (
         [
             indices[name][0] if len(indices.get(name, [])) == 1 else None
@@ -199,14 +203,16 @@ def _load_native(
             scene, animation, float(stack.time_begin + time)
         )
         evaluated_list = evaluated.nodes
-        sampled_nodes = [evaluated_list[index] for index in indexes]
-        matrices = [node.node_to_world for node in sampled_nodes]
-        points = [matrix.c3 for matrix in matrices]
+        sampled_nodes = [evaluated_list[index] if index is not None else None for index in indexes]
+        matrices = [node.node_to_world if node is not None else None for node in sampled_nodes]
+        points = [matrix.c3 if matrix is not None else None for matrix in matrices]
         _NATIVE_OWNERS.extend(
             (evaluated, evaluated_list, sampled_nodes, matrices, points)
         )
         for joint, index in enumerate(indexes):
             point = points[joint]
+            if point is None:
+                continue
             result[frame, joint] = (point.x, point.y, point.z)
         for joint, index in enumerate(extra_indexes):
             if index is not None:
@@ -215,12 +221,16 @@ def _load_native(
                 point = matrix.c3
                 _NATIVE_OWNERS.extend((node, matrix, point))
                 extras[frame, joint] = (point.x, point.y, point.z)
-    if not np.isfinite(result).all():
+    if not np.isfinite(result[:, :8 if include_elbows else 6]).all():
         raise ValidationError(f"{path.name}: joint positions contain invalid values.")
-    
-    if profile == "rokoko_mixamo_60":
-        # Rotate 90 degrees around Y axis to face front (Z)
-        theta = np.pi / 2
+
+    # Auto-align the skeleton to face +Z (camera) based on the median shoulder vector.
+    shoulder_vecs = result[:, 0] - result[:, 1]
+    median_vec = np.median(shoulder_vecs, axis=0)
+    theta = np.arctan2(median_vec[2], median_vec[0])
+
+
+    if abs(theta) > 1e-3:
         c, s = np.cos(theta), np.sin(theta)
         ry = np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
         result = result @ ry.T

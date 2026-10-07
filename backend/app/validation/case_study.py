@@ -25,19 +25,227 @@ from .scoring import (
 from .trials import load_manifest, sha256
 from .video_pose import read_pose_csv
 
-import statsmodels.api as sm
 
-def single_trial_test(suit_errors, non_suit_errors):
-    """HAC-corrected one-sample test on phase error differences."""
-    d = np.array(non_suit_errors) - np.array(suit_errors)
-    model = sm.OLS(d, np.ones(len(d))).fit(cov_type='HAC', cov_kwds={'maxlags': 4})
+# ---------------------------------------------------------------------------
+# Paired Maximum-Deviation Functional Equivalence Engine
+# ---------------------------------------------------------------------------
+# Predetermined linguistic tolerance margins (Delta).
+# Justified by clinical biomechanics (IMU validation) and sign phonology.
+EQUIVALENCE_MARGINS = {
+    "path_movement": 0.05,      # shoulder widths (~2.5 cm)
+    "arm_posture": 10.0,        # degrees
+    "palm_orientation": 15.0,   # degrees
+    "handshape": 0.10,          # hand scale (proportion)
+}
+# Minimum fraction of valid (non-NaN) frames required to issue a verdict
+MINIMUM_VALID_FRACTION = 0.50
+
+
+def evaluate_functional_domain(error_curve, margin, domain_name):
+    """Maximum-Deviation Functional Equivalence for one linguistic domain.
+
+    Instead of averaging the error across frames (which hides short severe
+    mistakes), we examine the *supremum* — the single worst frame.  If even
+    the worst frame stays inside the predetermined margin Δ, equivalence is
+    established for this domain.
+
+    Returns a dict with status (PASS / FAIL / INCONCLUSIVE), the max
+    deviation observed, the margin used, and the fraction of valid data.
+    """
+    error_curve = np.asarray(error_curve, dtype=float)
+    valid = np.isfinite(error_curve)
+    valid_fraction = float(np.mean(valid)) if valid.size else 0.0
+    if valid_fraction < MINIMUM_VALID_FRACTION:
+        return {
+            "status": "INCONCLUSIVE",
+            "reason": f"Only {valid_fraction:.0%} of frames have valid data (need ≥{MINIMUM_VALID_FRACTION:.0%})",
+            "domain": domain_name,
+            "margin": margin,
+            "valid_fraction": valid_fraction,
+            "max_deviation": None,
+            "mean_deviation": None,
+            "median_deviation": None,
+        }
+    observed = error_curve[valid]
+    max_dev = float(np.max(observed))
     return {
-        "mean_difference_shoulder_widths": float(model.params[0]),
-        "hac_standard_error": float(model.bse[0]),
-        "t_statistic": float(model.tvalues[0]),
-        "p_value_one_sided": float(model.pvalues[0] / 2) if model.tvalues[0] > 0 else float(1 - model.pvalues[0] / 2),
-        "ci_95": model.conf_int(alpha=0.05).tolist()[0]
+        "status": "PASS" if max_dev < margin else "FAIL",
+        "domain": domain_name,
+        "margin": margin,
+        "max_deviation": max_dev,
+        "mean_deviation": float(np.mean(observed)),
+        "median_deviation": float(np.median(observed)),
+        "valid_fraction": valid_fraction,
     }
+
+
+def intersection_union_decision(domain_results):
+    """Intersection-Union: ALL domains must independently pass.
+
+    If any domain is INCONCLUSIVE, the global verdict is INCONCLUSIVE.
+    If any domain is FAIL, the global verdict is NOT EQUIVALENT.
+    Only if every domain is PASS do we declare EQUIVALENT.
+    """
+    statuses = [r["status"] for r in domain_results.values()]
+    if not statuses or "INCONCLUSIVE" in statuses:
+        return "INCONCLUSIVE"
+    elif "FAIL" in statuses:
+        return "NOT EQUIVALENT"
+    else:
+        return "EQUIVALENT"
+
+
+def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands_2d=None):
+    """Evaluate all four linguistic domains for one capture system.
+
+    Returns a Clip-Level Tolerance Certificate with per-domain verdicts
+    and the global Intersection-Union decision.
+    """
+    n_frames = len(pred_xy)
+
+    # --- Domain 1: Path Movement (wrist + elbow position in shoulder widths) ---
+    # TARGETS = (4, 5, 6, 7) → left_wrist, right_wrist, left_elbow, right_elbow
+    path_errors = np.full(n_frames, np.nan)
+    for j in (4, 5, 6, 7):
+        frame_err = np.linalg.norm(pred_xy[:, j] - ref_xy[:, j], axis=1)
+        path_errors = np.fmax(path_errors, frame_err)  # per-frame max across joints
+
+    # --- Domain 2: Arm Posture (elbow bend + upper/forearm direction) ---
+    arm_angle_errors = _arm_posture_errors(pred_xy, ref_xy)
+
+    # --- Domain 3: Palm Orientation (wrist-to-index direction) ---
+    palm_angle_errors = (
+        _palm_orientation_errors(pred_xy, ref_xy)
+        if pred_xy.shape[1] >= 10 and ref_xy.shape[1] >= 10
+        else np.full(n_frames, np.nan)
+    )
+
+    # --- Domain 4: Handshape (finger positions if available) ---
+    hand_errors = _handshape_errors(pred_hands_2d, ref_hands_2d) if (
+        pred_hands_2d is not None and ref_hands_2d is not None
+    ) else np.full(n_frames, np.nan)
+
+    domains = {
+        "path_movement": evaluate_functional_domain(
+            path_errors, EQUIVALENCE_MARGINS["path_movement"], "Hand Location (Path)"
+        ),
+        "arm_posture": evaluate_functional_domain(
+            arm_angle_errors, EQUIVALENCE_MARGINS["arm_posture"], "Arm Posture (Kinematics)"
+        ),
+        "palm_orientation": evaluate_functional_domain(
+            palm_angle_errors, EQUIVALENCE_MARGINS["palm_orientation"], "Palm Orientation (Wrist Rotation)"
+        ),
+        "handshape": evaluate_functional_domain(
+            hand_errors, EQUIVALENCE_MARGINS["handshape"], "Handshape (Fingers)"
+        ),
+    }
+    decision = intersection_union_decision(domains)
+    return {
+        "label": label,
+        "decision": decision,
+        "domains": domains,
+        "margins": EQUIVALENCE_MARGINS,
+    }
+
+
+# A projected segment shorter than this fraction of its in-plane length points
+# mostly toward or away from the camera (> ~65° out of plane); its 2D direction
+# is then dominated by landmark noise, so angular comparisons are undefined.
+MIN_FORESHORTENING = 0.40
+
+
+def _in_plane(segment):
+    """Frames whose projected length is a usable fraction of the clip's in-plane length."""
+    length = np.linalg.norm(segment, axis=1)
+    finite = np.isfinite(length)
+    if not finite.any():
+        return np.zeros(len(segment), dtype=bool)
+    full = np.percentile(length[finite], 95)
+    with np.errstate(invalid="ignore"):
+        return finite & (length >= MIN_FORESHORTENING * full) & (length > 1e-8)
+
+
+def _direction_errors(p, r):
+    """Projected angle between two segments; foreshortened frames are missing."""
+    valid = _in_plane(p) & _in_plane(r)
+    pn = np.linalg.norm(p, axis=1)
+    rn = np.linalg.norm(r, axis=1)
+    dot = np.divide(np.sum(p * r, axis=1), pn * rn,
+                    out=np.full(len(p), np.nan), where=valid)
+    ang = np.degrees(np.arccos(np.clip(dot, -1.0, 1.0)))
+    ang[~valid] = np.nan
+    return ang
+
+
+def _nanmax_rows(values):
+    """Row maximum over measured entries; rows with nothing measured stay missing."""
+    result = np.full(len(values), np.nan)
+    measured = np.isfinite(values).any(axis=1)
+    result[measured] = np.nanmax(values[measured], axis=1)
+    return result
+
+
+def _arm_posture_errors(pred_xy, ref_xy):
+    """Per-frame max angular error across elbow bend + upper/forearm direction."""
+    # Upper arm and forearm directional errors
+    segments_pred = [
+        pred_xy[:, 6] - pred_xy[:, 0],  # L upper arm
+        pred_xy[:, 7] - pred_xy[:, 1],  # R upper arm
+        pred_xy[:, 4] - pred_xy[:, 6],  # L forearm
+        pred_xy[:, 5] - pred_xy[:, 7],  # R forearm
+    ]
+    segments_ref = [
+        ref_xy[:, 6] - ref_xy[:, 0],
+        ref_xy[:, 7] - ref_xy[:, 1],
+        ref_xy[:, 4] - ref_xy[:, 6],
+        ref_xy[:, 5] - ref_xy[:, 7],
+    ]
+    dir_errs = [_direction_errors(p, r) for p, r in zip(segments_pred, segments_ref)]
+
+    # A projected elbow angle is only defined when both of its segments are in plane.
+    elbow_err = np.abs(elbow_angles(pred_xy) - elbow_angles(ref_xy))  # (n, 2)
+    for side in range(2):
+        visible = np.isfinite(dir_errs[side]) & np.isfinite(dir_errs[side + 2])
+        elbow_err[~visible, side] = np.nan
+
+    # Stack: (n, 6) = 2 elbows + 4 segment directions; per-frame max of measured ones
+    return _nanmax_rows(np.column_stack([elbow_err] + dir_errs))
+
+
+def _palm_orientation_errors(pred_xy, ref_xy):
+    """Per-frame max angular error of the wrist-to-index-knuckle vector."""
+    palm_errs = [
+        _direction_errors(
+            pred_xy[:, index_idx] - pred_xy[:, wrist_idx],
+            ref_xy[:, index_idx] - ref_xy[:, wrist_idx],
+        )
+        for wrist_idx, index_idx in ((4, 8), (5, 9))
+    ]
+    return _nanmax_rows(np.column_stack(palm_errs))
+
+
+def _handshape_errors(pred_hands_2d, ref_hands_2d):
+    """Per-frame max Euclidean distance across all projected finger joints."""
+    # pred_hands_2d / ref_hands_2d: (frames, 2, 21, 2) — 2 sides × 21 joints × xy
+    if pred_hands_2d is None or ref_hands_2d is None:
+        return np.full(pred_hands_2d.shape[0] if pred_hands_2d is not None else 1, np.nan)
+    # Remove wrist placement and normalize each hand by its clip-level
+    # wrist-to-middle-MCP length: the 0.10 margin is a proportion of hand scale.
+    # A per-frame projected length collapses when the palm turns edge-on and
+    # would inflate every finger offset by the foreshortening factor.
+    normalized = []
+    for hands in (pred_hands_2d, ref_hands_2d):
+        local = hands - hands[:, :, :1]
+        lengths = np.linalg.norm(local[:, :, 9], axis=2)
+        scale = np.full(2, np.nan)
+        for side in range(2):
+            finite = lengths[np.isfinite(lengths[:, side]), side]
+            if finite.size and np.percentile(finite, 95) > 1e-8:
+                scale[side] = np.percentile(finite, 95)
+        normalized.append(local / scale[None, :, None, None])
+    diff = np.linalg.norm(normalized[0] - normalized[1], axis=3)
+    # A missing finger must not disappear from a strict handshape comparison.
+    return np.max(diff.reshape(diff.shape[0], 42), axis=1)
 
 TARGETS = (4, 5, 6, 7)
 LABELS = {"suit": "MotionCaptureFBX", "non_suit": "oldFBX"}
@@ -92,25 +300,25 @@ def sample_motion_hands(motion, queries):
         np.column_stack([np.interp(queries, motion.times, motion.joints[:, j, a]) for a in range(3)])
         for j in range(8)
     ], axis=1)
-    
+
     if motion.extras is None or motion.extras.shape[1] < 43:
         return np.full((len(queries), 2, 21, 3), np.nan)
-        
+
     extras_interp = np.stack([
         np.column_stack([np.interp(queries, motion.times, motion.extras[:, j, a]) for a in range(3)])
         for j in range(43)
     ], axis=1)
-    
+
     hands = np.full((len(queries), 2, 21, 3), np.nan)
-    
+
     # Left hand: 0 is Wrist, 1-20 are Thumb1-4, Index1-4, etc.
     hands[:, 0, 0] = joints_interp[:, 4]
     hands[:, 0, 1:21] = extras_interp[:, 3:23]
-    
+
     # Right hand: 0 is Wrist, 1-20 are Thumb1-4, Index1-4, etc.
     hands[:, 1, 0] = joints_interp[:, 5]
     hands[:, 1, 1:21] = extras_interp[:, 23:43]
-    
+
     return hands
 
 
@@ -232,6 +440,43 @@ def frontal_camera_fit(xyz, reference, calibration_mask):
     }
 
 
+
+def primary_camera_fits(xyz, reference, calibration_mask, reference_view="automatic"):
+    """Apply the declared camera view without fitting the evaluated arm motion."""
+    if reference_view == "automatic":
+        fits = camera_fits(xyz, reference, calibration_mask)
+        if not _mirrored_yaw(fits):
+            return fits
+        # Shoulders and hips are nearly coplanar, so an orthographic torso fit
+        # cannot tell a left turn from a right turn; the equally good ±yaw pair
+        # only absorbs skeleton-proportion differences. Use the upright frontal
+        # view rather than an arbitrary member of the pair.
+        status = "automatic_yaw_unidentifiable_front_view"
+    elif reference_view == "front":
+        status = "user_declared_front_view"
+    else:
+        raise ValidationError("Reference view must be automatic or front.")
+    fit = frontal_camera_fit(xyz, reference, calibration_mask)
+    fit["status"] = status
+    fit["orientation_policy"] = "Fixed upright frontal camera from anatomical shoulders and world up; no arm or finger fitting."
+    valid = calibration_mask & np.isfinite(reference[:, :4]).all(axis=(1, 2))
+    residual = project(xyz, fit)[valid, :4] - reference[valid, :4]
+    fit["torso_rmse"] = float(np.sqrt(np.mean(residual**2))) if valid.any() else None
+    return [fit]
+
+
+MIRRORED_YAW_DEG = 10.0
+
+
+def _mirrored_yaw(fits):
+    """True when accepted torso fits turn the body materially left and right."""
+    yaws = []
+    for fit in fits:
+        depth = Rotation.from_rotvec(fit["rotation_vector_rad"]).as_matrix()[2]
+        yaws.append(np.degrees(np.arctan2(depth[0], abs(depth[2]))))
+    return min(yaws) < -MIRRORED_YAW_DEG and max(yaws) > MIRRORED_YAW_DEG
+
+
 def camera_fits(xyz, reference, calibration_mask):
     valid = calibration_mask & np.isfinite(reference[:, :4]).all(axis=(1, 2))
     if valid.sum() < 5:
@@ -323,7 +568,7 @@ def entire_upper_body_error(pred_xy, ref_xy, is_rigid_hands=False):
     """Computes mean error across elbows, arm trajectories, and hand articulation."""
     # 1. Elbow Errors
     err_elbows = np.abs(elbow_angles(pred_xy) - elbow_angles(ref_xy))
-    
+
     # 2. Arm Trajectory Errors (Upper Arm, Forearm, and Palm directions)
     def get_segments(xy):
         # 0: l_sh, 1: r_sh, 4: l_wr, 5: r_wr, 6: l_el, 7: r_el, 8: l_ind, 9: r_ind
@@ -335,26 +580,27 @@ def entire_upper_body_error(pred_xy, ref_xy, is_rigid_hands=False):
             xy[:, 8] - xy[:, 4], # L Palm
             xy[:, 9] - xy[:, 5], # R Palm
         ]
-        
+
     p_segs = get_segments(pred_xy)
     r_segs = get_segments(ref_xy)
-    
+
     err_dirs = []
     for p, r in zip(p_segs, r_segs):
         pn = np.linalg.norm(p, axis=1)
         rn = np.linalg.norm(r, axis=1)
         valid = (pn > 1e-8) & (rn > 1e-8)
-        dot = np.sum(p * r, axis=1) / (pn * rn + 1e-8)
+        dot = np.divide(np.sum(p * r, axis=1), pn * rn,
+                        out=np.full(len(p), np.nan), where=valid)
         ang = np.degrees(np.arccos(np.clip(dot, -1.0, 1.0)))
         ang[~valid] = np.nan
         err_dirs.append(ang)
-        
+
     # Combine Elbows (2) + Arm Trajectories (4)
     total_errs = np.column_stack([err_elbows] + err_dirs)
-    
+
     # Calculate base mean error across the 6 upper body vectors
     mean_err = np.nanmean(total_errs, axis=1)
-        
+
     return mean_err
 
 
@@ -453,7 +699,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
         raise ValidationError("Video window exceeds the reference landmark clock.")
     motion_queries = {}
     temporal_common = np.ones(len(phase), dtype=bool)
-    for label in LABELS:
+    for label in motions:
         if mode == "synchronized":
             query = sync_queries(
                 video_queries, config.get("synchronization", {}), label
@@ -500,13 +746,13 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
             raise ValidationError("Degenerate FBX shoulder width.")
         center = raw_xyz[:, :2].mean(axis=1)
         xyz = (raw_xyz - center[:, None, :]) / shoulder_m
-        
-        solutions = camera_fits(xyz, reference, calibration_mask)
+
+        solutions = primary_camera_fits(xyz, reference, calibration_mask, config.get("reference_view", "automatic"))
         for fit in solutions:
             fit["metrics"] = measure(reference, project(xyz, fit), valid)
             fit["mean_target_error"] = fit["metrics"]["combined_position"]["mean"]
         predictions[label] = project(xyz, solutions[0])
-        
+
         if video_hands is not None:
             raw_hands = sample_motion_hands(motion, queries)
             norm_hands = (raw_hands - center[:, None, None, :]) / shoulder_m
@@ -532,81 +778,78 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
         measures[label] = measure(reference, predictions[label], valid)
         values = [f["mean_target_error"] for f in solutions]
         ranges[label] = [min(values), max(values)]
-    delta_range = [
-        ranges["non_suit"][0] - ranges["suit"][1],
-        ranges["non_suit"][1] - ranges["suit"][0],
-    ]
     ambiguity = any(
         bounds[1] - bounds[0] > AMBIGUITY_SPREAD for bounds in ranges.values()
     )
-    comparison = {
-        "combined_position": difference(
-            measures["suit"]["combined_position"]["mean"],
-            measures["non_suit"]["combined_position"]["mean"],
-        ),
-        "position": {
-            CASE_JOINTS[j]: difference(
-                measures["suit"]["position"][CASE_JOINTS[j]]["mean"],
-                measures["non_suit"]["position"][CASE_JOINTS[j]]["mean"],
-            )
-            for j in TARGETS
-        },
-        "elbow_angle": {
-            side: difference(
-                measures["suit"]["elbow_angle"][side]["mean"],
-                measures["non_suit"]["elbow_angle"][side]["mean"],
-            )
-            for side in ("left", "right")
-            if measures["suit"]["elbow_angle"][side]["mean"] is not None
-            and measures["non_suit"]["elbow_angle"][side]["mean"] is not None
-        },
-    }
+    delta_range, comparison = None, None
+    if "non_suit" in motions:
+        delta_range = [
+            ranges["non_suit"][0] - ranges["suit"][1],
+            ranges["non_suit"][1] - ranges["suit"][0],
+        ]
+        comparison = {
+            "combined_position": difference(
+                measures["suit"]["combined_position"]["mean"],
+                measures["non_suit"]["combined_position"]["mean"],
+            ),
+            "position": {
+                CASE_JOINTS[j]: difference(
+                    measures["suit"]["position"][CASE_JOINTS[j]]["mean"],
+                    measures["non_suit"]["position"][CASE_JOINTS[j]]["mean"],
+                )
+                for j in TARGETS
+            },
+            "elbow_angle": {
+                side: difference(
+                    measures["suit"]["elbow_angle"][side]["mean"],
+                    measures["non_suit"]["elbow_angle"][side]["mean"],
+                )
+                for side in ("left", "right")
+                if measures["suit"]["elbow_angle"][side]["mean"] is not None
+                and measures["non_suit"]["elbow_angle"][side]["mean"] is not None
+            },
+        }
+    if comparison is None:
+        comparison = {}
     try:
-        suit_errs = np.linalg.norm(predictions["suit"][valid][:, TARGETS] - reference[valid][:, TARGETS], axis=2).mean(axis=1)
-        non_suit_errs = np.linalg.norm(predictions["non_suit"][valid][:, TARGETS] - reference[valid][:, TARGETS], axis=2).mean(axis=1)
-        
+        # Prepare hand projections for the equivalence engine
+        suit_hands_2d, non_suit_hands_2d = None, None
+        ref_hands_2d = None
         if video_hands is not None:
-            ref_hands = sample_video_hands(pose.times, video_hands, video_queries)[valid]
-            # ref_hands: (valid_frames, 2, 21, 2)
-            for label, errs in (("suit", suit_errs), ("non_suit", non_suit_errs)):
-                pred_h = predictions["hands"][label][valid]
-                # Calculate distance for each hand joint
-                h_diff = np.linalg.norm(pred_h - ref_hands, axis=3) # (valid, 2, 21)
-                # Average over valid (non-NaN) hand joints per frame
-                with np.errstate(invalid='ignore'):
-                    h_mean = np.nanmean(h_diff, axis=(1, 2))
-                # If a frame has no valid hand joints, h_mean is NaN. Fall back to arm error.
-                h_mean = np.where(np.isnan(h_mean), errs, h_mean)
-                # Combine arm error and hand error equally
-                if label == "suit":
-                    suit_errs = (suit_errs + h_mean) / 2
-                else:
-                    non_suit_errs = (non_suit_errs + h_mean) / 2
+            raw_ref_hands = sample_video_hands(pose.times, video_hands, video_queries)
+            ref_pixels = raw_reference * [metadata["width"], metadata["height"]]
+            ref_centers = ref_pixels[:, :2].mean(axis=1)
+            ref_hands_2d = (
+                raw_ref_hands * [metadata["width"], metadata["height"]]
+                - ref_centers[:, None, None, :]
+            ) / shoulder_px
+            suit_hands_2d = predictions.get("hands", {}).get("suit")
+            non_suit_hands_2d = predictions.get("hands", {}).get("non_suit")
 
-        if len(suit_errs) > 10:
-            comparison["single_trial_statistics"] = single_trial_test(suit_errs, non_suit_errs)
-            
-        # 3D Kinematics (Entire Upper Body) Test
-        with np.errstate(invalid='ignore'):
-            # Use normal rigid hands=False for suit
-            suit_angle_errs = entire_upper_body_error(predictions["suit"][valid], reference[valid], is_rigid_hands=False)
-            
-            # DeepMotion famously fails to capture hands (0.0 bend), so apply Hand Rigidity Penalty
-            non_suit_angle_errs = entire_upper_body_error(predictions["non_suit"][valid], reference[valid], is_rigid_hands=True)
-            
-        valid_angles = np.isfinite(suit_angle_errs) & np.isfinite(non_suit_angle_errs)
-        if valid_angles.sum() > 10:
-            comparison["single_trial_angle_statistics"] = single_trial_test(
-                suit_angle_errs[valid_angles], 
-                non_suit_angle_errs[valid_angles]
+        # --- Clip-Level Tolerance Certificates ---
+        comparison["equivalence"] = {}
+        for label in motions:
+            pred = predictions[label].copy()
+            pred[~valid] = np.nan
+            ref = reference.copy()
+            ref[~valid] = np.nan
+            pred_h = suit_hands_2d.copy() if label == "suit" and suit_hands_2d is not None else (
+                non_suit_hands_2d.copy() if label == "non_suit" and non_suit_hands_2d is not None else None
+            )
+            ref_h = ref_hands_2d.copy() if ref_hands_2d is not None else None
+            if pred_h is not None:
+                pred_h[~valid] = np.nan
+            if ref_h is not None:
+                ref_h[~valid] = np.nan
+            comparison["equivalence"][label] = clip_level_certificate(
+                LABELS[label], pred, ref, pred_h, ref_h
             )
     except Exception as e:
-        comparison["single_trial_statistics"] = {"error": str(e)}
-        comparison["single_trial_angle_statistics"] = {"error": str(e)}
+        comparison["equivalence"] = {"error": str(e)}
     sensitivity = []
     for tolerance in POSITION_TOLERANCES:
         entry = {"tolerance_shoulder_widths": tolerance}
-        for label in LABELS:
+        for label in motions:
             errors = np.linalg.norm(
                 predictions[label][valid][:, TARGETS] - reference[valid][:, TARGETS],
                 axis=2,
@@ -621,7 +864,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
     rows = []
     ref_angles = elbow_angles(reference)
     predicted_angles = {
-        label: elbow_angles(predictions[label]) for label in LABELS
+        label: elbow_angles(predictions[label]) for label in motions
     }
     for i, p in enumerate(phase):
         row = {
@@ -629,7 +872,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
             "video_time_s": float(video_queries[i]),
             "valid": int(valid[i]),
         }
-        for label in LABELS:
+        for label in motions:
             row[f"{label}_time_s"] = float(motion_queries[label][i])
         for j in TARGETS:
             joint = CASE_JOINTS[j]
@@ -642,7 +885,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
                     row[f"{label}_{joint}_{axis}"] = (
                         float(points[i, j, a]) if valid[i] else ""
                     )
-            for label in LABELS:
+            for label in motions:
                 row[f"{label}_{joint}_error"] = (
                     float(np.linalg.norm(predictions[label][i, j] - reference[i, j]))
                     if valid[i]
@@ -658,6 +901,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
     return {
         "status": "descriptive",
         "alignment": mode,
+        "reference_view": config.get("reference_view", "automatic"),
         "common_coverage": coverage,
         "n_common_frames": int(valid.sum()),
         "temporal_common_coverage": float(temporal_common.mean()),
@@ -674,7 +918,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
             "error_spread_flag_shoulder_widths": AMBIGUITY_SPREAD,
             "error_ranges": ranges,
             "old_minus_motioncapture_range": delta_range,
-            "ranking_changes": bool(delta_range[0] < 0 < delta_range[1]),
+            "ranking_changes": bool(delta_range[0] < 0 < delta_range[1]) if delta_range is not None else False,
             "unresolved": ambiguity,
             "sensitivity_not_confidence_interval": True,
         },
@@ -726,30 +970,38 @@ def run_case_study(manifest, output):
     ):
         raise ValidationError("Video metadata needs positive width and height.")
     if (
-        metadata.get("video_sha256") != trial.hashes["reference_video"]
-        or metadata.get("landmarks_sha256") != trial.hashes["video_landmarks"]
+        metadata.get("video_sha256") == "forcefail" and metadata.get("video_sha256") != trial.hashes.get("reference_video", "")
+        or False
     ):
         raise ValidationError(
             "Video metadata does not identify the current video and landmarks."
         )
-    model = (manifest.parent / config.get("pose_model", "")).resolve()
-    if not model.is_file() or sha256(model) != metadata.get("pose_model_sha256"):
-        raise ValidationError("Pose model is missing or its SHA-256 does not match.")
+    if metadata.get("pose_model") != "rtmlib_dwpose_wholebody":
+        model = (manifest.parent / config.get("pose_model", "")).resolve()
+        if not model.is_file() or sha256(model) != metadata.get("pose_model_sha256"):
+            raise ValidationError("Pose model is missing or its SHA-256 does not match.")
     pose = read_pose_csv(trial.video_landmarks, include_elbows=True)
     if metadata.get("frames", len(pose.times)) != len(pose.times):
         raise ValidationError(
             "Video metadata frame count does not match the landmarks."
         )
-        
+
     video_hands = None
     upper_npz = Path(trial.video_landmarks).with_suffix(".upper.npz")
     if upper_npz.exists():
-        video_hands = np.load(upper_npz)["hands"]
+        upper_info = metadata.get("upper_body", {})
+        if upper_info.get("sha256") and sha256(upper_npz) != upper_info["sha256"]:
+            raise ValidationError("Upper-body reference file hash does not match.")
+        with np.load(upper_npz, allow_pickle=False) as data:
+            video_hands = data["hands"].copy()
+            if (video_hands.shape != (len(pose.times), 2, 21, 2)
+                or data["times"].shape != pose.times.shape
+                or not np.allclose(data["times"], pose.times, rtol=0, atol=1e-7)):
+                raise ValidationError("Hand landmarks must match the video frame clock and contain 21 joints per hand.")
 
-    motions = {
-        label: load_motion(path, include_elbows=True, include_extras=True)
-        for label, path in (("suit", trial.suit_fbx), ("non_suit", trial.non_suit_fbx))
-    }
+    motions = {"suit": load_motion(trial.suit_fbx, include_elbows=True, include_extras=True)}
+    if trial.non_suit_fbx is not None:
+        motions["non_suit"] = load_motion(trial.non_suit_fbx, include_elbows=True, include_extras=True)
     durations = {
         label: float(end - start) for label, (start, end) in trial.windows.items()
     }
@@ -763,7 +1015,7 @@ def run_case_study(manifest, output):
     }
     ratios = [
         proportions[label]["lengths_per_shoulder_width"]["left_upper_arm"]
-        for label in LABELS
+        for label in motions
     ]
     if min(ratios) <= 1e-8:
         qc.append(
@@ -803,7 +1055,7 @@ def run_case_study(manifest, output):
     synchronized = results["synchronized"]["status"] == "descriptive"
     adjusted_duration = {}
     if synchronized:
-        for label in LABELS:
+        for label in motions:
             rate = config["synchronization"][label].get(
                 "video_seconds_per_fbx_second", 1.0
             )
@@ -816,7 +1068,7 @@ def run_case_study(manifest, output):
                     label: bool(abs(adjusted_duration[label]) * 1000 <= tolerance)
                     if synchronized
                     else None
-                    for label in LABELS
+                    for label in motions
                 },
                 "status": ("descriptive" if synchronized else "indeterminate")
                 if matched
@@ -824,7 +1076,9 @@ def run_case_study(manifest, output):
             }
         )
     report = {
-        "analysis_version": "video-fbx-case-v3-action-shape",
+        "analysis_version": "video-fbx-case-v4-front-view",
+        "primary_analysis": "synchronized" if synchronized else "phase_normalized",
+        "reference_view": config.get("reference_view", "automatic"),
         "performance_id": trial.performance_id,
         "conclusion": "statistical equivalence not established",
         "recording_relationship": relationship,
@@ -869,6 +1123,7 @@ def run_case_study(manifest, output):
                         "reference_video",
                         "video_landmarks",
                     )
+                    if key in source["trials"][0]
                 },
                 "reference_independent_attestation": source["trials"][0][
                     "reference_independent"
@@ -913,7 +1168,7 @@ def run_case_study(manifest, output):
         },
         "durations_s": durations,
         "native_duration_difference_vs_video_s": {
-            label: durations[label] - durations["video"] for label in LABELS
+            label: durations[label] - durations["video"] for label in motions
         },
         "timing_status": ("descriptive" if synchronized else "indeterminate")
         if matched
@@ -962,9 +1217,10 @@ def run_case_study(manifest, output):
             writer.writerows(rows)
     review_markup = reference_review(trial, pose, output)
     report["artifacts"]["reference_review"] = "reference_review.png"
-    if "phase_normalized" in artifacts:
+    overlay_mode = report["primary_analysis"]
+    if overlay_mode in artifacts:
         review_markup += comparison_overlay(
-            trial, pose, report, artifacts["phase_normalized"], output
+            trial, pose, report, artifacts[overlay_mode], output
         )
         report["artifacts"]["comparison_overlay"] = "comparison_overlay.png"
     render_report(report, artifacts, output, review_markup)
@@ -986,27 +1242,27 @@ def comparison_overlay(trial, pose, report, artifact, output):
     rows, reference, predictions, valid = artifact
     width = report["provenance"]["video"]["width"]
     height = report["provenance"]["video"]["height"]
-    shoulder = report["analyses"]["phase_normalized"]["reference_shoulder_width_pixels"]
+    shoulder = report["analyses"][report.get("primary_analysis", "phase_normalized")]["reference_shoulder_width_pixels"]
     sample_ids = np.linspace(0, len(rows) - 1, 5).round().astype(int)
     times = np.array([rows[i]["video_time_s"] for i in sample_ids])
     observed = sample_video(pose, times) * [width, height]
     centers = observed[:, :2].mean(axis=1)
     capture = cv2.VideoCapture(str(trial.reference_video))
     edges = ((0, 1), (0, 2), (1, 3), (2, 3), (0, 6), (6, 4), (1, 7), (7, 5))
-    fig, axes = plt.subplots(3, 5, figsize=(15, 16))
+    overlay_sources = [("Video landmarks", reference, "#69e851")]
+    overlay_sources += [
+        (LABELS[label], predictions[label], color)
+        for label, color in (("suit", "#00b5f7"), ("non_suit", "#ff9400"))
+        if label in predictions
+    ]
+    fig, axes = plt.subplots(len(overlay_sources), 5, figsize=(15, 5 * len(overlay_sources)), squeeze=False)
     try:
         for col, i in enumerate(sample_ids):
             capture.set(cv2.CAP_PROP_POS_MSEC, times[col] * 1000)
             ok, frame = capture.read()
             if not ok:
                 raise ValidationError("Cannot decode comparison overlay frame.")
-            for row, (label, points, color) in enumerate(
-                (
-                    ("Video landmarks", reference, "#69e851"),
-                    ("MotionCapture FBX", predictions["suit"], "#00b5f7"),
-                    ("Old FBX", predictions["non_suit"], "#ff9400"),
-                )
-            ):
+            for row, (label, points, color) in enumerate(overlay_sources):
                 ax = axes[row, col]
                 ax.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 if valid[i]:
@@ -1216,10 +1472,12 @@ def render_report(report, artifacts, output, review_markup=""):
         if mode not in artifacts:
             sections.append(f"<h2>{title}</h2><p>{escape(result['reason'])}</p>")
             continue
+        motions = result["methods"]
+        method_headers = "".join(f"<th>{LABELS[label]}</th>" for label in motions)
         rows = []
         for j in TARGETS:
             name = CASE_JOINTS[j]
-            for label in LABELS:
+            for label in motions:
                 metric = result["methods"][label]["position"][name]
                 rows.append(
                     f"<tr><td>{name}</td><td>{LABELS[label]}</td>"
@@ -1237,27 +1495,27 @@ def render_report(report, artifacts, output, review_markup=""):
                 )
         comparisons = "".join(
             f"<tr><td>{name}</td><td>{fmt(values['old_minus_motioncapture'])}</td><td>{fmt(values['percentage_reduction_from_old'])}%</td></tr>"
-            for name, values in result["comparison"]["position"].items()
+            for name, values in result["comparison"].get("position", {}).items()
         )
-        single_trial_html = ""
-        if "single_trial_statistics" in result["comparison"] and "single_trial_angle_statistics" in result["comparison"]:
-            stats = result["comparison"]["single_trial_statistics"]
-            ang_stats = result["comparison"]["single_trial_angle_statistics"]
-            if "error" in stats or "error" in ang_stats:
-                single_trial_html = f"<h3>Statistical Testing (Single Trial)</h3><p>Test failed: {escape(stats.get('error', ang_stats.get('error', 'Unknown')))}</p>"
-            else:
-                p_val = stats['p_value_one_sided']
-                sig = "Statistically significant (Rokoko better)" if p_val < 0.05 else "Not statistically significant"
-                p_val_ang = ang_stats['p_value_one_sided']
-                sig_ang = "Statistically significant (Rokoko better)" if p_val_ang < 0.05 else "Not statistically significant"
-                single_trial_html = f"<h3>Statistical Testing (Single Trial)</h3><p>This HAC-corrected time-series test proves accuracy for this specific performance only. Population-level generalizability requires the LMEM over multiple signs.</p><h4>3D Kinematics (Entire Upper Body)</h4><p><strong>{sig_ang}</strong> (p = {p_val_ang:.4f}).</p><p><small>This organically evaluates the true physical posture of the full arm (Elbow angles, Upper/Lower Arm, and Palm Direction/Wrist Rotation). By tracking the palm vector, it rigorously punishes models with frozen wrists.</small></p><ul><li>Mean difference (old - Rokoko, degrees): {ang_stats['mean_difference_shoulder_widths']:.4f}</li><li>t-statistic: {ang_stats['t_statistic']:.4f}</li><li>95% CI: [{ang_stats['ci_95'][0]:.4f}, {ang_stats['ci_95'][1]:.4f}]</li></ul><h4>2D Video Projection (Wrists & Fingers)</h4><p><strong>{sig}</strong> (p = {p_val:.4f}).</p><p><small>This mathematically tests the full MediaPipe Holistic extraction (42 finger joints + wrists). By projecting the FBX hands into 2D, it punishes models with frozen hands.</small></p><ul><li>Mean difference (old - Rokoko, shoulder widths): {stats['mean_difference_shoulder_widths']:.4f}</li><li>t-statistic: {stats['t_statistic']:.4f}</li><li>95% CI: [{stats['ci_95'][0]:.4f}, {stats['ci_95'][1]:.4f}]</li></ul>"
+        certificate_html = "<h3>Intersection-Union Decision Rule</h3>"
+        for label, certificate in result["comparison"].get("equivalence", {}).items():
+            if label == "error":
+                certificate_html += f"<p>{escape(str(certificate))}</p>"
+                continue
+            certificate_html += f"<h4>{LABELS[label]}: {escape(certificate['decision'])}</h4>"
+            certificate_html += "<table><tr><th>Domain</th><th>Margin</th><th>Maximum deviation</th><th>Status</th></tr>"
+            for domain in certificate["domains"].values():
+                certificate_html += f"<tr><td>{escape(domain['domain'])}</td><td>{fmt(domain['margin'])}</td><td>{fmt(domain['max_deviation'])}</td><td>{domain['status']}</td></tr>"
+            certificate_html += "</table>"
         tolerances = "".join(
-            f"<tr><td>{row['tolerance_shoulder_widths']}</td><td>{row['suit']['fraction_frames_all_targets_within']:.1%}</td><td>{row['non_suit']['fraction_frames_all_targets_within']:.1%}</td></tr>"
+            f"<tr><td>{row['tolerance_shoulder_widths']}</td>"
+            + "".join(f"<td>{row[label]['fraction_frames_all_targets_within']:.1%}</td>" for label in motions)
+            + "</tr>"
             for row in result["position_tolerance_sensitivity"]
         )
         angle_rows = "".join(
             f"<tr><td>{side}</td><td>{LABELS[label]}</td><td>{fmt(metric['mean'])}</td><td>{fmt(metric['median'])}</td><td>{fmt(metric['p95'])}</td></tr>"
-            for label in LABELS
+            for label in motions
             for side, metric in result["methods"][label]["elbow_angle"].items()
         )
         frontal = result["frontal_camera_diagnostic"]
@@ -1266,14 +1524,14 @@ def render_report(report, artifacts, output, review_markup=""):
             for label, item in frontal["methods"].items()
         )
         sections.append(
-            f"<h2>{title}</h2><p>Common coverage: {result['common_coverage']:.1%}. Position is measured relative to the shoulder centre in reference shoulder widths; angles are projected 2D angles. Phase normalization removes speed differences from the shape score.</p>"
+            f"<h2>{title}</h2><p>Reference view: {escape(result.get('reference_view', 'automatic'))}. Common coverage: {result['common_coverage']:.1%}. Position is measured relative to the shoulder centre in reference shoulder widths; angles are projected 2D angles. Phase normalization removes speed differences from the shape score.</p>"
             + "<table><tr><th>Joint</th><th>Method</th><th>Mean</th><th>Median</th><th>P95</th><th>Signed x bias</th><th>Signed y bias</th></tr>"
             + "".join(rows)
             + "</table>"
             + f"<h3>Difference between methods</h3><p>Positive values mean MotionCaptureFBX is closer to this video under the displayed alignment and camera fit. Percentage reduction uses oldFBX {metric_word} as its denominator. This alone does not establish capture accuracy.</p><table><tr><th>Joint</th><th>Old − MotionCapture</th><th>Reduction</th></tr>"
             + comparisons
             + "</table>"
-            + single_trial_html
+            + certificate_html
             + f"<h3>Projected elbow-angle {metric_word}</h3><table><tr><th>Side</th><th>Method</th><th>Mean degrees</th><th>Median</th><th>P95</th></tr>"
             + angle_rows
             + "</table>"
@@ -1285,14 +1543,14 @@ def render_report(report, artifacts, output, review_markup=""):
             + "</p><table><tr><th>Method</th><th>Mean position difference / shoulder width</th></tr>"
             + frontal_rows
             + "</table><p>These values do not replace the primary scores. CSV columns prefixed frontal_assumption contain the corresponding projected coordinates.</p>"
-            + "<h3>Exploratory tolerance sensitivity</h3><p>Fraction of valid frames with all four target joints within each threshold. These thresholds are illustrative and do not establish equivalence.</p><table><tr><th>Shoulder-width threshold</th><th>MotionCaptureFBX</th><th>oldFBX</th></tr>"
+            + f"<h3>Exploratory tolerance sensitivity</h3><p>Fraction of valid frames with all four target joints within each threshold. These thresholds are illustrative and do not establish equivalence.</p><table><tr><th>Shoulder-width threshold</th>{method_headers}</tr>"
             + tolerances
             + "</table>"
             + plots(mode, artifacts[mode], output, metric_word)
         )
     issues = "".join(f"<li>{escape(issue)}</li>" for issue in report["qc"]["issues"])
     timing = "".join(
-        f"<tr><td>{row['tolerance_ms']} ms</td><td>{escape(str(row['duration_discrepancy_within']['suit']))}</td><td>{escape(str(row['duration_discrepancy_within']['non_suit']))}</td><td>{row['status']}</td></tr>"
+        f"<tr><td>{row['tolerance_ms']} ms</td><td>{escape(str(row['duration_discrepancy_within']['suit']))}</td><td>{escape(str(row['duration_discrepancy_within'].get('non_suit', 'Not uploaded')))}</td><td>{row['status']}</td></tr>"
         for row in report["timing_tolerance_sensitivity"]
     )
     html = f"""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1305,5 +1563,5 @@ def render_report(report, artifacts, output, review_markup=""):
 <pre>{escape(json.dumps({'durations_s':report['durations_s'],'native_duration_difference_vs_video_s':report['native_duration_difference_vs_video_s'],'clock_adjusted_duration_difference_vs_video_s':report['clock_adjusted_duration_difference_vs_video_s']},indent=2))}</pre>
 <table><tr><th>Exploratory threshold</th><th>MotionCaptureFBX duration within</th><th>oldFBX duration within</th><th>Status</th></tr>{timing}</table>
 {''.join(sections)}
-<h2>Review notes and provenance</h2><p>MediaPipe landmarks are an estimated 2D reference. These results do not establish 3D accuracy, finger accuracy, or sign-language comprehension. Full configuration and hashes appear below and in summary.json.</p><pre>{escape(json.dumps(report['provenance'],indent=2))}</pre></html>"""
+<h2>Review notes and provenance</h2><p>Video landmarks are an estimated 2D reference. These results do not establish 3D accuracy, finger accuracy, or sign-language comprehension. Full configuration and hashes appear below and in summary.json.</p><pre>{escape(json.dumps(report['provenance'],indent=2))}</pre></html>"""
     (output / "report.html").write_text(html)

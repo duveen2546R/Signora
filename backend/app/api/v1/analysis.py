@@ -66,6 +66,7 @@ class Options(BaseModel):
     windows: dict[Literal["suit", "non_suit", "video"], tuple[float, float]] = Field(
         default_factory=dict
     )
+    reference_view: Literal["automatic", "front"] = "automatic"
     calibration_phase: tuple[float, float] = (0.0, 0.15)
     synchronization: dict[Literal["suit", "non_suit"], Synchronization] = Field(
         default_factory=dict
@@ -134,8 +135,8 @@ def readiness():
 async def create_analysis(
     background: BackgroundTasks,
     motioncapture_fbx: UploadFile,
-    old_fbx: UploadFile,
     reference_video: UploadFile,
+    old_fbx: UploadFile | None = None,
     options: str = Form("{}"),
 ):
     uploads = (motioncapture_fbx, old_fbx, reference_video)
@@ -178,9 +179,16 @@ async def create_analysis(
             (old_fbx, "non_suit_fbx", {".fbx"}, FBX_LIMIT),
             (reference_video, "reference_video", {".mp4", ".mov", ".m4v"}, VIDEO_LIMIT),
         ):
+            if upload is None:
+                continue
             names[key] = await save_upload(
                 upload, directory / files[key], suffixes, limit
             )
+
+        # Remove non_suit_fbx from files dictionary if it was not uploaded
+        if old_fbx is None:
+            del files["non_suit_fbx"]
+
         payload = {
             **parsed.model_dump(mode="json"),
             "files": files,
@@ -193,7 +201,8 @@ async def create_analysis(
         return status
     finally:
         for upload in uploads:
-            await upload.close()
+            if upload is not None:
+                await upload.close()
         if directory is not None and not accepted:
             shutil.rmtree(directory)
 

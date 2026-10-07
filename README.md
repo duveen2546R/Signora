@@ -44,6 +44,23 @@ python3 -m venv .venv
 ./.venv/bin/pip install -r requirements-dev.txt
 ```
 
+Enable video/FBX analysis in the same backend environment:
+
+```bash
+cd backend
+./.venv/bin/python -m pip install -r requirements-validation-video.txt
+```
+
+DWPose uses `rtmlib` and ONNX Runtime on the CPU. Its ONNX weights are downloaded
+and cached on first use; the old MediaPipe `.task` models are not required for analysis.
+
+On the Analysis page, select **Front view — performer faces the camera** for a frontal
+reference video. This applies a fixed upright camera based on anatomical shoulder
+direction, regardless of the FBX world heading, to both body and finger joints.
+Verified synchronization is used for the primary result when it produces valid scores.
+Use the projected overlay to review alignment; front-view selection does not guarantee
+that the motion passes the configured tolerances.
+
 Start the API:
 
 ```bash
