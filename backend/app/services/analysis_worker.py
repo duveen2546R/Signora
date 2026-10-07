@@ -126,6 +126,7 @@ def process(directory: Path):
                 + json.dumps(options["original_names"]),
             ],
             "reference_view": options.get("reference_view", "automatic"),
+            "tolerance_profile": options.get("tolerance_profile", "replication"),
             "synchronization": options.get("synchronization", {}),
             "tolerance_policy": "exploratory; no justified equivalence bounds",
         },

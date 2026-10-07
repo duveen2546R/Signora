@@ -17,6 +17,7 @@ export function Result({ job }) {
   const available = analysis.status === 'descriptive'
   const certificates = Object.entries(analysis.comparison?.equivalence ?? {}).filter(([, certificate]) => certificate?.domains)
   const domains = certificates[0]?.[1].domains ?? {}
+  const intelligibility = certificates[0]?.[1].tolerance_profile === 'intelligibility'
   const similarity = summary.comparison_kind === 'movement_similarity' || job.recordingRelationshipCorrection === 'separate_repetitions'
 
   return (
@@ -51,7 +52,7 @@ export function Result({ job }) {
         {certificates.length > 0 && (
           <div className="analysis__notice" style={{ marginTop: '1rem', marginBottom: '2rem', backgroundColor: 'inherit', padding: 0, border: 'none' }}>
             <p style={{ marginBottom: '1rem' }}>
-              <strong>Intersection-Union Decision Rule:</strong> To be declared <em>EQUIVALENT</em> to the reference video, the motion capture system must stay within the biological tolerance margin for ALL linguistic domains simultaneously.
+              <strong>Intersection-Union Decision Rule:</strong> To be declared <em>EQUIVALENT</em> to the reference video, the motion capture system must stay within the tolerance margin for ALL linguistic domains simultaneously. {intelligibility ? 'Standard: intelligibility — each margin is half the distance to the neighbouring contrastive category, tested at the 95th-percentile frame.' : 'Standard: exact replication — tested at the single worst frame.'}
             </p>
             <div className="analysis__table-wrap">
               <table className="jobs" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -68,7 +69,7 @@ export function Result({ job }) {
                     const renderCell = (label, dom = { status: 'INCONCLUSIVE' }) => (
                       <td key={label} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', backgroundColor: dom.status === 'PASS' ? 'rgba(74, 222, 128, 0.15)' : (dom.status === 'FAIL' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(253, 224, 71, 0.15)') }}>
                         <strong>{dom.status}</strong><br/>
-                        <small>{formatDeviation(dom.max_deviation)}</small>
+                        <small>{formatDeviation(dom.tested_deviation ?? dom.max_deviation)}{dom.statistic === 'p95' ? ' (95th pct.)' : ''}</small>
                       </td>
                     );
                     return (
@@ -116,6 +117,7 @@ export default function Analysis() {
   const [pairing, setPairing] = useState(false)
   const [relationship, setRelationship] = useState('unknown')
   const [referenceView, setReferenceView] = useState('automatic')
+  const [toleranceProfile, setToleranceProfile] = useState('intelligibility')
   const [verifiedTiming, setVerifiedTiming] = useState(false)
   const [timing, setTiming] = useState(INITIAL_TIMING)
   const [readiness, setReadiness] = useState(null)
@@ -170,7 +172,7 @@ export default function Analysis() {
     event.preventDefault()
     setError(null)
     try {
-      const options = buildAnalysisOptions({ files, action, pairing, relationship, referenceView, windows, calibration, verifiedTiming, timing })
+      const options = buildAnalysisOptions({ files, action, pairing, relationship, referenceView, toleranceProfile, windows, calibration, verifiedTiming, timing })
       setUploading(true)
       const created = await api.createAnalysis(files, options)
       setJob(created)
@@ -189,6 +191,7 @@ export default function Analysis() {
             <label className="field">Comparison name<input value={action} onChange={(e) => setAction(e.target.value)} maxLength={120} placeholder="For example: ACTION — take 01" /></label>
             <label className="field">How were these recordings made?<select value={relationship} onChange={(e) => { setRelationship(e.target.value); setPairing(false); setVerifiedTiming(false) }}><option value="unknown">I’m not sure — movement similarity only</option><option value="separate_repetitions">Separate repetitions of the same action — movement similarity</option><option value="same_performance">One simultaneous performance — agreement comparison</option></select></label>
             <label className="field">Reference video camera view<select value={referenceView} onChange={(e) => setReferenceView(e.target.value)}><option value="automatic">Automatic — estimate camera orientation</option><option value="front">Front view — performer faces the camera</option></select></label>
+            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Intelligibility — a viewer perceives the same sign</option><option value="replication">Replication — the movement is reproduced exactly</option></select></label>
             <p className="hint">For a front-facing video, choose Front view. The FBX may face any direction in its viewer; comparison uses the anatomical shoulders to align its projection.</p>
             {relationship !== 'same_performance' && <p className="analysis__notice">Separate repetitions can differ in hand paths, speed, and body position even with perfect capture. These uploads cannot establish which capture method is more accurate. For that, each FBX needs a video of its exact performance.</p>}
             <div className="analysis__uploads">{SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>

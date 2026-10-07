@@ -3,7 +3,7 @@ export const SOURCES = [
   { key: 'video', title: 'Reference video', accept: '.mp4,.mov,.m4v', hint: 'The real person performing the action · up to 250 MB and 2 minutes' },
 ]
 
-export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', windows, calibration, verifiedTiming, timing }) {
+export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', toleranceProfile = 'intelligibility', windows, calibration, verifiedTiming, timing }) {
   for (const source of SOURCES) {
     const file = files[source.key]
     if (!file) throw new Error(`Select ${source.title.toLowerCase()} to continue.`)
@@ -16,6 +16,7 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
   if (!['same_performance', 'separate_repetitions', 'unknown'].includes(relationship)) throw new Error('Select the recording relationship.')
   if (verifiedTiming && relationship !== 'same_performance') throw new Error('Synchronized accuracy requires the exact same performance.')
   if (!['automatic', 'front'].includes(referenceView)) throw new Error('Select the reference camera view.')
+  if (!['intelligibility', 'replication'].includes(toleranceProfile)) throw new Error('Select the tolerance standard.')
   const selectedWindows = {}
   for (const source of SOURCES) {
     const entry = windows[source.key]
@@ -41,5 +42,5 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
       }
     }
   }
-  return { action: action.trim() || 'Action comparison', pairing_confirmed: true, recording_relationship: relationship, reference_view: referenceView, windows: selectedWindows, calibration_phase: calibrationPhase, synchronization }
+  return { action: action.trim() || 'Action comparison', pairing_confirmed: true, recording_relationship: relationship, reference_view: referenceView, tolerance_profile: toleranceProfile, windows: selectedWindows, calibration_phase: calibrationPhase, synchronization }
 }

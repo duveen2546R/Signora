@@ -67,6 +67,7 @@ class Options(BaseModel):
         default_factory=dict
     )
     reference_view: Literal["automatic", "front"] = "automatic"
+    tolerance_profile: Literal["replication", "intelligibility"] = "intelligibility"
     calibration_phase: tuple[float, float] = (0.0, 0.15)
     synchronization: dict[Literal["suit", "non_suit"], Synchronization] = Field(
         default_factory=dict

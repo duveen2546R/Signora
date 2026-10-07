@@ -37,11 +37,33 @@ EQUIVALENCE_MARGINS = {
     "palm_orientation": 15.0,   # degrees
     "handshape": 0.10,          # hand scale (proportion)
 }
+# Intelligibility margins: the question is whether a viewer perceives the same
+# phonological value, not whether the movement is replicated. Each margin is half
+# the spacing between neighbouring contrastive categories, so an error inside it
+# cannot reach the next category:
+#   location   — adjacent major body regions (chin/neck/chest) are ~13–15 cm apart
+#                → ~7 cm ≈ 0.20 shoulder widths;
+#   movement   — path directions contrast in 45° steps → 22.5°;
+#   orientation— palm/finger orientations contrast in 90° steps → 45°;
+#   handshape  — minimal pairs (B vs bent-B, 5 vs claw-5) move fingertips by
+#                ~0.5 hand lengths → 0.25.
+# The 95th percentile lets up to 5% of frames (transitions, tracker dropouts)
+# fall outside, since a single frame is not perceived as a different sign.
+INTELLIGIBILITY_MARGINS = {
+    "path_movement": 0.20,
+    "arm_posture": 22.5,
+    "palm_orientation": 45.0,
+    "handshape": 0.25,
+}
+TOLERANCE_PROFILES = {
+    "replication": {"margins": EQUIVALENCE_MARGINS, "statistic": "max"},
+    "intelligibility": {"margins": INTELLIGIBILITY_MARGINS, "statistic": "p95"},
+}
 # Minimum fraction of valid (non-NaN) frames required to issue a verdict
 MINIMUM_VALID_FRACTION = 0.50
 
 
-def evaluate_functional_domain(error_curve, margin, domain_name):
+def evaluate_functional_domain(error_curve, margin, domain_name, statistic="max"):
     """Maximum-Deviation Functional Equivalence for one linguistic domain.
 
     Instead of averaging the error across frames (which hides short severe
@@ -62,16 +84,21 @@ def evaluate_functional_domain(error_curve, margin, domain_name):
             "domain": domain_name,
             "margin": margin,
             "valid_fraction": valid_fraction,
+            "statistic": statistic,
+            "tested_deviation": None,
             "max_deviation": None,
             "mean_deviation": None,
             "median_deviation": None,
         }
     observed = error_curve[valid]
     max_dev = float(np.max(observed))
+    tested = max_dev if statistic == "max" else float(np.percentile(observed, 95))
     return {
-        "status": "PASS" if max_dev < margin else "FAIL",
+        "status": "PASS" if tested < margin else "FAIL",
         "domain": domain_name,
         "margin": margin,
+        "statistic": statistic,
+        "tested_deviation": tested,
         "max_deviation": max_dev,
         "mean_deviation": float(np.mean(observed)),
         "median_deviation": float(np.median(observed)),
@@ -95,7 +122,7 @@ def intersection_union_decision(domain_results):
         return "EQUIVALENT"
 
 
-def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands_2d=None):
+def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands_2d=None, profile="replication"):
     """Evaluate all four linguistic domains for one capture system.
 
     Returns a Clip-Level Tolerance Certificate with per-domain verdicts
@@ -125,26 +152,28 @@ def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands
         pred_hands_2d is not None and ref_hands_2d is not None
     ) else np.full(n_frames, np.nan)
 
+    if profile not in TOLERANCE_PROFILES:
+        raise ValidationError("Tolerance profile must be replication or intelligibility.")
+    margins = TOLERANCE_PROFILES[profile]["margins"]
+    statistic = TOLERANCE_PROFILES[profile]["statistic"]
+    curves = {
+        "path_movement": (path_errors, "Hand Location (Path)"),
+        "arm_posture": (arm_angle_errors, "Arm Posture (Kinematics)"),
+        "palm_orientation": (palm_angle_errors, "Palm Orientation (Wrist Rotation)"),
+        "handshape": (hand_errors, "Handshape (Fingers)"),
+    }
     domains = {
-        "path_movement": evaluate_functional_domain(
-            path_errors, EQUIVALENCE_MARGINS["path_movement"], "Hand Location (Path)"
-        ),
-        "arm_posture": evaluate_functional_domain(
-            arm_angle_errors, EQUIVALENCE_MARGINS["arm_posture"], "Arm Posture (Kinematics)"
-        ),
-        "palm_orientation": evaluate_functional_domain(
-            palm_angle_errors, EQUIVALENCE_MARGINS["palm_orientation"], "Palm Orientation (Wrist Rotation)"
-        ),
-        "handshape": evaluate_functional_domain(
-            hand_errors, EQUIVALENCE_MARGINS["handshape"], "Handshape (Fingers)"
-        ),
+        key: evaluate_functional_domain(curve, margins[key], name, statistic)
+        for key, (curve, name) in curves.items()
     }
     decision = intersection_union_decision(domains)
     return {
         "label": label,
         "decision": decision,
         "domains": domains,
-        "margins": EQUIVALENCE_MARGINS,
+        "margins": margins,
+        "tolerance_profile": profile,
+        "statistic": statistic,
     }
 
 
@@ -842,7 +871,8 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
             if ref_h is not None:
                 ref_h[~valid] = np.nan
             comparison["equivalence"][label] = clip_level_certificate(
-                LABELS[label], pred, ref, pred_h, ref_h
+                LABELS[label], pred, ref, pred_h, ref_h,
+                config.get("tolerance_profile", "replication"),
             )
     except Exception as e:
         comparison["equivalence"] = {"error": str(e)}
@@ -902,6 +932,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
         "status": "descriptive",
         "alignment": mode,
         "reference_view": config.get("reference_view", "automatic"),
+        "tolerance_profile": config.get("tolerance_profile", "replication"),
         "common_coverage": coverage,
         "n_common_frames": int(valid.sum()),
         "temporal_common_coverage": float(temporal_common.mean()),
@@ -1079,6 +1110,7 @@ def run_case_study(manifest, output):
         "analysis_version": "video-fbx-case-v4-front-view",
         "primary_analysis": "synchronized" if synchronized else "phase_normalized",
         "reference_view": config.get("reference_view", "automatic"),
+        "tolerance_profile": config.get("tolerance_profile", "replication"),
         "performance_id": trial.performance_id,
         "conclusion": "statistical equivalence not established",
         "recording_relationship": relationship,
@@ -1505,7 +1537,7 @@ def render_report(report, artifacts, output, review_markup=""):
             certificate_html += f"<h4>{LABELS[label]}: {escape(certificate['decision'])}</h4>"
             certificate_html += "<table><tr><th>Domain</th><th>Margin</th><th>Maximum deviation</th><th>Status</th></tr>"
             for domain in certificate["domains"].values():
-                certificate_html += f"<tr><td>{escape(domain['domain'])}</td><td>{fmt(domain['margin'])}</td><td>{fmt(domain['max_deviation'])}</td><td>{domain['status']}</td></tr>"
+                certificate_html += f"<tr><td>{escape(domain['domain'])}</td><td>{fmt(domain['margin'])}</td><td>{fmt(domain.get('tested_deviation', domain['max_deviation']))}</td><td>{domain['status']}</td></tr>"
             certificate_html += "</table>"
         tolerances = "".join(
             f"<tr><td>{row['tolerance_shoulder_widths']}</td>"

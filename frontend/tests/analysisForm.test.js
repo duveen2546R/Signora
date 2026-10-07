@@ -13,7 +13,7 @@ function input() {
 
 test('full clip comparison leaves source clocks unverified and calibration provisional', () => {
   const result = buildAnalysisOptions(input())
-  assert.deepEqual(result, { action: 'Wave', pairing_confirmed: true, recording_relationship: 'same_performance', reference_view: 'automatic', windows: {}, calibration_phase: [0, 0.15], synchronization: {} })
+  assert.deepEqual(result, { action: 'Wave', pairing_confirmed: true, recording_relationship: 'same_performance', reference_view: 'automatic', tolerance_profile: 'intelligibility', windows: {}, calibration_phase: [0, 0.15], synchronization: {} })
 })
 
 test('separate repetitions preserve their relationship and cannot claim synchronized accuracy', () => {
@@ -63,4 +63,12 @@ test('declared frontal reference is passed to backend and invalid views are reje
   assert.equal(buildAnalysisOptions(values).reference_view, 'front')
   values.referenceView = 'sideways'
   assert.throws(() => buildAnalysisOptions(values), /camera view/)
+})
+
+test('tolerance standard is passed to backend and invalid standards are rejected', () => {
+  const values = input()
+  values.toleranceProfile = 'replication'
+  assert.equal(buildAnalysisOptions(values).tolerance_profile, 'replication')
+  values.toleranceProfile = 'loose'
+  assert.throws(() => buildAnalysisOptions(values), /tolerance standard/)
 })
