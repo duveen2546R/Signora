@@ -21,7 +21,7 @@ JOINTS = (
     "left_wrist",
     "right_wrist",
 )
-CASE_JOINTS = (*JOINTS, "left_elbow", "right_elbow")
+CASE_JOINTS = (*JOINTS, "left_elbow", "right_elbow", "left_index", "right_index")
 HAND_BONES = tuple(
     f"{side}Hand{finger}{joint}"
     for side in ("Left", "Right")
@@ -34,6 +34,8 @@ BASE = {
     "right_shoulder": "RightArm",
     "left_wrist": "LeftHand",
     "right_wrist": "RightHand",
+    "left_index": "LeftHandIndex1",
+    "right_index": "RightHandIndex1",
 }
 PROFILES = {
     # Audited action.fbx: 30 FPS, mixamorig namespace, LeftUpLeg/RightUpLeg hips.

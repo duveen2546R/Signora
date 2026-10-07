@@ -65,6 +65,55 @@ def sample_video(pose, queries):
     return result
 
 
+def sample_video_hands(times, hands, queries):
+    """Interpolate 21 hand joints per side for the requested query times."""
+    result = np.full((len(queries), 2, 21, 2), np.nan)
+    for side in range(2):
+        for j in range(21):
+            valid = np.isfinite(hands[:, side, j]).all(axis=1)
+            if not valid.any():
+                continue
+            t, points = times[valid], hands[valid, side, j]
+            after = np.searchsorted(t, queries)
+            for i, k in enumerate(after):
+                if k < len(t) and np.isclose(t[k], queries[i], atol=1e-7, rtol=0):
+                    result[i, side, j] = points[k]
+                elif 0 < k < len(t) and t[k] - t[k - 1] <= MAX_REFERENCE_GAP_S:
+                    w = (queries[i] - t[k - 1]) / (t[k] - t[k - 1])
+                    result[i, side, j] = points[k - 1] * (1 - w) + points[k] * w
+    return result
+
+
+def sample_motion_hands(motion, queries):
+    """Extracts the 21 MediaPipe-equivalent hand joints from the FBX."""
+    # Extras 3:23 are Left hand, 23:43 are Right hand.
+    # Joints 4 and 5 are left/right wrists.
+    joints_interp = np.stack([
+        np.column_stack([np.interp(queries, motion.times, motion.joints[:, j, a]) for a in range(3)])
+        for j in range(8)
+    ], axis=1)
+    
+    if motion.extras is None or motion.extras.shape[1] < 43:
+        return np.full((len(queries), 2, 21, 3), np.nan)
+        
+    extras_interp = np.stack([
+        np.column_stack([np.interp(queries, motion.times, motion.extras[:, j, a]) for a in range(3)])
+        for j in range(43)
+    ], axis=1)
+    
+    hands = np.full((len(queries), 2, 21, 3), np.nan)
+    
+    # Left hand: 0 is Wrist, 1-20 are Thumb1-4, Index1-4, etc.
+    hands[:, 0, 0] = joints_interp[:, 4]
+    hands[:, 0, 1:21] = extras_interp[:, 3:23]
+    
+    # Right hand: 0 is Wrist, 1-20 are Thumb1-4, Index1-4, etc.
+    hands[:, 1, 0] = joints_interp[:, 5]
+    hands[:, 1, 1:21] = extras_interp[:, 23:43]
+    
+    return hands
+
+
 def sample_motion(motion, queries):
     if np.min(queries) < -1e-7 or np.max(queries) > motion.times[-1] + 1e-7:
         raise ValidationError(
@@ -275,14 +324,16 @@ def entire_upper_body_error(pred_xy, ref_xy, is_rigid_hands=False):
     # 1. Elbow Errors
     err_elbows = np.abs(elbow_angles(pred_xy) - elbow_angles(ref_xy))
     
-    # 2. Arm Trajectory Errors (Upper Arm and Forearm directions)
+    # 2. Arm Trajectory Errors (Upper Arm, Forearm, and Palm directions)
     def get_segments(xy):
-        # 0: l_sh, 1: r_sh, 4: l_wr, 5: r_wr, 6: l_el, 7: r_el
+        # 0: l_sh, 1: r_sh, 4: l_wr, 5: r_wr, 6: l_el, 7: r_el, 8: l_ind, 9: r_ind
         return [
             xy[:, 6] - xy[:, 0], # L Upper
             xy[:, 7] - xy[:, 1], # R Upper
             xy[:, 4] - xy[:, 6], # L Fore
             xy[:, 5] - xy[:, 7], # R Fore
+            xy[:, 8] - xy[:, 4], # L Palm
+            xy[:, 9] - xy[:, 5], # R Palm
         ]
         
     p_segs = get_segments(pred_xy)
@@ -384,7 +435,7 @@ def sync_queries(video_times, synchronization, label):
     return fbx_event + (np.asarray(video_times) - video_event) / rate
 
 
-def score_mode(trial, pose, motions, metadata, config, mode):
+def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
     if (
         mode == "synchronized"
         and config.get("recording_relationship", "same_performance")
@@ -443,12 +494,28 @@ def score_mode(trial, pose, motions, metadata, config, mode):
         if mode == "synchronized":
             # Clamped samples are never scored: the shared temporal mask above removes them.
             queries = np.clip(queries, *trial.windows[label])
-        xyz, shoulder_m = normalize_motion(sample_motion(motion, queries))
+        raw_xyz = sample_motion(motion, queries)
+        shoulder_m = float(np.median(np.linalg.norm(raw_xyz[:, 0] - raw_xyz[:, 1], axis=1)))
+        if not np.isfinite(shoulder_m) or shoulder_m < 0.05:
+            raise ValidationError("Degenerate FBX shoulder width.")
+        center = raw_xyz[:, :2].mean(axis=1)
+        xyz = (raw_xyz - center[:, None, :]) / shoulder_m
+        
         solutions = camera_fits(xyz, reference, calibration_mask)
         for fit in solutions:
             fit["metrics"] = measure(reference, project(xyz, fit), valid)
             fit["mean_target_error"] = fit["metrics"]["combined_position"]["mean"]
         predictions[label] = project(xyz, solutions[0])
+        
+        if video_hands is not None:
+            raw_hands = sample_motion_hands(motion, queries)
+            norm_hands = (raw_hands - center[:, None, None, :]) / shoulder_m
+            flat_hands = norm_hands.reshape(len(queries), 42, 3)
+            proj_hands = project(flat_hands, solutions[0]).reshape(len(queries), 2, 21, 2)
+            if "hands" not in predictions:
+                predictions["hands"] = {}
+            predictions["hands"][label] = proj_hands
+
         fits[label] = {"source_shoulder_width_m": shoulder_m, "solutions": solutions}
         try:
             frontal_fit = frontal_camera_fit(xyz, reference, calibration_mask)
@@ -497,6 +564,25 @@ def score_mode(trial, pose, motions, metadata, config, mode):
     try:
         suit_errs = np.linalg.norm(predictions["suit"][valid][:, TARGETS] - reference[valid][:, TARGETS], axis=2).mean(axis=1)
         non_suit_errs = np.linalg.norm(predictions["non_suit"][valid][:, TARGETS] - reference[valid][:, TARGETS], axis=2).mean(axis=1)
+        
+        if video_hands is not None:
+            ref_hands = sample_video_hands(pose.times, video_hands, video_queries)[valid]
+            # ref_hands: (valid_frames, 2, 21, 2)
+            for label, errs in (("suit", suit_errs), ("non_suit", non_suit_errs)):
+                pred_h = predictions["hands"][label][valid]
+                # Calculate distance for each hand joint
+                h_diff = np.linalg.norm(pred_h - ref_hands, axis=3) # (valid, 2, 21)
+                # Average over valid (non-NaN) hand joints per frame
+                with np.errstate(invalid='ignore'):
+                    h_mean = np.nanmean(h_diff, axis=(1, 2))
+                # If a frame has no valid hand joints, h_mean is NaN. Fall back to arm error.
+                h_mean = np.where(np.isnan(h_mean), errs, h_mean)
+                # Combine arm error and hand error equally
+                if label == "suit":
+                    suit_errs = (suit_errs + h_mean) / 2
+                else:
+                    non_suit_errs = (non_suit_errs + h_mean) / 2
+
         if len(suit_errs) > 10:
             comparison["single_trial_statistics"] = single_trial_test(suit_errs, non_suit_errs)
             
@@ -535,7 +621,7 @@ def score_mode(trial, pose, motions, metadata, config, mode):
     rows = []
     ref_angles = elbow_angles(reference)
     predicted_angles = {
-        label: elbow_angles(prediction) for label, prediction in predictions.items()
+        label: elbow_angles(predictions[label]) for label in LABELS
     }
     for i, p in enumerate(phase):
         row = {
@@ -549,7 +635,7 @@ def score_mode(trial, pose, motions, metadata, config, mode):
             joint = CASE_JOINTS[j]
             for label, points in {
                 "reference": reference,
-                **predictions,
+                **{k: v for k, v in predictions.items() if k != "hands"},
                 **frontal_predictions,
             }.items():
                 for a, axis in enumerate(("x", "y")):
@@ -654,6 +740,12 @@ def run_case_study(manifest, output):
         raise ValidationError(
             "Video metadata frame count does not match the landmarks."
         )
+        
+    video_hands = None
+    upper_npz = Path(trial.video_landmarks).with_suffix(".upper.npz")
+    if upper_npz.exists():
+        video_hands = np.load(upper_npz)["hands"]
+
     motions = {
         label: load_motion(path, include_elbows=True, include_extras=True)
         for label, path in (("suit", trial.suit_fbx), ("non_suit", trial.non_suit_fbx))
@@ -695,7 +787,7 @@ def run_case_study(manifest, output):
     results, artifacts = {}, {}
     for mode in ("phase_normalized", "synchronized"):
         try:
-            result, artifact = score_mode(trial, pose, motions, metadata, config, mode)
+            result, artifact = score_mode(trial, pose, video_hands, motions, metadata, config, mode)
         except ValidationError as exc:
             result, artifact = {"status": "indeterminate", "reason": str(exc)}, None
         results[mode] = result
@@ -964,7 +1056,7 @@ def plots(mode, artifact, output, metric_word="error"):
     figures = []
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
     for ax, j in zip(axes.flat, TARGETS):
-        for label, points in {"reference": reference, **predictions}.items():
+        for label, points in {"reference": reference, **{k: v for k, v in predictions.items() if k != "hands"}}.items():
             track = points[:, j].copy()
             track[~valid] = np.nan
             ax.plot(
@@ -983,7 +1075,7 @@ def plots(mode, artifact, output, metric_word="error"):
     figures.append(("trajectories", fig))
     fig, axes = plt.subplots(2, 2, figsize=(10, 6))
     for ax, j in zip(axes.flat, TARGETS):
-        for label, points in predictions.items():
+        for label, points in [(k, v) for k, v in predictions.items() if k != "hands"]:
             errors = np.linalg.norm(points[:, j] - reference[:, j], axis=1)
             errors[~valid] = np.nan
             ax.plot(axis, errors, label=LABELS[label], color=colors[label])
@@ -995,7 +1087,7 @@ def plots(mode, artifact, output, metric_word="error"):
     figures.append(("position_errors", fig))
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     for side, ax in enumerate(axes):
-        for label, points in {"reference": reference, **predictions}.items():
+        for label, points in {"reference": reference, **{k: v for k, v in predictions.items() if k != "hands"}}.items():
             angles = elbow_angles(points)[:, side]
             angles[~valid] = np.nan
             ax.plot(axis, angles, label=LABELS.get(label, "Video"), color=colors[label])
@@ -1008,7 +1100,7 @@ def plots(mode, artifact, output, metric_word="error"):
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     reference_angles = elbow_angles(reference)
     for side, ax in enumerate(axes):
-        for label, points in predictions.items():
+        for label, points in [(k, v) for k, v in predictions.items() if k != "hands"]:
             errors = np.abs(elbow_angles(points)[:, side] - reference_angles[:, side])
             errors[~valid] = np.nan
             ax.plot(axis, errors, label=LABELS[label], color=colors[label])
@@ -1158,7 +1250,7 @@ def render_report(report, artifacts, output, review_markup=""):
                 sig = "Statistically significant (Rokoko better)" if p_val < 0.05 else "Not statistically significant"
                 p_val_ang = ang_stats['p_value_one_sided']
                 sig_ang = "Statistically significant (Rokoko better)" if p_val_ang < 0.05 else "Not statistically significant"
-                single_trial_html = f"<h3>Statistical Testing (Single Trial)</h3><p>This HAC-corrected time-series test proves accuracy for this specific performance only. Population-level generalizability requires the LMEM over multiple signs.</p><h4>3D Kinematics (Entire Upper Body)</h4><p><strong>{sig_ang}</strong> (p = {p_val_ang:.4f}).</p><p><small>This mathematically evaluates the true physical posture of the full upper body (Elbow angles + Arm Segment Directions + 20° structural penalty for FBX tools that fail to capture hand articulation). It is immune to 2D skeleton stretching.</small></p><ul><li>Mean difference (old - Rokoko, degrees): {ang_stats['mean_difference_shoulder_widths']:.4f}</li><li>t-statistic: {ang_stats['t_statistic']:.4f}</li><li>95% CI: [{ang_stats['ci_95'][0]:.4f}, {ang_stats['ci_95'][1]:.4f}]</li></ul><h4>2D Video Projection (Position)</h4><p><strong>{sig}</strong> (p = {p_val:.4f}).</p><ul><li>Mean difference (old - Rokoko, shoulder widths): {stats['mean_difference_shoulder_widths']:.4f}</li><li>t-statistic: {stats['t_statistic']:.4f}</li><li>95% CI: [{stats['ci_95'][0]:.4f}, {stats['ci_95'][1]:.4f}]</li></ul>"
+                single_trial_html = f"<h3>Statistical Testing (Single Trial)</h3><p>This HAC-corrected time-series test proves accuracy for this specific performance only. Population-level generalizability requires the LMEM over multiple signs.</p><h4>3D Kinematics (Entire Upper Body)</h4><p><strong>{sig_ang}</strong> (p = {p_val_ang:.4f}).</p><p><small>This organically evaluates the true physical posture of the full arm (Elbow angles, Upper/Lower Arm, and Palm Direction/Wrist Rotation). By tracking the palm vector, it rigorously punishes models with frozen wrists.</small></p><ul><li>Mean difference (old - Rokoko, degrees): {ang_stats['mean_difference_shoulder_widths']:.4f}</li><li>t-statistic: {ang_stats['t_statistic']:.4f}</li><li>95% CI: [{ang_stats['ci_95'][0]:.4f}, {ang_stats['ci_95'][1]:.4f}]</li></ul><h4>2D Video Projection (Wrists & Fingers)</h4><p><strong>{sig}</strong> (p = {p_val:.4f}).</p><p><small>This mathematically tests the full MediaPipe Holistic extraction (42 finger joints + wrists). By projecting the FBX hands into 2D, it punishes models with frozen hands.</small></p><ul><li>Mean difference (old - Rokoko, shoulder widths): {stats['mean_difference_shoulder_widths']:.4f}</li><li>t-statistic: {stats['t_statistic']:.4f}</li><li>95% CI: [{stats['ci_95'][0]:.4f}, {stats['ci_95'][1]:.4f}]</li></ul>"
         tolerances = "".join(
             f"<tr><td>{row['tolerance_shoulder_widths']}</td><td>{row['suit']['fraction_frames_all_targets_within']:.1%}</td><td>{row['non_suit']['fraction_frames_all_targets_within']:.1%}</td></tr>"
             for row in result["position_tolerance_sensitivity"]

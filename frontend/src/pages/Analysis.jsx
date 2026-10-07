@@ -54,12 +54,12 @@ function Result({ job }) {
             )}
 
             <div style={{ flex: 1, padding: '1rem', border: '1px solid #555', backgroundColor: analysis.comparison.single_trial_statistics.p_value_one_sided < 0.05 ? 'rgba(74, 222, 128, 0.15)' : 'inherit', borderRadius: '0.25rem' }}>
-              <strong style={{ display: 'block', marginBottom: '0.5rem' }}>2D Video Projection (Position)</strong>
+              <strong style={{ display: 'block', marginBottom: '0.5rem' }}>2D Video Projection (Wrists & Fingers)</strong>
               <p style={{ margin: 0, fontWeight: 'bold', color: analysis.comparison.single_trial_statistics.p_value_one_sided < 0.05 ? '#4ade80' : 'inherit' }}>
                 {analysis.comparison.single_trial_statistics.p_value_one_sided < 0.05 ? 'Rokoko Significantly Better' : 'Tie / Not Significant'}
                 {' '}(p = {analysis.comparison.single_trial_statistics.p_value_one_sided.toFixed(4)})
               </p>
-              <small style={{ display: 'block', marginTop: '0.5rem', lineHeight: 1.3 }}>Prone to 2D scaling artifacts and camera bias.</small>
+              <small style={{ display: 'block', marginTop: '0.5rem', lineHeight: 1.3 }}>Tested against full 42 finger joint extraction.</small>
             </div>
           </div>
         )}

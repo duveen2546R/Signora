@@ -109,7 +109,7 @@ def extract_video_pose(
         int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
     )
     joints = CASE_JOINTS if include_elbows else JOINTS
-    indices = (*POSE_INDICES, 13, 14) if include_elbows else POSE_INDICES
+    indices = (*POSE_INDICES, 13, 14, 19, 20) if include_elbows else POSE_INDICES
     columns = (
         "time_s",
         *(f"{joint}_{field}" for joint in joints for field in ("x", "y", "confidence")),
