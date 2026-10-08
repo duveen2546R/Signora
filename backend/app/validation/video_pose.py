@@ -219,15 +219,15 @@ def extract_video_pose(
                     # Left hand: 91:112
                     lh = person_kpts[91:112] / [width, height]
                     lh_scores = person_scores[91:112]
-                    # Only accept if average hand score is reasonable
-                    if np.mean(lh_scores) > 0.1:
-                        hands[0] = lh
+                    # Gate each point; a high hand average must not hide a bad finger.
+                    accepted = (lh_scores >= 0.70) & np.isfinite(lh).all(axis=1) & ((lh >= 0) & (lh <= 1)).all(axis=1)
+                    hands[0, accepted] = lh[accepted]
 
                     # Right hand: 112:133
                     rh = person_kpts[112:133] / [width, height]
                     rh_scores = person_scores[112:133]
-                    if np.mean(rh_scores) > 0.1:
-                        hands[1] = rh
+                    accepted = (rh_scores >= 0.70) & np.isfinite(rh).all(axis=1) & ((rh >= 0) & (rh <= 1)).all(axis=1)
+                    hands[1, accepted] = rh[accepted]
 
                 upper_pose.append(full_pose)
                 upper_hands.append(hands)
@@ -273,7 +273,7 @@ def extract_video_pose(
             "file": upper_path.name,
             "sha256": sha256(upper_path),
             "hand_model_available": True,
-            "hand_quality": "DWPose ONNX Direct Output",
+            "hand_quality": "DWPose per-point score >= 0.70; scores are not calibrated uncertainty",
             "hand_observed_frame_fraction": np.isfinite(np.array(upper_hands))
             .all(axis=(2, 3))
             .mean(axis=0)

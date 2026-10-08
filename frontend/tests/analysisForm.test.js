@@ -13,7 +13,7 @@ function input() {
 
 test('full clip comparison leaves source clocks unverified and calibration provisional', () => {
   const result = buildAnalysisOptions(input())
-  assert.deepEqual(result, { action: 'Wave', pairing_confirmed: true, recording_relationship: 'same_performance', reference_view: 'automatic', tolerance_profile: 'intelligibility', windows: {}, calibration_phase: [0, 0.15], synchronization: {} })
+  assert.deepEqual(result, { action: 'Wave', pairing_confirmed: true, recording_relationship: 'same_performance', reference_view: 'automatic', tolerance_profile: 'replication', windows: {}, calibration_phase: [0, 0.15], synchronization: {} })
 })
 
 test('separate repetitions preserve their relationship and cannot claim synchronized accuracy', () => {

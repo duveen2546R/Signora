@@ -3,7 +3,7 @@ export const SOURCES = [
   { key: 'video', title: 'Reference video', accept: '.mp4,.mov,.m4v', hint: 'The real person performing the action · up to 250 MB and 2 minutes' },
 ]
 
-export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', toleranceProfile = 'intelligibility', windows, calibration, verifiedTiming, timing }) {
+export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', toleranceProfile = 'replication', windows, calibration, verifiedTiming, timing }) {
   for (const source of SOURCES) {
     const file = files[source.key]
     if (!file) throw new Error(`Select ${source.title.toLowerCase()} to continue.`)

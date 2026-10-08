@@ -23,7 +23,7 @@ def test_maximum_deviation_catches_short_severe_errors():
     result = evaluate_functional_domain([.01] * 100 + [.2], .1, 'Path')
     assert result['status'] == 'FAIL'
     assert result['mean_deviation'] < .1
-    assert intersection_union_decision({'path': result}) == 'NOT EQUIVALENT'
+    assert intersection_union_decision({'path': result}) == 'OBSERVED TOLERANCE EXCEEDED'
     assert intersection_union_decision({}) == 'INCONCLUSIVE'
 
 
@@ -103,8 +103,10 @@ def test_foreshortened_palm_is_unmeasured_not_a_180_degree_error():
     pred[-3:, 8] = (-.5, .99)
     left = case_study._direction_errors(pred[:, 8] - pred[:, 4], ref[:, 8] - ref[:, 4])
     assert np.all(np.isnan(left[-3:]))
-    # The right palm stays measurable, so the frame verdict uses it alone.
-    assert np.max(case_study._palm_orientation_errors(pred, ref)) < 1e-6
+    # Missing left-palm measurements cannot be replaced by the right palm.
+    errors = case_study._palm_orientation_errors(pred, ref)
+    assert np.isnan(errors[-3:]).all()
+    assert np.nanmax(errors) < 1e-6
 
 
 def test_mirrored_torso_yaw_pair_falls_back_to_front_view(monkeypatch):
@@ -118,5 +120,6 @@ def test_mirrored_torso_yaw_pair_falls_back_to_front_view(monkeypatch):
     })
     xyz = np.zeros((10, 8, 3))
     fits = case_study.primary_camera_fits(xyz, xyz[..., :2], np.ones(10, bool))
-    assert [f["status"] for f in fits] == ["automatic_yaw_unidentifiable_front_view"]
+    assert fits[0]["status"] == "automatic_yaw_unidentifiable_front_view"
+    assert fits[1:] == pair
     assert not case_study._mirrored_yaw(pair[:1])

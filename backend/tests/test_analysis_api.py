@@ -108,17 +108,21 @@ def test_results_and_artifacts_are_restricted_to_completed_job(client):
     results = directory / "results"
     results.mkdir()
     summary = {
-        "artifacts": {"traces": {"shape": "shape.csv"}, "figures": ["curve.svg"]}
+        "artifacts": {"traces": {"shape": "shape.csv"}, "figures": ["curve.svg"], "full_sequence_overlay": "full_sequence_overlay.mp4"}
     }
     (results / "summary.json").write_text(json.dumps(summary))
     (results / "report.html").write_text("<h1>Comparison</h1>")
     (results / "curve.png").write_bytes(b"png")
+    (results / "full_sequence_overlay.mp4").write_bytes(b"overlay")
     service.write_status(directory, "done")
     assert client.get(f"/analyses/{job}").json()["summary"] == summary
     response = client.get(f"/analyses/{job}/files/report.html")
     assert response.status_code == 200
     assert "sandbox" in response.headers["content-security-policy"]
     assert client.get(f"/analyses/{job}/files/curve.png").status_code == 200
+    overlay = client.get(f"/analyses/{job}/files/full_sequence_overlay.mp4")
+    assert overlay.status_code == 200
+    assert overlay.headers["content-type"] == "video/mp4"
     assert client.get(f"/analyses/{job}/files/worker.log").status_code == 404
     assert client.get("/analyses/not-a-job").status_code == 404
 

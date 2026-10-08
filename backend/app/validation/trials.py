@@ -152,29 +152,28 @@ def load_manifest(
                 f"{performance}: reference video is assigned to another performance."
             )
         videos.add(files["reference_video"])
-        hashes = item.get("sha256", {})
+        hashes = item.get("sha256")
+        if not isinstance(hashes, dict):
+            raise ValidationError(f"{performance}: SHA-256 hashes are required for every source.")
         for label, file in files.items():
             expected = hashes.get(label)
-            if expected is not None:
-                if not isinstance(expected, str) or len(expected) != 64 or expected.lower() != sha256(file):
-                    raise ValidationError(
-                        f"{performance}: {label} SHA-256 is missing or does not match."
-                    )
-        current_motion = {hashes.get("suit_fbx", "a").lower()}
+            if not isinstance(expected, str) or len(expected) != 64 or expected.lower() != sha256(file):
+                raise ValidationError(f"{performance}: {label} SHA-256 is missing or does not match.")
+        current_motion = {hashes["suit_fbx"].lower()}
         if "non_suit_fbx" in hashes:
             current_motion.add(hashes["non_suit_fbx"].lower())
-            if hashes.get("suit_fbx", "a").lower() == hashes["non_suit_fbx"].lower():
+            if hashes["suit_fbx"].lower() == hashes["non_suit_fbx"].lower():
                 raise ValidationError(f"{performance}: FBX contents are duplicated within this trial.")
         if current_motion & source_digests:
             raise ValidationError(
                 f"{performance}: FBX contents are duplicated within or across trials."
             )
         source_digests.update(current_motion)
-        if hashes.get("reference_video", "").lower() in video_digests:
+        if hashes["reference_video"].lower() in video_digests:
             raise ValidationError(
                 f"{performance}: reference video contents are reused across trials."
             )
-        video_digests.add(hashes.get("reference_video", "").lower())
+        video_digests.add(hashes["reference_video"].lower())
         landmarks = item.get("video_landmarks")
         pose_path = (
             _path(path.parent, landmarks, "video_landmarks", ".csv")
@@ -187,11 +186,8 @@ def load_manifest(
             )
         if pose_path is not None:
             expected = hashes.get("video_landmarks")
-            if expected is not None:
-                if not isinstance(expected, str) or expected.lower() != sha256(pose_path):
-                    raise ValidationError(
-                        f"{performance}: video_landmarks SHA-256 is missing or does not match."
-                    )
+            if not isinstance(expected, str) or expected.lower() != sha256(pose_path):
+                raise ValidationError(f"{performance}: video_landmarks SHA-256 is missing or does not match.")
 
         windows = item.get("windows")
         if not isinstance(windows, dict):

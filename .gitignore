@@ -87,3 +87,12 @@ backend/data/speech-model/
 
 # Local research manifests, reference-video landmarks, and statistical results.
 backend/study/
+
+# Reference videos for the matched study: large, identifiable recordings kept local.
+study/**/reference*.mp4
+study/**/reference*.mov
+study/**/reference*.m4v
+videos/*.mp4
+videos/*.mov
+videos/*.m4v
+study/matched_study/data/AFTER/reference.mp4

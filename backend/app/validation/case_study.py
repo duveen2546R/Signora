@@ -26,29 +26,14 @@ from .trials import load_manifest, sha256
 from .video_pose import read_pose_csv
 
 
-# ---------------------------------------------------------------------------
-# Paired Maximum-Deviation Functional Equivalence Engine
-# ---------------------------------------------------------------------------
-# Predetermined linguistic tolerance margins (Delta).
-# Justified by clinical biomechanics (IMU validation) and sign phonology.
+# Exploratory tolerance profiles retained for compatibility, not validated
+# equivalence bounds or evidence of sign-language intelligibility.
 EQUIVALENCE_MARGINS = {
-    "path_movement": 0.05,      # shoulder widths (~2.5 cm)
+    "path_movement": 0.05,      # reference shoulder widths
     "arm_posture": 10.0,        # degrees
     "palm_orientation": 15.0,   # degrees
     "handshape": 0.10,          # hand scale (proportion)
 }
-# Intelligibility margins: the question is whether a viewer perceives the same
-# phonological value, not whether the movement is replicated. Each margin is half
-# the spacing between neighbouring contrastive categories, so an error inside it
-# cannot reach the next category:
-#   location   — adjacent major body regions (chin/neck/chest) are ~13–15 cm apart
-#                → ~7 cm ≈ 0.20 shoulder widths;
-#   movement   — path directions contrast in 45° steps → 22.5°;
-#   orientation— palm/finger orientations contrast in 90° steps → 45°;
-#   handshape  — minimal pairs (B vs bent-B, 5 vs claw-5) move fingertips by
-#                ~0.5 hand lengths → 0.25.
-# The 95th percentile lets up to 5% of frames (transitions, tracker dropouts)
-# fall outside, since a single frame is not perceived as a different sign.
 INTELLIGIBILITY_MARGINS = {
     "path_movement": 0.20,
     "arm_posture": 22.5,
@@ -60,27 +45,25 @@ TOLERANCE_PROFILES = {
     "intelligibility": {"margins": INTELLIGIBILITY_MARGINS, "statistic": "p95"},
 }
 # Minimum fraction of valid (non-NaN) frames required to issue a verdict
-MINIMUM_VALID_FRACTION = 0.50
+MINIMUM_VALID_FRACTION = MIN_COVERAGE
 
 
-def evaluate_functional_domain(error_curve, margin, domain_name, statistic="max"):
-    """Maximum-Deviation Functional Equivalence for one linguistic domain.
-
-    Instead of averaging the error across frames (which hides short severe
-    mistakes), we examine the *supremum* — the single worst frame.  If even
-    the worst frame stays inside the predetermined margin Δ, equivalence is
-    established for this domain.
-
-    Returns a dict with status (PASS / FAIL / INCONCLUSIVE), the max
-    deviation observed, the margin used, and the fraction of valid data.
-    """
+def evaluate_functional_domain(error_curve, margin, domain_name, statistic="max", times=None):
+    """Descriptive threshold check; missing required measurements stay missing."""
     error_curve = np.asarray(error_curve, dtype=float)
     valid = np.isfinite(error_curve)
-    valid_fraction = float(np.mean(valid)) if valid.size else 0.0
+    weights = np.ones(error_curve.size)
+    if times is not None and len(times) > 1:
+        times = np.asarray(times)
+        if times.shape != error_curve.shape or np.any(np.diff(times) <= 0):
+            raise ValidationError("Assessment timestamps must match the curve and increase.")
+        boundaries = np.r_[times[0], (times[1:] + times[:-1]) / 2, times[-1]]
+        weights = np.diff(boundaries)
+    valid_fraction = float(weights[valid].sum() / weights.sum()) if valid.size else 0.0
     if valid_fraction < MINIMUM_VALID_FRACTION:
         return {
             "status": "INCONCLUSIVE",
-            "reason": f"Only {valid_fraction:.0%} of frames have valid data (need ≥{MINIMUM_VALID_FRACTION:.0%})",
+            "reason": f"Only {valid_fraction:.0%} of assessed time has valid data (need ≥{MINIMUM_VALID_FRACTION:.0%})",
             "domain": domain_name,
             "margin": margin,
             "valid_fraction": valid_fraction,
@@ -92,7 +75,12 @@ def evaluate_functional_domain(error_curve, margin, domain_name, statistic="max"
         }
     observed = error_curve[valid]
     max_dev = float(np.max(observed))
-    tested = max_dev if statistic == "max" else float(np.percentile(observed, 95))
+    if statistic not in ("max", "p95"):
+        raise ValidationError("Statistic must be max or p95.")
+    ordered = np.argsort(observed)
+    cumulative = np.cumsum(weights[valid][ordered]) / weights[valid].sum()
+    p95 = float(observed[ordered][np.searchsorted(cumulative, .95)])
+    tested = max_dev if statistic == "max" else p95
     return {
         "status": "PASS" if tested < margin else "FAIL",
         "domain": domain_name,
@@ -100,42 +88,36 @@ def evaluate_functional_domain(error_curve, margin, domain_name, statistic="max"
         "statistic": statistic,
         "tested_deviation": tested,
         "max_deviation": max_dev,
-        "mean_deviation": float(np.mean(observed)),
+        "mean_deviation": float(np.average(observed, weights=weights[valid])),
         "median_deviation": float(np.median(observed)),
         "valid_fraction": valid_fraction,
     }
 
 
 def intersection_union_decision(domain_results):
-    """Intersection-Union: ALL domains must independently pass.
-
-    If any domain is INCONCLUSIVE, the global verdict is INCONCLUSIVE.
-    If any domain is FAIL, the global verdict is NOT EQUIVALENT.
-    Only if every domain is PASS do we declare EQUIVALENT.
-    """
+    """Combine observed checks without making a statistical equivalence claim."""
     statuses = [r["status"] for r in domain_results.values()]
     if not statuses or "INCONCLUSIVE" in statuses:
         return "INCONCLUSIVE"
     elif "FAIL" in statuses:
-        return "NOT EQUIVALENT"
+        return "OBSERVED TOLERANCE EXCEEDED"
     else:
-        return "EQUIVALENT"
+        return "OBSERVED TOLERANCE SATISFIED"
 
 
-def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands_2d=None, profile="replication"):
-    """Evaluate all four linguistic domains for one capture system.
+def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands_2d=None, profile="replication", times=None):
+    """Evaluate all four projected movement domains for one capture system.
 
     Returns a Clip-Level Tolerance Certificate with per-domain verdicts
-    and the global Intersection-Union decision.
+    and their descriptive combined assessment.
     """
     n_frames = len(pred_xy)
 
     # --- Domain 1: Path Movement (wrist + elbow position in shoulder widths) ---
     # TARGETS = (4, 5, 6, 7) → left_wrist, right_wrist, left_elbow, right_elbow
-    path_errors = np.full(n_frames, np.nan)
-    for j in (4, 5, 6, 7):
-        frame_err = np.linalg.norm(pred_xy[:, j] - ref_xy[:, j], axis=1)
-        path_errors = np.fmax(path_errors, frame_err)  # per-frame max across joints
+    path_errors = np.max(np.linalg.norm(
+        pred_xy[:, TARGETS] - ref_xy[:, TARGETS], axis=2
+    ), axis=1)
 
     # --- Domain 2: Arm Posture (elbow bend + upper/forearm direction) ---
     arm_angle_errors = _arm_posture_errors(pred_xy, ref_xy)
@@ -159,27 +141,42 @@ def clip_level_certificate(label, pred_xy, ref_xy, pred_hands_2d=None, ref_hands
     curves = {
         "path_movement": (path_errors, "Hand Location (Path)"),
         "arm_posture": (arm_angle_errors, "Arm Posture (Kinematics)"),
-        "palm_orientation": (palm_angle_errors, "Palm Orientation (Wrist Rotation)"),
+        "palm_orientation": (palm_angle_errors, "Projected wrist-to-index direction"),
         "handshape": (hand_errors, "Handshape (Fingers)"),
     }
     domains = {
-        key: evaluate_functional_domain(curve, margins[key], name, statistic)
+        key: evaluate_functional_domain(curve, margins[key], name, statistic, times)
         for key, (curve, name) in curves.items()
     }
     decision = intersection_union_decision(domains)
     return {
         "label": label,
         "decision": decision,
+        "required_joint_coverage": {
+            CASE_JOINTS[j]: float(np.isfinite(pred_xy[:, j] - ref_xy[:, j]).all(axis=1).mean())
+            for j in range(min(pred_xy.shape[1], len(CASE_JOINTS)))
+        },
+        "hand_coverage": {
+            side: float(np.isfinite(pred_hands_2d[:, i] - ref_hands_2d[:, i]).all(axis=(1, 2)).mean())
+            if pred_hands_2d is not None and ref_hands_2d is not None else 0.0
+            for i, side in enumerate(("left", "right"))
+        },
         "domains": domains,
         "margins": margins,
         "tolerance_profile": profile,
         "statistic": statistic,
+        "assessment_kind": "observed_tolerance",
+        "margin_status": "exploratory",
+        "statistical_equivalence": {"status": "not_established", "reasons": [
+            "Measurement uncertainty has not been independently calibrated.",
+            "Tolerance margins lack validated movement-fidelity justification.",
+            "A single projected recording cannot establish full 3D equivalence.",
+        ]},
     }
 
 
-# A projected segment shorter than this fraction of its in-plane length points
-# mostly toward or away from the camera (> ~65° out of plane); its 2D direction
-# is then dominated by landmark noise, so angular comparisons are undefined.
+# Heuristic visibility mask based on projected segment length. It is not a
+# calibrated estimate of out-of-plane angle or measurement uncertainty.
 MIN_FORESHORTENING = 0.40
 
 
@@ -207,10 +204,10 @@ def _direction_errors(p, r):
 
 
 def _nanmax_rows(values):
-    """Row maximum over measured entries; rows with nothing measured stay missing."""
+    """Maximum requiring every component; a hidden side cannot pass via the other side."""
     result = np.full(len(values), np.nan)
-    measured = np.isfinite(values).any(axis=1)
-    result[measured] = np.nanmax(values[measured], axis=1)
+    measured = np.isfinite(values).all(axis=1)
+    result[measured] = np.max(values[measured], axis=1)
     return result
 
 
@@ -237,7 +234,7 @@ def _arm_posture_errors(pred_xy, ref_xy):
         visible = np.isfinite(dir_errs[side]) & np.isfinite(dir_errs[side + 2])
         elbow_err[~visible, side] = np.nan
 
-    # Stack: (n, 6) = 2 elbows + 4 segment directions; per-frame max of measured ones
+    # Stack: (n, 6); a frame needs both elbows and all four segment directions.
     return _nanmax_rows(np.column_stack([elbow_err] + dir_errs))
 
 
@@ -485,13 +482,14 @@ def primary_camera_fits(xyz, reference, calibration_mask, reference_view="automa
         status = "user_declared_front_view"
     else:
         raise ValidationError("Reference view must be automatic or front.")
+    alternatives = fits if reference_view == "automatic" else []
     fit = frontal_camera_fit(xyz, reference, calibration_mask)
     fit["status"] = status
     fit["orientation_policy"] = "Fixed upright frontal camera from anatomical shoulders and world up; no arm or finger fitting."
     valid = calibration_mask & np.isfinite(reference[:, :4]).all(axis=(1, 2))
     residual = project(xyz, fit)[valid, :4] - reference[valid, :4]
     fit["torso_rmse"] = float(np.sqrt(np.mean(residual**2))) if valid.any() else None
-    return [fit]
+    return [fit, *alternatives]
 
 
 MIRRORED_YAW_DEG = 10.0
@@ -720,10 +718,25 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
             "status": "not_applicable",
             "reason": "Separate or unverified performances cannot be synchronized as an accuracy test. Movement differences include variation between repetitions.",
         }, None
-    phase = np.linspace(0, 1, 101)
-    video_queries = (
-        trial.windows["video"][0] + phase * np.diff(trial.windows["video"])[0]
-    )
+    # Union of source clocks keeps every native video and FBX sample, including
+    # short spikes missed by a fixed 101-point phase grid. Other streams are
+    # interpolated only under their existing coverage and maximum-gap rules.
+    start, end = trial.windows["video"]
+    clocks = [np.array([start, end]), pose.times[(pose.times >= start) & (pose.times <= end)]]
+    for label, motion in motions.items():
+        lo, hi = trial.windows[label]
+        native = motion.times[(motion.times >= lo) & (motion.times <= hi)]
+        if mode == "synchronized":
+            sync = config.get("synchronization", {}).get(label, {})
+            if sync_queries(np.array([start]), config.get("synchronization", {}), label) is None:
+                return {"status": "indeterminate", "reason": "Source clocks and synchronization events are not verified."}, None
+            event = sync["event"]
+            clock = event["video_seconds"] + (native - event["fbx_seconds"]) * sync.get("video_seconds_per_fbx_second", 1.0)
+        else:
+            clock = start + (native - lo) / (hi - lo) * (end - start)
+        clocks.append(clock[(clock >= start) & (clock <= end)])
+    video_queries = np.unique(np.round(np.concatenate(clocks), 12))
+    phase = (video_queries - start) / (end - start)
     if video_queries[-1] > pose.times[-1] + 1e-7:
         raise ValidationError("Video window exceeds the reference landmark clock.")
     motion_queries = {}
@@ -764,6 +777,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
     )
     predictions, fits, measures, ranges = {}, {}, {}, {}
     frontal, frontal_predictions = {}, {}
+    xyz_for_camera, hands_for_camera = {}, {}
     for label, motion in motions.items():
         queries = motion_queries[label]
         if mode == "synchronized":
@@ -776,6 +790,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
         center = raw_xyz[:, :2].mean(axis=1)
         xyz = (raw_xyz - center[:, None, :]) / shoulder_m
 
+        xyz_for_camera[label] = xyz
         solutions = primary_camera_fits(xyz, reference, calibration_mask, config.get("reference_view", "automatic"))
         for fit in solutions:
             fit["metrics"] = measure(reference, project(xyz, fit), valid)
@@ -786,6 +801,7 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
             raw_hands = sample_motion_hands(motion, queries)
             norm_hands = (raw_hands - center[:, None, None, :]) / shoulder_m
             flat_hands = norm_hands.reshape(len(queries), 42, 3)
+            hands_for_camera[label] = flat_hands
             proj_hands = project(flat_hands, solutions[0]).reshape(len(queries), 2, 21, 2)
             if "hands" not in predictions:
                 predictions["hands"] = {}
@@ -870,10 +886,29 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
                 pred_h[~valid] = np.nan
             if ref_h is not None:
                 ref_h[~valid] = np.nan
-            comparison["equivalence"][label] = clip_level_certificate(
-                LABELS[label], pred, ref, pred_h, ref_h,
-                config.get("tolerance_profile", "replication"),
-            )
+            profiles = {profile: clip_level_certificate(
+                LABELS[label], pred, ref, pred_h, ref_h, profile, video_queries,
+            ) for profile in TOLERANCE_PROFILES}
+            comparison["equivalence"][label] = dict(profiles[config.get("tolerance_profile", "replication")])
+            comparison["equivalence"][label]["profile_sensitivity"] = profiles
+            cameras = []
+            for fit in fits[label]["solutions"]:
+                alt_pred = project(xyz_for_camera[label], fit)
+                alt_pred[~valid] = np.nan
+                alt_hands = None
+                if label in hands_for_camera:
+                    alt_hands = project(hands_for_camera[label], fit).reshape(len(video_queries), 2, 21, 2)
+                    alt_hands[~valid] = np.nan
+                cameras.append(clip_level_certificate(LABELS[label], alt_pred, ref, alt_hands, ref_h,
+                    config.get("tolerance_profile", "replication"), video_queries))
+            comparison["equivalence"][label]["camera_sensitivity"] = {
+                "interpretation": "Admitted torso fits only; not confidence intervals. No fit selected by target error.",
+                "decisions": [c["decision"] for c in cameras],
+                "domain_ranges": {key: [min(values), max(values)] if values else None
+                    for key in EQUIVALENCE_MARGINS
+                    for values in [[c["domains"][key]["tested_deviation"] for c in cameras
+                                    if c["domains"][key]["tested_deviation"] is not None]]},
+            }
     except Exception as e:
         comparison["equivalence"] = {"error": str(e)}
     sensitivity = []
@@ -931,6 +966,9 @@ def score_mode(trial, pose, video_hands, motions, metadata, config, mode):
     return {
         "status": "descriptive",
         "alignment": mode,
+        "sampling_policy": "union_of_native_source_clocks",
+        "n_assessed_samples": len(video_queries),
+        "synchronization_evidence": "declared_or_estimated_not_independently_validated" if mode == "synchronized" else "phase_normalized_no_timing_agreement",
         "reference_view": config.get("reference_view", "automatic"),
         "tolerance_profile": config.get("tolerance_profile", "replication"),
         "common_coverage": coverage,
@@ -1001,8 +1039,8 @@ def run_case_study(manifest, output):
     ):
         raise ValidationError("Video metadata needs positive width and height.")
     if (
-        metadata.get("video_sha256") == "forcefail" and metadata.get("video_sha256") != trial.hashes.get("reference_video", "")
-        or False
+        metadata.get("video_sha256") != trial.hashes["reference_video"]
+        or metadata.get("landmarks_sha256") != trial.hashes["video_landmarks"]
     ):
         raise ValidationError(
             "Video metadata does not identify the current video and landmarks."
@@ -1019,9 +1057,11 @@ def run_case_study(manifest, output):
 
     video_hands = None
     upper_npz = Path(trial.video_landmarks).with_suffix(".upper.npz")
+    if metadata.get("upper_body") and not upper_npz.is_file():
+        raise ValidationError("Upper-body reference file is missing.")
     if upper_npz.exists():
         upper_info = metadata.get("upper_body", {})
-        if upper_info.get("sha256") and sha256(upper_npz) != upper_info["sha256"]:
+        if upper_info.get("file") != upper_npz.name or sha256(upper_npz) != upper_info.get("sha256"):
             raise ValidationError("Upper-body reference file hash does not match.")
         with np.load(upper_npz, allow_pickle=False) as data:
             video_hands = data["hands"].copy()
@@ -1036,7 +1076,7 @@ def run_case_study(manifest, output):
     durations = {
         label: float(end - start) for label, (start, end) in trial.windows.items()
     }
-    qc = []
+    qc = ["Synchronization is declared or estimated; its uncertainty is not independently validated. Both tolerance profiles are exploratory."]
     if not matched:
         qc.append(
             "Recording correspondence: separate or unverified performances. Position and angle differences combine performance variation, skeleton geometry, tracking, and projection. They cannot establish capture accuracy or superiority."
@@ -1082,6 +1122,26 @@ def run_case_study(manifest, output):
                 )
         else:
             qc.append(f"{mode}: {result['reason']}")
+    alignment_sensitivity = {"status": "unavailable", "interpretation": "No usable synchronized assessment."}
+    if results["synchronized"]["status"] == "descriptive":
+        step = float(np.median(np.diff(pose.times)))
+        scenarios = []
+        for offset in (-step, 0.0, step):
+            if offset == 0:
+                assessment = results["synchronized"]
+            else:
+                alternative = json.loads(json.dumps(config))
+                for sync in alternative.get("synchronization", {}).values():
+                    if sync.get("event"):
+                        sync["event"]["video_seconds"] += offset
+                try:
+                    assessment, _ = score_mode(trial, pose, video_hands, motions, metadata, alternative, "synchronized")
+                except ValidationError as exc:
+                    assessment = {"status": "indeterminate", "reason": str(exc)}
+            scenarios.append({"video_event_offset_s": offset, "status": assessment["status"],
+                "reason": assessment.get("reason"), "certificates": assessment.get("comparison", {}).get("equivalence", {})})
+        alignment_sensitivity = {"status": "descriptive", "scenarios": scenarios,
+            "interpretation": "Declared alignment plus/minus one native reference-frame interval. Resolution diagnostic only, not a calibrated uncertainty bound or independently verified timing. No scenario is chosen by target error."}
     timing_sensitivity = []
     synchronized = results["synchronized"]["status"] == "descriptive"
     adjusted_duration = {}
@@ -1107,7 +1167,14 @@ def run_case_study(manifest, output):
             }
         )
     report = {
-        "analysis_version": "video-fbx-case-v4-front-view",
+        "analysis_version": "video-fbx-case-v5-observed-agreement",
+        "assessment_kind": "observed_tolerance",
+        "reference_uncertainty": "unvalidated; legacy hand sidecars have no per-point confidence",
+        "statistical_equivalence": {"status": "not_established", "reasons": [
+            "No independently validated landmark, camera, or timing uncertainty model.",
+            "Both tolerance profiles are exploratory, not justified equivalence margins.",
+            "Measurements cover observable projected movement in one recording only.",
+        ]},
         "primary_analysis": "synchronized" if synchronized else "phase_normalized",
         "reference_view": config.get("reference_view", "automatic"),
         "tolerance_profile": config.get("tolerance_profile", "replication"),
@@ -1208,6 +1275,7 @@ def run_case_study(manifest, output):
         "clock_adjusted_duration_difference_vs_video_s": adjusted_duration or None,
         "timing_tolerance_sensitivity": timing_sensitivity,
         "analyses": results,
+        "alignment_sensitivity": alignment_sensitivity,
         "artifacts": {
             "html": "report.html",
             "summary": "summary.json",
@@ -1255,12 +1323,95 @@ def run_case_study(manifest, output):
             trial, pose, report, artifacts[overlay_mode], output
         )
         report["artifacts"]["comparison_overlay"] = "comparison_overlay.png"
+        try:
+            if full_sequence_overlay(trial, pose, motions, report, output, video_hands):
+                report["artifacts"]["full_sequence_overlay"] = "full_sequence_overlay.mp4"
+                review_markup += '<p>Full sequence review: <a href="full_sequence_overlay.mp4">full_sequence_overlay.mp4</a> (local companion file). Points follow stored source timestamps; playback uses the nominal reference frame rate.</p>'
+        except (ValidationError, KeyError) as exc:
+            report["qc"]["issues"].append(f"Full-sequence overlay unavailable: {exc}")
+            report["qc"]["status"] = "provisional"
     render_report(report, artifacts, output, review_markup)
     report["artifacts"]["figures"] = [p.name for p in sorted(output.glob("*.svg"))]
     (output / "summary.json").write_text(
         json.dumps(_safe(report), indent=2, allow_nan=False) + "\n"
     )
     return report
+
+
+def full_sequence_overlay(trial, pose, motions, report, output, video_hands):
+    """Sequentially decode all frames and draw both reference and FBX body/hands."""
+    import cv2
+    mode = report["primary_analysis"]
+    result = report["analyses"][mode]
+    metadata = report["provenance"]["video"]
+    config = report["provenance"]["configuration"]
+    capture = cv2.VideoCapture(str(trial.reference_video))
+    writer = None
+    destination = output / "full_sequence_overlay.mp4"
+    edges = ((0, 1), (0, 2), (1, 3), (0, 6), (6, 4), (1, 7), (7, 5), (4, 8), (5, 9))
+    count = 0
+    try:
+        while True:
+            ok, frame = capture.read()
+            if not ok:
+                break
+            if count >= len(pose.times):
+                raise ValidationError("Overlay frame count exceeds stored reference clock.")
+            time = pose.times[count]
+            reference = pose.xy[count] * [metadata["width"], metadata["height"]]
+            center = reference[:2].mean(axis=0)
+            tracks = [(reference, (80, 230, 80))]
+            hands = []
+            if video_hands is not None:
+                hands.append((video_hands[count] * [metadata["width"], metadata["height"]], (80, 230, 80)))
+            if trial.windows["video"][0] <= time <= trial.windows["video"][1] and np.isfinite(center).all():
+                for label, motion in motions.items():
+                    if mode == "synchronized":
+                        queries = sync_queries(np.array([time]), config.get("synchronization", {}), label)
+                    else:
+                        phase = (time - trial.windows["video"][0]) / np.diff(trial.windows["video"])[0]
+                        queries = np.array([trial.windows[label][0] + phase * np.diff(trial.windows[label])[0]])
+                    if queries is None or not trial.windows[label][0] <= queries[0] <= trial.windows[label][1]:
+                        continue
+                    xyz = sample_motion(motion, queries)
+                    origin = xyz[:, :2].mean(axis=1)
+                    calibration = result["calibration"][label]
+                    scale = calibration["source_shoulder_width_m"]
+                    fit = calibration["solutions"][0]
+                    pixels = result["reference_shoulder_width_pixels"]
+                    color = (240, 180, 0) if label == "suit" else (0, 140, 250)
+                    tracks.append((project((xyz - origin[:, None]) / scale, fit)[0] * pixels + center, color))
+                    joints = sample_motion_hands(motion, queries)
+                    projected = project(((joints - origin[:, None, None]) / scale).reshape(1, 42, 3), fit)
+                    hands.append((projected.reshape(2, 21, 2) * pixels + center, color))
+            for xy, color in tracks:
+                for a, b in edges:
+                    if max(a, b) < len(xy) and np.isfinite(xy[[a, b]]).all():
+                        cv2.line(frame, tuple(np.round(xy[a]).astype(int)), tuple(np.round(xy[b]).astype(int)), color, 5)
+            for points, color in hands:
+                for hand in points:
+                    for finger in range(5):
+                        chain = [0, *range(1 + 4 * finger, 5 + 4 * finger)]
+                        for a, b in zip(chain, chain[1:]):
+                            if np.isfinite(hand[[a, b]]).all():
+                                cv2.line(frame, tuple(np.round(hand[a]).astype(int)), tuple(np.round(hand[b]).astype(int)), color, 3)
+            ratio = min(1.0, 960 / max(frame.shape[:2]))
+            size = tuple(max(2, int(d * ratio) // 2 * 2) for d in (frame.shape[1], frame.shape[0]))
+            frame = cv2.resize(frame, size)
+            cv2.putText(frame, f"{time:.3f}s | green: video, blue: Rokoko | {mode}", (8, 24), cv2.FONT_HERSHEY_SIMPLEX, .42, (255, 255, 255), 1)
+            if writer is None:
+                writer = cv2.VideoWriter(str(destination), cv2.VideoWriter_fourcc(*"avc1"), metadata["frame_rate"], size)
+                if not writer.isOpened():
+                    raise ValidationError("H.264 full-sequence overlay encoder unavailable.")
+            writer.write(frame)
+            count += 1
+        if count != len(pose.times):
+            raise ValidationError("Overlay frame count differs from stored reference clock.")
+    finally:
+        capture.release()
+        if writer is not None:
+            writer.release()
+    return count > 0
 
 
 def comparison_overlay(trial, pose, report, artifact, output):
@@ -1529,16 +1680,16 @@ def render_report(report, artifacts, output, review_markup=""):
             f"<tr><td>{name}</td><td>{fmt(values['old_minus_motioncapture'])}</td><td>{fmt(values['percentage_reduction_from_old'])}%</td></tr>"
             for name, values in result["comparison"].get("position", {}).items()
         )
-        certificate_html = "<h3>Intersection-Union Decision Rule</h3>"
+        certificate_html = "<h3>Observed tolerance checks</h3><p>Both profiles are exploratory. PASS means an observed threshold was satisfied, not statistical equivalence or intelligibility. All required sides and joints need at least 80% complete coverage.</p>"
         for label, certificate in result["comparison"].get("equivalence", {}).items():
             if label == "error":
                 certificate_html += f"<p>{escape(str(certificate))}</p>"
                 continue
             certificate_html += f"<h4>{LABELS[label]}: {escape(certificate['decision'])}</h4>"
-            certificate_html += "<table><tr><th>Domain</th><th>Margin</th><th>Maximum deviation</th><th>Status</th></tr>"
+            certificate_html += "<table><tr><th>Domain</th><th>Margin</th><th>Tested deviation</th><th>Coverage</th><th>Status</th></tr>"
             for domain in certificate["domains"].values():
-                certificate_html += f"<tr><td>{escape(domain['domain'])}</td><td>{fmt(domain['margin'])}</td><td>{fmt(domain.get('tested_deviation', domain['max_deviation']))}</td><td>{domain['status']}</td></tr>"
-            certificate_html += "</table>"
+                certificate_html += f"<tr><td>{escape(domain['domain'])}</td><td>{fmt(domain['margin'])}</td><td>{fmt(domain.get('tested_deviation', domain['max_deviation']))}</td><td>{domain['valid_fraction']:.1%}</td><td>{domain['status']}</td></tr>"
+            certificate_html += "</table><details><summary>Both exploratory profiles</summary><pre>" + escape(json.dumps(certificate.get("profile_sensitivity", {}), indent=2)) + "</pre></details>"
         tolerances = "".join(
             f"<tr><td>{row['tolerance_shoulder_widths']}</td>"
             + "".join(f"<td>{row[label]['fraction_frames_all_targets_within']:.1%}</td>" for label in motions)
@@ -1591,6 +1742,7 @@ def render_report(report, artifacts, output, review_markup=""):
 <div class="notice"><strong>{notice}</strong><p>{escape(report['interpretation'])}</p><p>Statistical equivalence not established. Tracking and reference landmarks have measurement uncertainty.</p></div>
 <h2>Quality and review status: {report['qc']['status']}</h2><ul>{issues}</ul>{review_markup}
 <h2>Skeleton geometry</h2><p>Native 3D segment lengths divided by shoulder width. These show differences between the exported skeletons; they do not measure accuracy. Position differences include skeleton proportions as well as movement and projection.</p><pre>{escape(json.dumps(report.get('skeleton_proportions', {}), indent=2))}</pre>
+<h2>Alignment resolution sensitivity</h2><pre>{escape(json.dumps(report.get('alignment_sensitivity', {}), indent=2))}</pre>
 <h2>Timing diagnostics</h2><p>Timing status: {report['timing_status']}. The raw annotated durations below use each file's stored clock. Separate repetitions cannot be treated as synchronized observations of one performance.</p>
 <pre>{escape(json.dumps({'durations_s':report['durations_s'],'native_duration_difference_vs_video_s':report['native_duration_difference_vs_video_s'],'clock_adjusted_duration_difference_vs_video_s':report['clock_adjusted_duration_difference_vs_video_s']},indent=2))}</pre>
 <table><tr><th>Exploratory threshold</th><th>MotionCaptureFBX duration within</th><th>oldFBX duration within</th><th>Status</th></tr>{timing}</table>

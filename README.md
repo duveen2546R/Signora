@@ -57,8 +57,8 @@ and cached on first use; the old MediaPipe `.task` models are not required for a
 On the Analysis page, select **Front view — performer faces the camera** for a frontal
 reference video. This applies a fixed upright camera based on anatomical shoulder
 direction, regardless of the FBX world heading, to both body and finger joints.
-Verified synchronization is used for the primary result when it produces valid scores.
-Use the projected overlay to review alignment; front-view selection does not guarantee
+Declared or estimated synchronization is used for the primary result when it produces valid scores.
+New comparisons assess the union of native source timestamps, require coverage of every required side and joint, and expose both exploratory tolerance profiles. Observed threshold checks do not establish statistical equivalence; timing and camera sensitivity are not confidence intervals. Use the full-sequence projected overlay to review alignment; front-view selection does not guarantee
 that the motion passes the configured tolerances.
 
 Start the API:

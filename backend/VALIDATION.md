@@ -1,5 +1,51 @@
 # Independent motion validation
 
+## Current single-pair assessment (v5)
+
+The current extractor uses DWPose/rtmlib, not the historical MediaPipe task setup
+below. Install `requirements-validation-video.txt`; ONNX weights are cached on
+first use. New hand extraction rejects individual points below 0.70 confidence,
+outside the image, or non-finite. These scores are not calibrated uncertainty.
+Historical hand sidecars do not supply per-point confidence and are labelled
+unvalidated; they are not silently re-extracted or upgraded.
+
+Case reports check source hashes, metadata-to-video/landmark linkage, and hashed
+hand sidecars. Every required side and joint must be measured; one visible hand
+cannot substitute for the other. Complete-domain coverage requires at least 80%
+of assessed time. The assessment clock is the union of native video and mapped
+FBX timestamps plus action endpoints. This retains native short motion excursions;
+other streams use bounded interpolation. It cannot reveal motion between all
+source samples. Maxima use assessed points; domain P95 and mean weight their
+local time support rather than letting a denser clock dominate. Per-joint and
+per-hand coverage fields report sample fractions; `domains.valid_fraction` reports
+time support. No frame is an independent population replication.
+
+The `equivalence` JSON key is retained for consumers, but new `decision` values
+are `OBSERVED TOLERANCE SATISFIED`, `OBSERVED TOLERANCE EXCEEDED`, or
+`INCONCLUSIVE`. `assessment_kind` is `observed_tolerance` and
+`statistical_equivalence.status` remains `not_established`. Both `replication`
+(maximum; default for new website submissions) and legacy `intelligibility` (P95)
+profiles are exploratory. Both are exported under `profile_sensitivity`.
+Neither establishes linguistic comprehension or statistically justified movement
+equivalence. The wrist-to-index metric is a projected direction proxy, not 3D
+palm rotation. All admitted torso fits are retained for camera sensitivity,
+including alternatives when automatic yaw uses a frontal fallback.
+
+Synchronized scoring uses declared or estimated annotations, not independently
+verified timing. `alignment_sensitivity` repeats scoring at the declared offset
+and plus/minus one native reference-frame interval, without selecting a scenario
+by target error. These are resolution diagnostics, not confidence intervals or
+calibrated error bounds. Phase normalization and DTW remain shape diagnostics.
+The reference, synchronization and camera measurement-error model and the movement
+acceptance margins need independent validation before a statistical claim.
+
+Reports include source-clock CSV traces, both profiles, coverage and sensitivity
+results, a five-frame contact sheet and a full-sequence body/finger projection
+video. Overlay timestamps refer to the stored video clock; its MP4 playback uses
+the nominal frame rate. Overlay failures are recorded rather than hidden.
+Historical results are immutable and the UI labels their earlier rules explicitly.
+Generated local reports should use a fresh directory under ignored `backend/study/`.
+
 ## Website recording relationship and validity
 
 The **Analysis** page now distinguishes one simultaneous performance, separate repetitions, and

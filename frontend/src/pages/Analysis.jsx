@@ -7,6 +7,7 @@ import { SOURCES, buildAnalysisOptions } from '../analysisForm'
 const STAGES = { queued: 'Waiting for the comparison to start…', inspecting: 'Checking files and recording clocks…', extracting: 'Tracking the joints in your video…', scoring: 'Comparing motion and preparing the report…' }
 const INITIAL_WINDOWS = { suit: { start: '', end: '' }, non_suit: { start: '', end: '' }, video: { start: '', end: '' } }
 const INITIAL_TIMING = Object.fromEntries(['suit', 'non_suit'].map((key) => [key, { description: '', video: '', fbx: '', rate: '1', evidence: '', rateEvidence: '' }]))
+const observedDecision = (value) => ({ EQUIVALENT: 'Observed tolerance satisfied', 'NOT EQUIVALENT': 'Observed tolerance exceeded' }[value] ?? value)
 const format = (value) => Number.isFinite(value) ? value.toFixed(3) : '—'
 
 
@@ -17,14 +18,16 @@ export function Result({ job }) {
   const available = analysis.status === 'descriptive'
   const certificates = Object.entries(analysis.comparison?.equivalence ?? {}).filter(([, certificate]) => certificate?.domains)
   const domains = certificates[0]?.[1].domains ?? {}
-  const intelligibility = certificates[0]?.[1].tolerance_profile === 'intelligibility'
+  const historical = summary.assessment_kind !== 'observed_tolerance'
   const similarity = summary.comparison_kind === 'movement_similarity' || job.recordingRelationshipCorrection === 'separate_repetitions'
 
   return (
     <section className="analysis__results" aria-labelledby="results-heading">
       <div className="panel__head"><div><p className="analysis__eyebrow">Your comparison</p><h2 id="results-heading">Analysis Results</h2></div><span className="status">Report generated</span></div>
       <p>{summary.performance_id}</p>
-      <p className="hint">Alignment: {primaryMode === 'synchronized' ? 'Verified synchronized timing' : 'Phase-normalized movement'}. Camera: {analysis.reference_view === 'front' ? 'Front view — declared reference orientation' : 'Automatic torso fit'}.</p>
+      <p className="analysis__notice"><strong>Statistical equivalence not established.</strong> This report measures observable projected movement. Both tolerance profiles are exploratory; measurement uncertainty and acceptance margins have not been independently validated.</p>
+      {historical && <p className="hint">Historical report: earlier scores and coverage rules are retained. Earlier equivalence labels describe observed thresholds only. Run a new comparison for native-clock coverage checks.</p>}
+      <p className="hint">Alignment: {primaryMode === 'synchronized' ? 'Declared or estimated synchronized timing' : 'Phase-normalized movement'}. Camera: {analysis.reference_view === 'front' ? 'Front view — declared reference orientation' : 'Automatic torso fit'}.</p>
       {analysis.reference_view === 'front' && <p className="analysis__notice">The FBX is projected into an upright front view using its shoulders and world up. Review the overlay to confirm this matches the reference camera.</p>}
       {analysis.calibration_sensitivity?.unresolved && <p className="analysis__notice">Camera orientation remains ambiguous. Review the projected overlay before interpreting the verdict.</p>}
 
@@ -33,7 +36,7 @@ export function Result({ job }) {
         <summary>Diagnostic Warnings & Assumptions</summary>
         <div style={{ marginTop: '1rem' }}>
           {job.supersededBy && <p className="analysis__notice">This historical report used the earlier same-performance assumption. You clarified that these are separate repetitions. <a className="link" href={`?job=${encodeURIComponent(job.supersededBy)}`}>Open the corrected movement-similarity report.</a></p>}
-          <div className="analysis__notice"><strong>{similarity ? 'Capture accuracy cannot be determined from these recordings' : 'Statistical equivalence not established'}</strong><p>{similarity ? 'These are separate or unverified performances. Scores describe movement similarity and include differences in how the action was performed. They cannot prove which capture method is more accurate.' : `This report describes one performance. Timing ${summary.timing_status === 'indeterminate' ? 'remains unverified' : 'uses your verified event annotations'}; thresholds are exploratory.`}</p></div>
+          <div className="analysis__notice"><strong>{similarity ? 'Capture accuracy cannot be determined from these recordings' : 'Statistical equivalence not established'}</strong><p>{similarity ? 'These are separate or unverified performances. Scores describe movement similarity and include differences in how the action was performed. They cannot prove which capture method is more accurate.' : `This report describes one performance. Timing ${summary.timing_status === 'indeterminate' ? 'remains unverified' : 'uses declared or estimated event annotations'}; thresholds are exploratory.`}</p></div>
           {(summary.qc?.issues ?? []).length > 0 && <div className="analysis__review"><h3>Review before interpreting</h3><ul>{summary.qc.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}
         </div>
       </details>
@@ -52,14 +55,14 @@ export function Result({ job }) {
         {certificates.length > 0 && (
           <div className="analysis__notice" style={{ marginTop: '1rem', marginBottom: '2rem', backgroundColor: 'inherit', padding: 0, border: 'none' }}>
             <p style={{ marginBottom: '1rem' }}>
-              <strong>Intersection-Union Decision Rule:</strong> To be declared <em>EQUIVALENT</em> to the reference video, the motion capture system must stay within the tolerance margin for ALL linguistic domains simultaneously. {intelligibility ? 'Standard: intelligibility — each margin is half the distance to the neighbouring contrastive category, tested at the 95th-percentile frame.' : 'Standard: exact replication — tested at the single worst frame.'}
+              <strong>Observed tolerance checks:</strong> Each domain requires complete measurements of all required sides and joints over at least 80% of assessed time. Replication uses the maximum assessed deviation; the wider legacy profile uses a time-weighted P95. Passing these checks does not establish statistical equivalence or sign comprehension.
             </p>
             <div className="analysis__table-wrap">
               <table className="jobs" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #ccc' }}>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Linguistic Domain</th>
-                    <th style={{ padding: '0.75rem 0.5rem' }}>Tolerance Margin (Δ)</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Measured domain</th>
+                    <th style={{ padding: '0.75rem 0.5rem' }}>Exploratory limit</th>
                     {certificates.map(([label, certificate]) => <th key={label} style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>{certificate.label ?? label}</th>)}
                   </tr>
                 </thead>
@@ -68,8 +71,8 @@ export function Result({ job }) {
                     const formatDeviation = format;
                     const renderCell = (label, dom = { status: 'INCONCLUSIVE' }) => (
                       <td key={label} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', backgroundColor: dom.status === 'PASS' ? 'rgba(74, 222, 128, 0.15)' : (dom.status === 'FAIL' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(253, 224, 71, 0.15)') }}>
-                        <strong>{dom.status}</strong><br/>
-                        <small>{formatDeviation(dom.tested_deviation ?? dom.max_deviation)}{dom.statistic === 'p95' ? ' (95th pct.)' : ''}</small>
+                        <strong>{dom.status === 'PASS' ? 'Observed threshold satisfied' : dom.status === 'FAIL' ? 'Observed threshold exceeded' : dom.status}</strong><br/>
+                        <small>{formatDeviation(dom.tested_deviation ?? dom.max_deviation)}{dom.statistic === 'p95' ? ' (95th pct.)' : ''}</small><br /><small>Coverage: {Number.isFinite(dom.valid_fraction) ? `${(dom.valid_fraction * 100).toFixed(1)}%` : 'unavailable'}</small>
                       </td>
                     );
                     return (
@@ -83,9 +86,9 @@ export function Result({ job }) {
                 </tbody>
                 <tfoot>
                   <tr style={{ backgroundColor: '#f1f5f9', borderTop: '2px solid #ccc' }}>
-                    <td colSpan={2} style={{ padding: '1rem 0.5rem', fontWeight: 'bold', textAlign: 'right', color: '#1e293b' }}>Global Verdict:</td>
-                    {certificates.map(([label, certificate]) => <td key={label} style={{ padding: '1rem 0.5rem', textAlign: 'center', fontWeight: 'bold', color: certificate.decision === 'EQUIVALENT' ? '#16a34a' : '#dc2626' }}>
-                      {certificate.decision}
+                    <td colSpan={2} style={{ padding: '1rem 0.5rem', fontWeight: 'bold', textAlign: 'right', color: '#1e293b' }}>Observed assessment:</td>
+                    {certificates.map(([label, certificate]) => <td key={label} style={{ padding: '1rem 0.5rem', textAlign: 'center', fontWeight: 'bold', color: certificate.decision === 'OBSERVED TOLERANCE SATISFIED' ? '#16a34a' : '#dc2626' }}>
+                      {observedDecision(certificate.decision)}
                     </td>)}
                   </tr>
                 </tfoot>
@@ -99,8 +102,29 @@ export function Result({ job }) {
         {certificates.length === 0 && !analysis.comparison?.equivalence?.error && <p role="status">This report has no domain certificates. Run a new comparison to generate them.</p>}
       </> : <p className="error" role="status">No shape scores were produced: {analysis.reason}</p>}
 
+      {certificates.map(([label, certificate]) => <details className="analysis__advanced" key={label}>
+        <summary>{certificate.label ?? label}: profiles, coverage and camera sensitivity</summary>
+        {Object.entries(certificate.profile_sensitivity ?? {}).map(([profile, assessment]) => <div key={profile}>
+          <h4>{profile === 'replication' ? 'Replication profile — maximum' : 'Wider legacy profile — time-weighted P95'}</h4>
+          <p>{observedDecision(assessment.decision)}</p>
+          <div className="analysis__table-wrap"><table className="jobs"><thead><tr><th>Domain</th><th>Exploratory limit</th><th>Observed deviation</th><th>Time coverage</th></tr></thead><tbody>
+            {Object.entries(assessment.domains ?? {}).map(([key, domain]) => <tr key={key}><td>{domain.domain}</td><td>{format(domain.margin)}</td><td>{format(domain.tested_deviation)}</td><td>{Number.isFinite(domain.valid_fraction) ? `${(domain.valid_fraction * 100).toFixed(1)}%` : 'Unavailable'}</td></tr>)}
+          </tbody></table></div>
+        </div>)}
+        <div className="analysis__table-wrap"><table className="jobs"><caption>Complete sample coverage by joint and hand</caption><thead><tr><th>Measurement</th><th>Coverage</th></tr></thead><tbody>
+          {Object.entries(certificate.required_joint_coverage ?? {}).map(([name, fraction]) => <tr key={name}><td>{name.replaceAll('_', ' ')}</td><td>{(fraction * 100).toFixed(1)}%</td></tr>)}
+          {Object.entries(certificate.hand_coverage ?? {}).map(([name, fraction]) => <tr key={name}><td>{name} hand — all finger points</td><td>{(fraction * 100).toFixed(1)}%</td></tr>)}
+        </tbody></table></div>
+        {certificate.camera_sensitivity && <><p>{certificate.camera_sensitivity.interpretation}</p><div className="analysis__table-wrap"><table className="jobs"><caption>Deviation ranges across admitted camera fits</caption><thead><tr><th>Domain</th><th>Range</th></tr></thead><tbody>
+          {Object.entries(certificate.camera_sensitivity.domain_ranges ?? {}).map(([key, range]) => <tr key={key}><td>{certificate.domains[key]?.domain ?? key}</td><td>{range ? `${format(range[0])} – ${format(range[1])}` : 'Insufficient coverage'}</td></tr>)}
+        </tbody></table></div></>}
+      </details>)}
+      {summary.alignment_sensitivity && <details className="analysis__advanced"><summary>Timing resolution sensitivity</summary><p>{summary.alignment_sensitivity.interpretation}</p><div className="analysis__table-wrap"><table className="jobs"><thead><tr><th>Event offset</th><th>Observed assessment</th></tr></thead><tbody>
+        {(summary.alignment_sensitivity.scenarios ?? []).map((scenario) => <tr key={scenario.video_event_offset_s}><td>{format(scenario.video_event_offset_s * 1000)} ms</td><td>{scenario.reason ?? Object.values(scenario.certificates ?? {}).map((certificate) => `${certificate.label ?? 'Assessment'}: ${observedDecision(certificate.decision ?? 'Unavailable')}`).join('; ')}</td></tr>)}
+      </tbody></table></div></details>}
+      {summary.artifacts?.full_sequence_overlay && <details className="analysis__advanced"><summary>Review the full sequence of body and finger projections</summary><video controls preload="metadata" style={{ width: '100%' }} src={api.analysisFile(job.jobId, summary.artifacts.full_sequence_overlay)} /><a className="link" href={api.analysisFile(job.jobId, summary.artifacts.full_sequence_overlay, true)}>Download full-sequence overlay</a></details>}
       <div className="analysis__downloads">
-        {[['summary.json', 'Download results'], ['manifest.json', 'Download annotations'], ...Object.values(summary.artifacts?.traces ?? {}).map((name) => [name, ({ synchronized_traces: 'Download timing traces', phase_normalized_traces: 'Download position traces', action_shape_traces: 'Download action angles', action_alignment: 'Download time alignment', finger_animation_traces: 'Download finger articulation' })[name.replace('.csv', '')] || 'Download traces'])].map(([name, label]) => <a className="link" key={name} href={api.analysisFile(job.jobId, name, true)}>{label}</a>)}
+        {[['report.html', 'Download complete report'], ['summary.json', 'Download results'], ['manifest.json', 'Download annotations'], ...Object.values(summary.artifacts?.traces ?? {}).map((name) => [name, ({ synchronized_traces: 'Download timing traces', phase_normalized_traces: 'Download position traces', action_shape_traces: 'Download action angles', action_alignment: 'Download time alignment', finger_animation_traces: 'Download finger articulation' })[name.replace('.csv', '')] || 'Download traces'])].map(([name, label]) => <a className="link" key={name} href={api.analysisFile(job.jobId, name, true)}>{label}</a>)}
       </div>
     </section>
   )
@@ -117,7 +141,7 @@ export default function Analysis() {
   const [pairing, setPairing] = useState(false)
   const [relationship, setRelationship] = useState('unknown')
   const [referenceView, setReferenceView] = useState('automatic')
-  const [toleranceProfile, setToleranceProfile] = useState('intelligibility')
+  const [toleranceProfile, setToleranceProfile] = useState('replication')
   const [verifiedTiming, setVerifiedTiming] = useState(false)
   const [timing, setTiming] = useState(INITIAL_TIMING)
   const [readiness, setReadiness] = useState(null)
@@ -191,7 +215,7 @@ export default function Analysis() {
             <label className="field">Comparison name<input value={action} onChange={(e) => setAction(e.target.value)} maxLength={120} placeholder="For example: ACTION — take 01" /></label>
             <label className="field">How were these recordings made?<select value={relationship} onChange={(e) => { setRelationship(e.target.value); setPairing(false); setVerifiedTiming(false) }}><option value="unknown">I’m not sure — movement similarity only</option><option value="separate_repetitions">Separate repetitions of the same action — movement similarity</option><option value="same_performance">One simultaneous performance — agreement comparison</option></select></label>
             <label className="field">Reference video camera view<select value={referenceView} onChange={(e) => setReferenceView(e.target.value)}><option value="automatic">Automatic — estimate camera orientation</option><option value="front">Front view — performer faces the camera</option></select></label>
-            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Intelligibility — a viewer perceives the same sign</option><option value="replication">Replication — the movement is reproduced exactly</option></select></label>
+            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option></select></label>
             <p className="hint">For a front-facing video, choose Front view. The FBX may face any direction in its viewer; comparison uses the anatomical shoulders to align its projection.</p>
             {relationship !== 'same_performance' && <p className="analysis__notice">Separate repetitions can differ in hand paths, speed, and body position even with perfect capture. These uploads cannot establish which capture method is more accurate. For that, each FBX needs a video of its exact performance.</p>}
             <div className="analysis__uploads">{SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>
