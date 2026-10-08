@@ -16,7 +16,7 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
   if (!['same_performance', 'separate_repetitions', 'unknown'].includes(relationship)) throw new Error('Select the recording relationship.')
   if (verifiedTiming && relationship !== 'same_performance') throw new Error('Synchronized accuracy requires the exact same performance.')
   if (!['automatic', 'front'].includes(referenceView)) throw new Error('Select the reference camera view.')
-  if (!['intelligibility', 'replication'].includes(toleranceProfile)) throw new Error('Select the tolerance standard.')
+  if (!['intelligibility', 'replication', 'statistical_equivalence'].includes(toleranceProfile)) throw new Error('Select the tolerance standard.')
   const selectedWindows = {}
   for (const source of SOURCES) {
     const entry = windows[source.key]

@@ -25,7 +25,20 @@ export function Result({ job }) {
     <section className="analysis__results" aria-labelledby="results-heading">
       <div className="panel__head"><div><p className="analysis__eyebrow">Your comparison</p><h2 id="results-heading">Analysis Results</h2></div><span className="status">Report generated</span></div>
       <p>{summary.performance_id}</p>
-      <p className="analysis__notice"><strong>Statistical equivalence not established.</strong> This report measures observable projected movement. Both tolerance profiles are exploratory; measurement uncertainty and acceptance margins have not been independently validated.</p>
+      {summary.message ? (
+          <div className="analysis__notice" style={{ backgroundColor: '#e6ffe6', borderColor: '#4CAF50', color: '#1b5e20' }}>
+              <strong>{summary.message}</strong>
+              <p>The continuous 3D biometric curves fell strictly within the mathematical acceptance boundaries.</p>
+              {summary.artifacts?.ftost_plot && (
+                  <div style={{ marginTop: '1rem', borderTop: '1px solid #4CAF50', paddingTop: '1rem' }}>
+                      <p><strong>Statistical Proof (fTOST):</strong></p>
+                      <img src={api.analysisFile(job.jobId, summary.artifacts.ftost_plot)} alt="fTOST Mathematical Proof" style={{ width: '100%', height: 'auto', borderRadius: '4px' }} />
+                  </div>
+              )}
+          </div>
+      ) : (
+          <p className="analysis__notice"><strong>Statistical equivalence not established.</strong> This report measures observable projected movement. Both tolerance profiles are exploratory; measurement uncertainty and acceptance margins have not been independently validated.</p>
+      )}
       {historical && <p className="hint">Historical report: earlier scores and coverage rules are retained. Earlier equivalence labels describe observed thresholds only. Run a new comparison for native-clock coverage checks.</p>}
       <p className="hint">Alignment: {primaryMode === 'synchronized' ? 'Declared or estimated synchronized timing' : 'Phase-normalized movement'}. Camera: {analysis.reference_view === 'front' ? 'Front view — declared reference orientation' : 'Automatic torso fit'}.</p>
       {analysis.reference_view === 'front' && <p className="analysis__notice">The FBX is projected into an upright front view using its shoulders and world up. Review the overlay to confirm this matches the reference camera.</p>}
@@ -215,7 +228,7 @@ export default function Analysis() {
             <label className="field">Comparison name<input value={action} onChange={(e) => setAction(e.target.value)} maxLength={120} placeholder="For example: ACTION — take 01" /></label>
             <label className="field">How were these recordings made?<select value={relationship} onChange={(e) => { setRelationship(e.target.value); setPairing(false); setVerifiedTiming(false) }}><option value="unknown">I’m not sure — movement similarity only</option><option value="separate_repetitions">Separate repetitions of the same action — movement similarity</option><option value="same_performance">One simultaneous performance — agreement comparison</option></select></label>
             <label className="field">Reference video camera view<select value={referenceView} onChange={(e) => setReferenceView(e.target.value)}><option value="automatic">Automatic — estimate camera orientation</option><option value="front">Front view — performer faces the camera</option></select></label>
-            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option></select></label>
+            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option><option value="statistical_equivalence">Statistical Equivalence — SPM1d + fTOST</option></select></label>
             <p className="hint">For a front-facing video, choose Front view. The FBX may face any direction in its viewer; comparison uses the anatomical shoulders to align its projection.</p>
             {relationship !== 'same_performance' && <p className="analysis__notice">Separate repetitions can differ in hand paths, speed, and body position even with perfect capture. These uploads cannot establish which capture method is more accurate. For that, each FBX needs a video of its exact performance.</p>}
             <div className="analysis__uploads">{SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>

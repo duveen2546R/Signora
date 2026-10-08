@@ -1,2 +1,6 @@
 -r requirements.txt
 statsmodels==0.15.0
+
+# New Statistical Validation Pipeline Requirements
+torch>=2.0.0
+spm1d>=0.4.0

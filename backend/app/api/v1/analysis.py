@@ -67,7 +67,7 @@ class Options(BaseModel):
         default_factory=dict
     )
     reference_view: Literal["automatic", "front"] = "automatic"
-    tolerance_profile: Literal["replication", "intelligibility"] = "replication"
+    tolerance_profile: Literal["replication", "intelligibility", "statistical_equivalence"] = "replication"
     calibration_phase: tuple[float, float] = (0.0, 0.15)
     synchronization: dict[Literal["suit", "non_suit"], Synchronization] = Field(
         default_factory=dict
@@ -230,13 +230,14 @@ def analysis_file(job_id: str, filename: str, download: bool = False):
     allowed = {
         "report.html",
         "summary.json",
+        artifacts.get("ftost_plot"),
         "manifest.json",
         "reference_pose.csv",
         "reference_pose.metadata.json",
         artifacts.get("reference_review"),
         artifacts.get("comparison_overlay"),
         artifacts.get("full_sequence_overlay"),
-        *artifacts["traces"].values(),
+        *artifacts.get("traces", {}).values(),
         *artifacts.get("figures", []),
     }
     allowed.update(
