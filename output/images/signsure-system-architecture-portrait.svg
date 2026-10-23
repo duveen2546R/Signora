@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2480" height="3960" viewBox="0 0 1240 1980">
+  <rect width="1240" height="1754" fill="#ffffff"/>
+  <style>
+    .title{font-family:Arial,sans-serif;font-weight:700;fill:#12243a;text-anchor:middle}.section{font-size:25px}.sub{font-family:Arial,sans-serif;font-size:15px;fill:#4d6176;text-anchor:middle}.box{fill:#fff;stroke:#1f4e79;stroke-width:2}.head{font-family:Arial,sans-serif;font-weight:700;font-size:19px;fill:#fff;text-anchor:middle}.text{font-family:Arial,sans-serif;font-size:17px;fill:#17212b;text-anchor:middle}.small{font-family:Arial,sans-serif;font-size:15px;fill:#17212b;text-anchor:middle}.label{font-family:Arial,sans-serif;font-size:13px;fill:#4d6176;text-anchor:middle}.note{font-family:Arial,sans-serif;font-size:14px;fill:#4d6176;text-anchor:middle}
+  </style>
+  <defs><marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" viewBox="0 0 8 8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#1f4e79"/></marker></defs>
+  <text class="title" font-size="33" x="620" y="53">SIGN SURE SYSTEM ARCHITECTURE</text>
+  <text class="sub" x="620" y="79">Capture, library playback, subtitle scheduling and statistical validation</text>
+
+  <!-- YouTube -->
+  <rect x="45" y="110" width="1150" height="470" rx="13" fill="#f3f8fc" stroke="#1f4e79" stroke-width="2"/>
+  <rect x="45" y="110" width="1150" height="52" rx="13" fill="#1f4e79"/><rect x="45" y="140" width="1150" height="22" fill="#1f4e79"/>
+  <text class="head" x="620" y="143">01  YOUTUBE SUBTITLE SIGNING</text>
+  <rect class="box" x="95" y="195" width="310" height="95" rx="7"/><text class="text" x="250" y="232">YouTube URL + uploaded subtitles</text><text class="text" x="250" y="257">SRT / WebVTT</text>
+  <rect class="box" x="95" y="355" width="310" height="110" rx="7"/><text class="text" x="250" y="395">Watch page → FastAPI</text><text class="small" x="250" y="421">Parse subtitles into complete</text><text class="small" x="250" y="443">caption units</text>
+  <rect class="box" x="485" y="240" width="280" height="105" rx="7"/><text class="text" x="625" y="280">Resolve caption units</text><text class="small" x="625" y="307">Match available sign clips</text>
+  <rect class="box" x="845" y="195" width="300" height="95" rx="7"/><text class="text" x="995" y="230">Prepared video plan</text><text class="small" x="995" y="254">SQLite: text, timing, status</text><text class="small" x="995" y="276">Files: compressed motion</text>
+  <rect class="box" x="845" y="355" width="300" height="110" rx="7"/><text class="text" x="995" y="394">YouTubeSignScheduler</text><text class="small" x="995" y="420">Prefetch motion; pause / seek reset</text><text class="small" x="995" y="443">Schedules avatar playback</text>
+  <rect class="box" x="845" y="500" width="300" height="50" rx="7"/><text class="small" x="995" y="531">Official YouTube iframe: player time / state</text>
+  <path d="M250 290 V355" stroke="#1f4e79" stroke-width="3" marker-end="url(#arrow)"/><path d="M405 410 H485" stroke="#1f4e79" stroke-width="3" marker-end="url(#arrow)"/><path d="M765 292 H845" stroke="#1f4e79" stroke-width="3" marker-end="url(#arrow)"/><path d="M995 290 V355" stroke="#1f4e79" stroke-width="3" marker-end="url(#arrow)"/><path d="M995 500 V465" stroke="#1f4e79" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Motion -->
+  <rect x="45" y="615" width="1150" height="705" rx="13" fill="#f3faf5" stroke="#347353" stroke-width="2"/>
+  <rect x="45" y="615" width="1150" height="52" rx="13" fill="#347353"/><rect x="45" y="645" width="1150" height="22" fill="#347353"/>
+  <text class="head" x="620" y="648">02  MOTION LIBRARY + UNITY</text>
+  <rect class="box" x="370" y="700" width="500" height="78" rx="7"/><text class="text" x="620" y="732">Combined Rokoko FBX</text><text class="small" x="620" y="757">Body, hand and face recording</text>
+  <rect class="box" x="370" y="827" width="500" height="86" rx="7"/><text class="text" x="620" y="860">Capture page → FastAPI</text><text class="small" x="620" y="886">FBX parsing + phase normalization</text>
+  <rect class="box" x="115" y="962" width="420" height="118" rx="7"/><text class="text" x="325" y="997">SQLite metadata</text><text class="small" x="325" y="1022">Glosses, takes, paths, phases, QC</text><text class="small" x="325" y="1047">Searchable motion-library index</text>
+  <rect class="box" x="705" y="962" width="420" height="118" rx="7"/><text class="text" x="915" y="997">Motion frame JSON</text><text class="small" x="915" y="1022">Timestamped body, hands and face</text><text class="small" x="915" y="1047">Normalized playback data</text>
+  <rect class="box" x="300" y="1130" width="640" height="85" rx="7"/><text class="text" x="620" y="1164">Shared composition + blending</text><text class="small" x="620" y="1190">Phase selection → transition generation → quality checks</text>
+  <rect class="box" x="300" y="1250" width="640" height="85" rx="7"/><text class="text" x="620" y="1284">React SignoraPlayer</text><text class="small" x="620" y="1310">Calibration + canonical frame scheduling</text>
+  <rect class="box" x="300" y="1370" width="640" height="85" rx="7"/><text class="text" x="620" y="1404">Unity WebGL runtime</text><text class="small" x="620" y="1430">Frame filtering + body / hand / head / face retargeting</text>
+  <rect class="box" x="370" y="1490" width="500" height="68" rx="7"/><text class="text" x="620" y="1531">Rendered Signora avatar</text>
+  <path d="M620 778 V827" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><line x1="620" y1="913" x2="325" y2="962" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><line x1="620" y1="913" x2="915" y2="962" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><line x1="325" y1="1080" x2="620" y2="1130" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><line x1="915" y1="1080" x2="620" y2="1130" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><path d="M620 1215 V1250" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><path d="M620 1335 V1370" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/><path d="M620 1455 V1490" stroke="#347353" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- validation -->
+  <rect x="45" y="1600" width="1150" height="330" rx="13" fill="#fff8ed" stroke="#b66b1d" stroke-width="2"/>
+  <rect x="45" y="1600" width="1150" height="52" rx="13" fill="#b66b1d"/><rect x="45" y="1630" width="1150" height="22" fill="#b66b1d"/>
+  <text class="head" x="620" y="1633">03  STATISTICAL EQUIVALENCE / VALIDATION</text>
+  <rect class="box" x="95" y="1682" width="310" height="105" rx="7"/><text class="text" x="250" y="1718">Motion-capture FBX +</text><text class="small" x="250" y="1742">independent reference video</text><text class="small" x="250" y="1765">Optional comparison FBX</text>
+  <rect class="box" x="465" y="1682" width="310" height="105" rx="7"/><text class="text" x="620" y="1718">Analysis page → FastAPI</text><text class="small" x="620" y="1742">Store inputs, options</text><text class="small" x="620" y="1765">and job status</text>
+  <rect class="box" x="835" y="1682" width="310" height="105" rx="7"/><text class="text" x="990" y="1718">Python analysis worker</text><text class="small" x="990" y="1742">FBX extraction + DWPose landmarks</text><text class="small" x="990" y="1765">Clock validation + provenance</text>
+  <rect class="box" x="195" y="1822" width="390" height="65" rx="7"/><text class="text" x="390" y="1850">MANO hand-kinematics bridge</text><text class="small" x="390" y="1874">Video fitting + FBX hand mapping</text>
+  <rect class="box" x="655" y="1822" width="390" height="65" rx="7"/><text class="text" x="850" y="1850">SPM1D / functional TOST</text><text class="small" x="850" y="1874">Aligned waveform comparison → report</text>
+  <path d="M405 1734 H465" stroke="#b66b1d" stroke-width="3" marker-end="url(#arrow)"/><path d="M775 1734 H835" stroke="#b66b1d" stroke-width="3" marker-end="url(#arrow)"/><line x1="990" y1="1787" x2="390" y2="1822" stroke="#b66b1d" stroke-width="3" marker-end="url(#arrow)"/><path d="M585 1854 H655" stroke="#b66b1d" stroke-width="3" marker-end="url(#arrow)"/>
+  <text class="note" x="620" y="1960">Figure 3.1: SignSure system architecture. Solid paths are implementation workflows; validation remains separate from normal avatar playback.</text>
+</svg>

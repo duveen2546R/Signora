@@ -76,7 +76,7 @@ export default function Landing() {
           <span className="landing__hero-eyebrow">Indian Sign Language · motion captured</span>
           <h1>Crafting sign language<br />that feels truly human.</h1>
           <p className="landing__hero-lede">
-            SignSure turns written English into a signed performance driven by real motion capture —
+            Signora turns written English into a signed performance driven by real motion capture —
             the timing, the handshape and the intention of a human signer, preserved end to end.
           </p>
           <div className="landing__hero-actions">
@@ -112,8 +112,8 @@ export default function Landing() {
           <Reveal delay={160} className="project__meta"><p>Natural, continuous<br />sign performance</p></Reveal>
         </div>
         <div className="project__feature">
-          <Reveal className="studio-preview" aria-label="Preview of the SignSure studio">
-            <div className="studio-preview__bar"><span /><span /><span /><b>signsure studio</b></div>
+          <Reveal className="studio-preview" aria-label="Preview of the Signora studio">
+            <div className="studio-preview__bar"><span /><span /><span /><b>signora studio</b></div>
             <div className="studio-preview__body">
               <p>GOOD<br />MORNING</p>
               <div className="studio-preview__avatar" aria-hidden="true"><span /><i /><b /></div>
@@ -122,7 +122,7 @@ export default function Landing() {
           </Reveal>
           <Reveal delay={100} className="project__story">
             <h2>Type it.<br />Watch it signed.</h2>
-            <div className="project__story-copy"><span>Info</span><p>SignSure transforms written English into sign language performed by an avatar driven by real motion capture. Every word carries the timing, shape and intention of a human signer.</p></div>
+            <div className="project__story-copy"><span>Info</span><p>Signora transforms written English into sign language performed by an avatar driven by real motion capture. Every word carries the timing, shape and intention of a human signer.</p></div>
             <Link to="/sign" className="pill-link">Open studio <span aria-hidden="true">↗</span></Link>
           </Reveal>
         </div>

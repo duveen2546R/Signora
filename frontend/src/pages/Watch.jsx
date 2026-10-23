@@ -112,7 +112,7 @@ export default function Watch() {
       <header className="watch-head">
         <p className="eyebrow">YouTube + ISL avatar</p>
         <h1>Watch with signs in parallel.</h1>
-        <p>Use a YouTube link and its matching English SRT or VTT file. SignSure prepares complete signing units before playback.</p>
+        <p>Use a YouTube link and its matching English SRT or VTT file. Signora prepares complete signing units before playback.</p>
       </header>
 
       <form className="watch-setup" onSubmit={submit}>

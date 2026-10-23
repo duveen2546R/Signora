@@ -1,4 +1,4 @@
-# SignSure frontend
+# Signora frontend
 
 React/Vite studio for FBX capture review, avatar signing, live speech, and YouTube subtitles.
 

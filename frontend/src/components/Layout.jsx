@@ -61,7 +61,7 @@ export default function Layout() {
       <a className="skip-link" href="#main-content">Skip to content</a>
       <header className={`shell__head ${scrolled ? 'shell__head--scrolled' : ''}`}>
         <div className="shell__head-inner">
-          <NavLink to="/" className="wordmark" aria-label="SignSure home" onClick={() => setMenuOpen(false)}>SignSure</NavLink>
+          <NavLink to="/" className="wordmark" aria-label="Signora home" onClick={() => setMenuOpen(false)}>Signora</NavLink>
 
           <div className="shell__menu-actions">
             <ThemeToggle />
@@ -130,7 +130,7 @@ export default function Layout() {
           </ul>
         </div>
         <div className="foot__col--end">
-          <div>SignSure® © {new Date().getFullYear()}</div>
+          <div>Signora® © {new Date().getFullYear()}</div>
         </div>
       </footer>
     </div>
