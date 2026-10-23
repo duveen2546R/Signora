@@ -26,12 +26,24 @@ export function Result({ job }) {
       <div className="panel__head"><div><p className="analysis__eyebrow">Your comparison</p><h2 id="results-heading">Analysis Results</h2></div><span className="status">Report generated</span></div>
       <p>{summary.performance_id}</p>
       {summary.message ? (
-          <div className="analysis__notice" style={{ backgroundColor: '#e6ffe6', borderColor: '#4CAF50', color: '#1b5e20' }}>
+          <div
+            className="analysis__notice"
+            style={{
+              backgroundColor: summary.statistical_validation?.verdict === 'NOT EQUIVALENT' ? '#fff8e1' : '#e6ffe6',
+              borderColor: summary.statistical_validation?.verdict === 'NOT EQUIVALENT' ? '#ffa000' : '#4CAF50',
+              color: summary.statistical_validation?.verdict === 'NOT EQUIVALENT' ? '#5d4037' : '#1b5e20',
+            }}
+          >
               <strong>{summary.message}</strong>
-              <p>The continuous 3D biometric curves fell strictly within the mathematical acceptance boundaries.</p>
+              <p>
+                {summary.statistical_validation?.interpretation ??
+                  (summary.statistical_validation?.verdict === 'NOT EQUIVALENT'
+                    ? 'Certain movement phases exceeded the equivalence tolerance. See the fTOST + SPM1D curves below for details.'
+                    : 'The multi-channel joint trajectories fell within the statistical equivalence boundaries.')}
+              </p>
               {summary.artifacts?.ftost_plot && (
-                  <div style={{ marginTop: '1rem', borderTop: '1px solid #4CAF50', paddingTop: '1rem' }}>
-                      <p><strong>Statistical Proof (fTOST):</strong></p>
+                  <div style={{ marginTop: '1rem', borderTop: '1px solid currentColor', paddingTop: '1rem' }}>
+                      <p><strong>Statistical Analysis (fTOST + SPM1D):</strong></p>
                       <img src={api.analysisFile(job.jobId, summary.artifacts.ftost_plot)} alt="fTOST Mathematical Proof" style={{ width: '100%', height: 'auto', borderRadius: '4px' }} />
                   </div>
               )}

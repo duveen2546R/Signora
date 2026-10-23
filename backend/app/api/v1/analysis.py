@@ -231,6 +231,7 @@ def analysis_file(job_id: str, filename: str, download: bool = False):
         "report.html",
         "summary.json",
         artifacts.get("ftost_plot"),
+        artifacts.get("ftost_plot_svg"),
         "manifest.json",
         "reference_pose.csv",
         "reference_pose.metadata.json",

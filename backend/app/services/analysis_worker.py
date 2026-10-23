@@ -126,7 +126,9 @@ def process(directory: Path):
                 + json.dumps(options["original_names"]),
             ],
             "reference_view": options.get("reference_view", "automatic"),
-            "tolerance_profile": options.get("tolerance_profile", "replication"),
+            "tolerance_profile": "replication"
+            if options.get("tolerance_profile") == "statistical_equivalence"
+            else options.get("tolerance_profile", "replication"),
             "synchronization": options.get("synchronization", {}),
             "tolerance_policy": "exploratory; no justified equivalence bounds",
         },
@@ -134,33 +136,53 @@ def process(directory: Path):
     manifest_path = directory / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     write_status(directory, "scoring")
-    
-    # --- New Statistical Pipeline Hook ---
-    if options.get("tolerance_profile") == "statistical_equivalence":
-        import shutil
-        results_dir = directory / "results"
-        results_dir.mkdir(exist_ok=True)
-        
-        # Copy the pre-generated proof plot into this job's results folder
-        try:
-            shutil.copy("/Users/duveen/Projects/SignSure/ftost_result.png", results_dir / "ftost_result.png")
-            has_plot = True
-        except Exception as e:
-            print(f"Error copying plot: {e}")
-            has_plot = False
 
-        summary_payload = {
-            "status": "success",
-            "message": "STATISTICAL EQUIVALENCE: PROVEN via SPM1d and fTOST.",
-            "artifacts": {
-                "ftost_plot": "ftost_result.png" if has_plot else None
-            }
-        }
-        (results_dir / "summary.json").write_text(json.dumps(summary_payload))
-        # run_statistical_case_study(manifest_path, results_dir)
-    else:
-        run_case_study(manifest_path, directory / "results")
-        
+    # Run the descriptive case study (tracks landmarks, projects 2D/3D, calculates traces)
+    results_dir = directory / "results"
+    run_case_study(manifest_path, results_dir)
+
+    # --- Real Statistical Validation via fTOST + SPM1D ---
+    if options.get("tolerance_profile") == "statistical_equivalence":
+        from app.validation.single_pair_stats import run_single_pair_validation
+
+        sign_label = options.get("action", "Sign")
+        stats_result = run_single_pair_validation(
+            results_dir,
+            sign_name=sign_label,
+            position_delta=0.20,
+            alpha=0.05,
+        )
+
+        summary_file = results_dir / "summary.json"
+        if summary_file.is_file():
+            summary_payload = json.loads(summary_file.read_text())
+        else:
+            summary_payload = {}
+
+        summary_payload["statistical_validation"] = stats_result
+        if "artifacts" not in summary_payload:
+            summary_payload["artifacts"] = {}
+
+        if stats_result.get("status") == "completed":
+            summary_payload["artifacts"]["ftost_plot"] = stats_result["artifacts"]["ftost_plot"]
+            summary_payload["artifacts"]["ftost_plot_svg"] = stats_result["artifacts"]["ftost_plot_svg"]
+            verdict = stats_result["verdict"]
+            eq_frac = stats_result["ftost"]["equivalence_fraction"] * 100
+            if verdict == "EQUIVALENT":
+                summary_payload["message"] = (
+                    f"STATISTICAL EQUIVALENCE: SUPPORTED via SPM1D and fTOST ({eq_frac:.1f}% within tolerance)."
+                )
+            else:
+                summary_payload["message"] = (
+                    f"STATISTICAL EQUIVALENCE: NOT SUPPORTED via SPM1D and fTOST ({eq_frac:.1f}% within tolerance)."
+                )
+        else:
+            summary_payload["message"] = (
+                f"Statistical equivalence testing incomplete: {stats_result.get('reason', 'unknown reason')}"
+            )
+
+        summary_file.write_text(json.dumps(summary_payload, indent=2) + "\n")
+
     write_status(directory, "done")
 
 

@@ -73,12 +73,14 @@ def run_job(directory: Path):
         environment = os.environ.copy()
         environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
         environment["MPLCONFIGDIR"] = str(directory / "plot-cache")
+        root_venv_python = Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"
+        worker_python = str(root_venv_python) if root_venv_python.is_file() else sys.executable
         try:
             write_status(directory, "inspecting")
             with (directory / "worker.log").open("w") as log:
                 process = subprocess.run(
                     [
-                        sys.executable,
+                        worker_python,
                         "-m",
                         "app.services.analysis_worker",
                         str(directory),
