@@ -1332,6 +1332,20 @@ def run_case_study(manifest, output):
             report["qc"]["status"] = "provisional"
     render_report(report, artifacts, output, review_markup)
     report["artifacts"]["figures"] = [p.name for p in sorted(output.glob("*.svg"))]
+    for pref in (overlay_mode, "synchronized", "phase_normalized"):
+        if (output / f"{pref}_trajectories.png").is_file():
+            report["artifacts"]["trajectories_plot"] = f"{pref}_trajectories.png"
+            break
+        elif (output / f"{pref}_trajectories.svg").is_file():
+            report["artifacts"]["trajectories_plot"] = f"{pref}_trajectories.svg"
+            break
+    for pref in (overlay_mode, "synchronized", "phase_normalized"):
+        if (output / f"{pref}_angles.png").is_file():
+            report["artifacts"]["angles_plot"] = f"{pref}_angles.png"
+            break
+        elif (output / f"{pref}_angles.svg").is_file():
+            report["artifacts"]["angles_plot"] = f"{pref}_angles.svg"
+            break
     (output / "summary.json").write_text(
         json.dumps(_safe(report), indent=2, allow_nan=False) + "\n"
     )

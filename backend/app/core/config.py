@@ -9,6 +9,8 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     app_name: str = "SignSure"
+    base_dir: Path = BASE_DIR
+    repo_root: Path = BASE_DIR.parent
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'signsure.db'}"
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     clip_dir: Path = BASE_DIR / "data" / "clips"

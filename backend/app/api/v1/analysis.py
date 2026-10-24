@@ -226,11 +226,13 @@ def analysis_file(job_id: str, filename: str, download: bool = False):
         raise HTTPException(409, "This analysis is not finished yet.")
     results = directory / "results"
     summary = json.loads((results / "summary.json").read_text())
-    artifacts = summary["artifacts"]
+    artifacts = summary.get("artifacts", {})
     allowed = {
         "report.html",
         "summary.json",
         artifacts.get("ftost_plot"),
+        artifacts.get("trajectories_plot"),
+        artifacts.get("angles_plot"),
         "manifest.json",
         "reference_pose.csv",
         "reference_pose.metadata.json",
@@ -243,6 +245,18 @@ def analysis_file(job_id: str, filename: str, download: bool = False):
     allowed.update(
         name.removesuffix(".svg") + ".png" for name in artifacts.get("figures", [])
     )
+    allowed.update({
+        "synchronized_trajectories.png",
+        "synchronized_trajectories.svg",
+        "synchronized_angles.png",
+        "synchronized_angles.svg",
+        "phase_normalized_trajectories.png",
+        "phase_normalized_trajectories.svg",
+        "phase_normalized_angles.png",
+        "phase_normalized_angles.svg",
+        "ftost_result.png",
+    })
+    allowed.discard(None)
     if filename not in allowed:
         raise HTTPException(404, "This result file could not be found.")
     path = (

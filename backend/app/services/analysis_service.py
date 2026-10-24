@@ -89,10 +89,18 @@ def run_job(directory: Path):
                     timeout=600,
                 )
             if process.returncode and read_status(directory)["status"] != "failed":
+                worker_error = None
+                log_path = directory / "worker.log"
+                if log_path.is_file():
+                    lines = [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
+                    for line in reversed(lines):
+                        if any(err in line for err in ("Error:", "Exception:", "ValidationError:")):
+                            worker_error = line
+                            break
                 write_status(
                     directory,
                     "failed",
-                    error=(
+                    error=worker_error or (
                         "The local analysis worker could not finish. Check backend video-analysis dependencies "
                         "and native graphics access, then retry."
                     ),

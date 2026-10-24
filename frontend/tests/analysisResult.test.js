@@ -39,6 +39,18 @@ test('analysis results render single, dual, missing-data, and historical certifi
     assert.match(render(undefined), /no domain certificates/)
     assert.match(render({ error: 'Missing landmarks' }), /Domain evaluation unavailable: Missing landmarks/)
     assert.match(render({ suit: { ...certificate, domains: { handshape: { ...domain, max_deviation: undefined } } } }), /INCONCLUSIVE/)
+
+    // Trajectory and elbow angles graphs rendering
+    const withGraphs = render(undefined, {
+      artifacts: {
+        trajectories_plot: 'synchronized_trajectories.png',
+        angles_plot: 'synchronized_angles.png',
+      },
+    })
+    assert.match(withGraphs, /FIGURE 4\.5/)
+    assert.match(withGraphs, /FIGURE 4\.6/)
+    assert.match(withGraphs, /synchronized_trajectories\.png/)
+    assert.match(withGraphs, /synchronized_angles\.png/)
   } finally {
     await server.close()
   }

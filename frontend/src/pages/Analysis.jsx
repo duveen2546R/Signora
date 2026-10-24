@@ -20,39 +20,101 @@ export function Result({ job }) {
   const domains = certificates[0]?.[1].domains ?? {}
   const historical = summary.assessment_kind !== 'observed_tolerance'
   const similarity = summary.comparison_kind === 'movement_similarity' || job.recordingRelationshipCorrection === 'separate_repetitions'
+  const artifacts = summary.artifacts ?? {}
+  const figures = Array.isArray(artifacts.figures) ? artifacts.figures : []
+
+  const trajectoriesPlot = artifacts.trajectories_plot
+    ?? figures.find((f) => f.includes('synchronized_trajectories'))
+    ?? figures.find((f) => f.includes('phase_normalized_trajectories'))
+    ?? figures.find((f) => f.includes('trajectories'))
+
+  const anglesPlot = artifacts.angles_plot
+    ?? figures.find((f) => f.includes('synchronized_angles') && !f.includes('errors'))
+    ?? figures.find((f) => f.includes('phase_normalized_angles') && !f.includes('errors'))
+    ?? figures.find((f) => (f.endsWith('angles.png') || f.endsWith('angles.svg')) && !f.includes('errors'))
+
+  const ftostPlot = artifacts.ftost_plot
 
   return (
     <section className="analysis__results" aria-labelledby="results-heading">
       <div className="panel__head"><div><p className="analysis__eyebrow">Your comparison</p><h2 id="results-heading">Analysis Results</h2></div><span className="status">Report generated</span></div>
       <p>{summary.performance_id}</p>
       {summary.message ? (
-          <div className="analysis__notice" style={{ backgroundColor: '#e6ffe6', borderColor: '#4CAF50', color: '#1b5e20' }}>
-              <strong>{summary.message}</strong>
-              <p>The continuous 3D biometric curves fell strictly within the mathematical acceptance boundaries.</p>
-              {summary.artifacts?.ftost_plot && (
-                  <div style={{ marginTop: '1rem', borderTop: '1px solid #4CAF50', paddingTop: '1rem' }}>
-                      <p><strong>Statistical Proof (fTOST):</strong></p>
-                      <img src={api.analysisFile(job.jobId, summary.artifacts.ftost_plot)} alt="fTOST Mathematical Proof" style={{ width: '100%', height: 'auto', borderRadius: '4px' }} />
-                  </div>
-              )}
-          </div>
-      ) : (
-          <p className="analysis__notice"><strong>Statistical equivalence not established.</strong> This report measures observable projected movement. Both tolerance profiles are exploratory; measurement uncertainty and acceptance margins have not been independently validated.</p>
-      )}
-      {historical && <p className="hint">Historical report: earlier scores and coverage rules are retained. Earlier equivalence labels describe observed thresholds only. Run a new comparison for native-clock coverage checks.</p>}
-      <p className="hint">Alignment: {primaryMode === 'synchronized' ? 'Declared or estimated synchronized timing' : 'Phase-normalized movement'}. Camera: {analysis.reference_view === 'front' ? 'Front view — declared reference orientation' : 'Automatic torso fit'}.</p>
-      {analysis.reference_view === 'front' && <p className="analysis__notice">The FBX is projected into an upright front view using its shoulders and world up. Review the overlay to confirm this matches the reference camera.</p>}
-      {analysis.calibration_sensitivity?.unresolved && <p className="analysis__notice">Camera orientation remains ambiguous. Review the projected overlay before interpreting the verdict.</p>}
-
-      {/* Group verbose warnings into a collapsible block */}
-      <details className="analysis__advanced" style={{ marginBottom: '1.5rem' }}>
-        <summary>Diagnostic Warnings & Assumptions</summary>
-        <div style={{ marginTop: '1rem' }}>
-          {job.supersededBy && <p className="analysis__notice">This historical report used the earlier same-performance assumption. You clarified that these are separate repetitions. <a className="link" href={`?job=${encodeURIComponent(job.supersededBy)}`}>Open the corrected movement-similarity report.</a></p>}
-          <div className="analysis__notice"><strong>{similarity ? 'Capture accuracy cannot be determined from these recordings' : 'Statistical equivalence not established'}</strong><p>{similarity ? 'These are separate or unverified performances. Scores describe movement similarity and include differences in how the action was performed. They cannot prove which capture method is more accurate.' : `This report describes one performance. Timing ${summary.timing_status === 'indeterminate' ? 'remains unverified' : 'uses declared or estimated event annotations'}; thresholds are exploratory.`}</p></div>
-          {(summary.qc?.issues ?? []).length > 0 && <div className="analysis__review"><h3>Review before interpreting</h3><ul>{summary.qc.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}
+        <div
+          className="analysis__notice"
+          style={{
+            backgroundColor: summary.equivalence_verdict === 'PASS' ? '#e6ffe6' : '#fff4e5',
+            borderColor: summary.equivalence_verdict === 'PASS' ? '#4CAF50' : '#ff9800',
+            color: summary.equivalence_verdict === 'PASS' ? '#1b5e20' : '#b74700',
+            marginBottom: '2rem'
+          }}
+        >
+          <strong style={{ fontSize: '1.05rem', display: 'block', marginBottom: '0.25rem' }}>{summary.message}</strong>
+          <p style={{ margin: 0 }}>
+            {summary.message_detail ||
+              (summary.equivalence_verdict === 'PASS'
+                ? 'The continuous 3D biometric curves fell strictly within the mathematical acceptance boundaries.'
+                : 'Observed continuous joint curves exceeded the statistical equivalence margin.')}
+          </p>
         </div>
-      </details>
+      ) : (
+        <p className="analysis__notice"><strong>Statistical equivalence not established.</strong> This report measures observable projected movement. Both tolerance profiles are exploratory; measurement uncertainty and acceptance margins have not been independently validated.</p>
+      )}
+
+      {/* Visual Graphs: 2D Trajectories, Projected Elbow Angles, and fTOST */}
+      {(trajectoriesPlot || anglesPlot || ftostPlot) && (
+        <div className="analysis__graphs" style={{ margin: '2rem 0' }}>
+          <div className="panel__head" style={{ marginBottom: '1.25rem' }}>
+            <div>
+              <p className="analysis__eyebrow" style={{ marginBottom: '4px' }}>Motion Verification</p>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 600 }}>Biometric Trajectory & Joint Angle Curves</h3>
+            </div>
+          </div>
+
+          {trajectoriesPlot && (
+            <figure className="analysis__figure" style={{ border: '1px solid var(--rule-on-light, #e2e8f0)', marginBottom: '2rem', padding: '1.25rem', background: '#fff', borderRadius: '16px' }}>
+              <img
+                src={api.analysisFile(job.jobId, trajectoriesPlot)}
+                alt="Figure 4.5: Two-dimensional wrist and elbow trajectories from the reference video and MotionCapture FBX"
+                style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }}
+              />
+              <figcaption style={{ marginTop: '0.85rem', fontWeight: 500, color: 'var(--charcoal, #1e293b)', lineHeight: 1.5 }}>
+                <strong>FIGURE 4.5:</strong> Two-dimensional wrist and elbow trajectories from the reference video and MotionCapture FBX.
+              </figcaption>
+            </figure>
+          )}
+
+          {anglesPlot && (
+            <figure className="analysis__figure" style={{ border: '1px solid var(--rule-on-light, #e2e8f0)', marginBottom: '2rem', padding: '1.25rem', background: '#fff', borderRadius: '16px' }}>
+              <img
+                src={api.analysisFile(job.jobId, anglesPlot)}
+                alt="Figure 4.6: Projected left and right elbow angles over reference-video time for the video and MotionCapture FBX"
+                style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }}
+              />
+              <figcaption style={{ marginTop: '0.85rem', fontWeight: 500, color: 'var(--charcoal, #1e293b)', lineHeight: 1.5 }}>
+                <strong>FIGURE 4.6:</strong> Projected left and right elbow angles over reference-video time for the video and MotionCapture FBX.
+              </figcaption>
+            </figure>
+          )}
+
+          {ftostPlot && (
+            <figure className="analysis__figure" style={{ border: '1px solid var(--rule-on-light, #e2e8f0)', marginBottom: '2rem', padding: '1.25rem', background: '#fff', borderRadius: '16px' }}>
+              <img
+                src={api.analysisFile(job.jobId, ftostPlot)}
+                alt={`Figure 4.7: Statistical Equivalence (fTOST) for ${summary.performance_id || 'the action'}`}
+                style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }}
+              />
+              <figcaption style={{ marginTop: '0.85rem', fontWeight: 500, color: 'var(--charcoal, #1e293b)', lineHeight: 1.5 }}>
+                <strong>FIGURE 4.7:</strong> Statistical Equivalence (fTOST) for {summary.performance_id || 'the action'} with SPM1d continuous tolerance bounds.
+              </figcaption>
+            </figure>
+          )}
+        </div>
+      )}
+      {!summary.message && historical && <p className="hint">Historical report: earlier scores and coverage rules are retained. Earlier equivalence labels describe observed thresholds only. Run a new comparison for native-clock coverage checks.</p>}
+      {!summary.message && <p className="hint">Alignment: {primaryMode === 'synchronized' ? 'Declared or estimated synchronized timing' : 'Phase-normalized movement'}. Camera: {analysis.reference_view === 'front' ? 'Front view — declared reference orientation' : 'Automatic torso fit'}.</p>}
+      {!summary.message && analysis.reference_view === 'front' && <p className="analysis__notice">The FBX is projected into an upright front view using its shoulders and world up. Review the overlay to confirm this matches the reference camera.</p>}
+      {!summary.message && analysis.calibration_sensitivity?.unresolved && <p className="analysis__notice">Camera orientation remains ambiguous. Review the projected overlay before interpreting the verdict.</p>}
 
       {summary.artifacts?.comparison_overlay && <details className="analysis__advanced">
         <summary>Review video and projected FBX orientation</summary>
@@ -60,8 +122,7 @@ export function Result({ job }) {
         <img src={api.analysisFile(job.jobId, summary.artifacts.comparison_overlay)} alt="Video landmarks and projected FBX skeletons at five sample times" style={{ width: '100%', height: 'auto' }} />
       </details>}
 
-
-      {available ? <>
+      {available && !summary.message ? <>
         <h3>Observed Movement Assessment</h3>
 
         {/* Primary Statistical Overview: Functional Equivalence */}
@@ -110,12 +171,11 @@ export function Result({ job }) {
           </div>
         )}
 
-
-        {analysis.comparison?.equivalence?.error && <p className="error" role="status">Domain evaluation unavailable: {analysis.comparison.equivalence.error}</p>}
+        {analysis.comparison?.equivalence?.error && analysis.comparison.equivalence.error !== 'statistical_equivalence' && <p className="error" role="status">Domain evaluation unavailable: {analysis.comparison.equivalence.error}</p>}
         {certificates.length === 0 && !analysis.comparison?.equivalence?.error && <p role="status">This report has no domain certificates. Run a new comparison to generate them.</p>}
-      </> : <p className="error" role="status">No shape scores were produced: {analysis.reason}</p>}
+      </> : !summary.message ? <p className="error" role="status">No shape scores were produced: {analysis.reason}</p> : null}
 
-      {certificates.map(([label, certificate]) => <details className="analysis__advanced" key={label}>
+      {!summary.message && certificates.map(([label, certificate]) => <details className="analysis__advanced" key={label}>
         <summary>{certificate.label ?? label}: profiles, coverage and camera sensitivity</summary>
         {Object.entries(certificate.profile_sensitivity ?? {}).map(([profile, assessment]) => <div key={profile}>
           <h4>{profile === 'replication' ? 'Replication profile — maximum' : 'Wider legacy profile — time-weighted P95'}</h4>
@@ -132,12 +192,20 @@ export function Result({ job }) {
           {Object.entries(certificate.camera_sensitivity.domain_ranges ?? {}).map(([key, range]) => <tr key={key}><td>{certificate.domains[key]?.domain ?? key}</td><td>{range ? `${format(range[0])} – ${format(range[1])}` : 'Insufficient coverage'}</td></tr>)}
         </tbody></table></div></>}
       </details>)}
-      {summary.alignment_sensitivity && <details className="analysis__advanced"><summary>Timing resolution sensitivity</summary><p>{summary.alignment_sensitivity.interpretation}</p><div className="analysis__table-wrap"><table className="jobs"><thead><tr><th>Event offset</th><th>Observed assessment</th></tr></thead><tbody>
+      {!summary.message && summary.alignment_sensitivity && <details className="analysis__advanced"><summary>Timing resolution sensitivity</summary><p>{summary.alignment_sensitivity.interpretation}</p><div className="analysis__table-wrap"><table className="jobs"><thead><tr><th>Event offset</th><th>Observed assessment</th></tr></thead><tbody>
         {(summary.alignment_sensitivity.scenarios ?? []).map((scenario) => <tr key={scenario.video_event_offset_s}><td>{format(scenario.video_event_offset_s * 1000)} ms</td><td>{scenario.reason ?? Object.values(scenario.certificates ?? {}).map((certificate) => `${certificate.label ?? 'Assessment'}: ${observedDecision(certificate.decision ?? 'Unavailable')}`).join('; ')}</td></tr>)}
       </tbody></table></div></details>}
       {summary.artifacts?.full_sequence_overlay && <details className="analysis__advanced"><summary>Review the full sequence of body and finger projections</summary><video controls preload="metadata" style={{ width: '100%' }} src={api.analysisFile(job.jobId, summary.artifacts.full_sequence_overlay)} /><a className="link" href={api.analysisFile(job.jobId, summary.artifacts.full_sequence_overlay, true)}>Download full-sequence overlay</a></details>}
       <div className="analysis__downloads">
-        {[['report.html', 'Download complete report'], ['summary.json', 'Download results'], ['manifest.json', 'Download annotations'], ...Object.values(summary.artifacts?.traces ?? {}).map((name) => [name, ({ synchronized_traces: 'Download timing traces', phase_normalized_traces: 'Download position traces', action_shape_traces: 'Download action angles', action_alignment: 'Download time alignment', finger_animation_traces: 'Download finger articulation' })[name.replace('.csv', '')] || 'Download traces'])].map(([name, label]) => <a className="link" key={name} href={api.analysisFile(job.jobId, name, true)}>{label}</a>)}
+        {[
+          ['report.html', 'Download complete report'],
+          ['summary.json', 'Download results'],
+          ['manifest.json', 'Download annotations'],
+          ...(trajectoriesPlot ? [[trajectoriesPlot, 'Download trajectories plot']] : []),
+          ...(anglesPlot ? [[anglesPlot, 'Download elbow angles plot']] : []),
+          ...(ftostPlot ? [[ftostPlot, 'Download fTOST equivalence plot']] : []),
+          ...Object.values(summary.artifacts?.traces ?? {}).map((name) => [name, ({ synchronized_traces: 'Download timing traces', phase_normalized_traces: 'Download position traces', action_shape_traces: 'Download action angles', action_alignment: 'Download time alignment', finger_animation_traces: 'Download finger articulation' })[name.replace('.csv', '')] || 'Download traces']),
+        ].map(([name, label]) => <a className="link" key={name} href={api.analysisFile(job.jobId, name, true)}>{label}</a>)}
       </div>
     </section>
   )
@@ -199,7 +267,13 @@ export default function Analysis() {
   }
   function selectFile(key, file) {
     setFiles((current) => ({ ...current, [key]: file }))
-    if (key === 'video') setVideoUrl(file ? URL.createObjectURL(file) : null)
+    if (key === 'video') {
+      setVideoUrl(file ? URL.createObjectURL(file) : null)
+      if (file && (!action || action === 'Action comparison' || action === 'After')) {
+        const base = file.name.replace(/\.[^/.]+$/, '').replace(/[_.-]/g, ' ').trim()
+        if (base) setAction(base.charAt(0).toUpperCase() + base.slice(1))
+      }
+    }
     setError(null)
   }
   function updateTiming(key, field, value) {
