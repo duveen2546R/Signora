@@ -102,3 +102,12 @@ videos/*.mp4
 videos/*.mov
 videos/*.m4v
 study/matched_study/data/AFTER/reference.mp4
+
+# Session files
+_memory_.ses
+**/_memory_.ses
+:memory:.ses
+**/:memory:.ses
+
+# Database backups
+backend/data/backups/
