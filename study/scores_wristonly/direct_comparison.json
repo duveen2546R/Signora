@@ -1,0 +1,118 @@
+[
+  {
+    "video_window_s": [
+      0.875,
+      5.083
+    ],
+    "reference_shoulder_width_image_fraction": 0.4043883113816597,
+    "common_wrist_coverage": 1.0,
+    "calibration_phase": [
+      0.0,
+      0.15
+    ],
+    "camera": "torso-only (as shipped)",
+    "methods": {
+      "suit": {
+        "file": "MotionCaptureFbx\\action.fbx",
+        "fbx_profile": "mixamo_30",
+        "fbx_fps": 30.0,
+        "window_s": [
+          0.6666666666666666,
+          2.7
+        ],
+        "duration_s": 2.0333333333333337,
+        "source_shoulder_width_m": 0.34484811882393995,
+        "torso_fit_rmse": 0.046257157654608874,
+        "distinct_calibrations": 3,
+        "scale": 1.0714170230778826,
+        "mean_wrist_error": 0.6367789604455691,
+        "median_wrist_error": 0.6212884093381887,
+        "p90_wrist_error": 0.8885369754724407,
+        "max_wrist_error": 1.0869069496496695,
+        "left_wrist_error": 0.7127305724385665,
+        "right_wrist_error": 0.5608273484525717
+      },
+      "non_suit": {
+        "file": "oldfbx\\action.fbx",
+        "fbx_profile": "blender_25",
+        "fbx_fps": 25.0,
+        "window_s": [
+          0.28,
+          2.48
+        ],
+        "duration_s": 2.2,
+        "source_shoulder_width_m": 0.26312939657734447,
+        "torso_fit_rmse": 0.03493749148933694,
+        "distinct_calibrations": 3,
+        "scale": 0.9211523432481085,
+        "mean_wrist_error": 0.6875060688887455,
+        "median_wrist_error": 0.6774588936089146,
+        "p90_wrist_error": 0.8623065201511219,
+        "max_wrist_error": 1.1087842583281773,
+        "left_wrist_error": 0.6528979603218314,
+        "right_wrist_error": 0.7221141774556594
+      }
+    },
+    "ratio_suit_over_non_suit": 0.9262157663201877,
+    "relative_error_reduction": 0.07378423367981235,
+    "better": "suit"
+  },
+  {
+    "video_window_s": [
+      0.875,
+      5.083
+    ],
+    "reference_shoulder_width_image_fraction": 0.4043883113816597,
+    "common_wrist_coverage": 1.0,
+    "calibration_phase": [
+      0.0,
+      0.15
+    ],
+    "camera": "constrained to +-20 deg of frontal",
+    "methods": {
+      "suit": {
+        "file": "MotionCaptureFbx\\action.fbx",
+        "fbx_profile": "mixamo_30",
+        "fbx_fps": 30.0,
+        "window_s": [
+          0.6666666666666666,
+          2.7
+        ],
+        "duration_s": 2.0333333333333337,
+        "source_shoulder_width_m": 0.34484811882393995,
+        "torso_fit_rmse": 0.09212647670088435,
+        "distinct_calibrations": 2,
+        "scale": 0.8061276637030512,
+        "mean_wrist_error": 0.3003022341853104,
+        "median_wrist_error": 0.2949449435412509,
+        "p90_wrist_error": 0.568405373927006,
+        "max_wrist_error": 0.8023022406224194,
+        "left_wrist_error": 0.4292948033648869,
+        "right_wrist_error": 0.1713096650057339
+      },
+      "non_suit": {
+        "file": "oldfbx\\action.fbx",
+        "fbx_profile": "blender_25",
+        "fbx_fps": 25.0,
+        "window_s": [
+          0.28,
+          2.48
+        ],
+        "duration_s": 2.2,
+        "source_shoulder_width_m": 0.26312939657734447,
+        "torso_fit_rmse": 0.12715389665115798,
+        "distinct_calibrations": 2,
+        "scale": 0.5585126313311637,
+        "mean_wrist_error": 0.4573385822281608,
+        "median_wrist_error": 0.4694277861699009,
+        "p90_wrist_error": 0.7413267205084053,
+        "max_wrist_error": 0.8961040239195731,
+        "left_wrist_error": 0.5532985754878288,
+        "right_wrist_error": 0.36137858896849284
+      }
+    },
+    "ratio_suit_over_non_suit": 0.6566300020484455,
+    "relative_error_reduction": 0.34336999795155454,
+    "better": "suit"
+  }
+]

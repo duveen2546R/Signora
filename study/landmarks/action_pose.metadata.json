@@ -1,0 +1,26 @@
+{
+  "video": "action.mp4",
+  "landmarks": "action_pose.csv",
+  "frames": 139,
+  "frame_rate": 24.0,
+  "width": 576,
+  "height": 1024,
+  "pose_model": "pose_landmarker_full.task",
+  "pose_model_sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1",
+  "video_sha256": "5505b0379f808b3baca28a84f2b730b4d0b541b6917e8e1b11ff86dcaabbef91",
+  "landmarks_sha256": "07221abc6071ebeda3bbd151dc34de39de16526a9dc5b3f2868c83b380b6d146",
+  "timestamp_policy": "decoder milliseconds; frame_index/fps fallback",
+  "joint_names": [
+    "left_shoulder",
+    "right_shoulder",
+    "left_hip",
+    "right_hip",
+    "left_wrist",
+    "right_wrist",
+    "left_elbow",
+    "right_elbow"
+  ],
+  "tracking_review": "unreviewed",
+  "mediapipe_version": "0.10.35",
+  "opencv_version": "5.0.0.93"
+}

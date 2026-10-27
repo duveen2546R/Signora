@@ -1,0 +1,422 @@
+import { assertPayloadShape, buildFrame } from './canonicalFrame.js'
+import { faceForward, facingReference } from './facing.js'
+
+const RUNTIME_OBJECT = 'SignoraTrackingRuntime'
+
+// The driver blends a channel back to its bind pose once frames are older than 0.2s, so the stream
+// must never pause - when nothing is playing we keep resending the last pose.
+const KEEPALIVE = true
+
+// The runtime reports 'failed-body' when it could not sample enough frames; retry rather than
+// leaving the avatar frozen in its bind pose.
+const MAX_CALIBRATION_ATTEMPTS = 5
+const RETRY_DELAY_MS = 700
+const CALIBRATION_SUCCESS_STATES = new Set(['complete', 'partial-hand', 'body-only'])
+
+/**
+ * Streams landmark frames to the Signora Unity runtime.
+ *
+ * The runtime retargets in-engine from a calibration reference, so the contract is: send a steady
+ * stream of frames, hold a single reference pose while it calibrates, then play. Sequence numbers
+ * increase monotonically for the life of the page - the runtime rejects anything that goes
+ * backwards, and it never resets except on reload.
+ */
+export default class SignoraPlayer {
+  constructor(sendMessage) {
+    this.send = sendMessage
+    this.sequence = 0
+    this.track = null
+    this.queue = []
+    this.segments = []
+    this.segmentIndex = -1
+    this.idlePose = null
+    this.lastPose = null
+    this.frameIndex = 0
+    this.startedAt = 0
+    this.pausedAt = null
+    this.pauseReasons = new Set()
+    this.raf = null
+    this.calibrated = false
+    this.awaitingResult = false
+    this.attempts = 0
+    this.retryTimer = null
+    this.visibilityBound = false
+    this.calibrationPose = null
+    this.facing = null
+    this.onSignStart = null
+    this.onFinished = null
+    this.onCalibrated = null
+    this.onCalibrationFailed = null
+    this.appliedMarkers = new Map()
+    this.reportedSigns = new Set()
+    this.activeMarker = -1
+    this.externalPlaybackRate = 1
+    this.motionPlaybackRate = 1
+  }
+
+  /** A single pose held during calibration; becomes the avatar's zero. */
+  setCalibrationPose(payload) {
+    assertPayloadShape(payload)
+    this.calibrationPose = {
+      pose: payload.pose[0], leftHand: payload.leftHand[0], rightHand: payload.rightHand[0],
+      faceBlendshapes: null,
+    }
+    // Every streamed frame is turned to face the way this pose does, so signs always play
+    // front-facing even where the performer turned while recording.
+    this.facing = facingReference(this.calibrationPose.pose)
+  }
+
+  /**
+   * Start calibration and keep at it until the runtime reports success.
+   *
+   * The driver measures its 2s window against wall-clock time but only samples on frames it
+   * renders, so anything that stalls rendering - a backgrounded tab, a slow first paint - makes it
+   * calibrate from a starved sample set and fail every binding. Rather than guess at that from
+   * `document.hidden`, which lies in embedded panes, this reacts to the result the runtime actually
+   * reports back and tries again.
+   */
+  calibrate() {
+    if (!this.calibrationPose) throw new Error('No calibration pose has been set.')
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer)
+    this.retryTimer = null
+    this.calibrated = false
+    this.attempts = 0
+    this.#watchVisibility()
+    this.#beginCalibration()
+  }
+
+  #beginCalibration() {
+    this.attempts += 1
+    this.awaitingResult = true
+    this.send(RUNTIME_OBJECT, 'BeginCalibration')
+    this.#ensureLoop()
+  }
+
+  /** Wired to the runtime's SignoraCalibrationState callback. */
+  handleCalibrationState(state) {
+    if (!this.awaitingResult) return
+
+    // BeginCalibration reports this synchronously. It is a progress event, not a successful
+    // result. Treating it as success lets queued motion replace the bind pose during Unity's
+    // calibration window, after which the avatar either calibrates against a moving sign or never
+    // leaves calibration at all.
+    if (state === 'calibrating') return
+
+    this.awaitingResult = false
+
+    if (CALIBRATION_SUCCESS_STATES.has(state)) {
+      this.calibrated = true
+      this.onCalibrated?.(state)
+      return
+    }
+
+    if (state !== 'failed-body') {
+      this.onCalibrationFailed?.(`Unity reported an unknown calibration state: ${state}`)
+      return
+    }
+
+    if (this.attempts >= MAX_CALIBRATION_ATTEMPTS) {
+      this.onCalibrationFailed?.(
+        `Calibration failed after ${this.attempts} attempts. The avatar view must be visible and ` +
+        'rendering for the runtime to sample enough frames.',
+      )
+      return
+    }
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null
+      this.#beginCalibration()
+    }, RETRY_DELAY_MS)
+  }
+
+  #watchVisibility() {
+    if (this.visibilityBound) return
+    this.visibilityBound = true
+    this.onVisibilityChange = () => {
+      this.#setPaused('visibility', document.hidden)
+      // Coming back into view is the moment a starved calibration can finally succeed.
+      if (!document.hidden && !this.calibrated && !this.awaitingResult) {
+        this.attempts = 0
+        this.#beginCalibration()
+      }
+    }
+    document.addEventListener('visibilitychange', this.onVisibilityChange)
+  }
+
+  /**
+   * Play a composed sentence - one continuous track, not a queue of clips.
+   *
+   * The backend already stitched the signs together and generated the movement between them, so
+   * there is nothing to schedule here and, more importantly, no boundary at which the stream could
+   * pause. Segments only say which sign is on screen.
+   */
+  play(payload) {
+    this.clear()
+    this.enqueue(payload)
+  }
+
+  /** Append a validated motion chunk without restarting the current avatar stream. */
+  enqueue(payload, sequence = null, tag = null) {
+    assertPayloadShape(payload)
+    // A rest-pose fallback is a validated track too; anything else failed transition validation.
+    if (payload.blendQuality && !['direct', 'neutral-fallback'].includes(payload.blendQuality.status)) {
+      throw new Error('Animation failed transition validation.')
+    }
+    if (!this.calibrated) {
+      throw new Error('Avatar calibration must complete before playback starts.')
+    }
+    if (payload.neutral) this.setIdlePose(payload.neutral)
+    const entry = { payload, sequence, tag }
+    if (this.track) {
+      this.queue.push(entry)
+    } else {
+      this.#startEntry(entry, performance.now())
+    }
+    this.#ensureLoop()
+  }
+
+  #startEntry(entry, startedAt) {
+    this.track = entry.payload
+    this.faceBlendshapeNames = entry.payload.faceBlendshapeNames ?? []
+    this.currentSequence = entry.sequence
+    this.currentTag = entry.tag
+    const durationMs = entry.payload.frameCount / entry.payload.fps * 1000
+    const upcomingMs = this.queue.reduce((total, next) => total + next.payload.frameCount / next.payload.fps * 1000, 0)
+    const targetMs = entry.payload.playbackTiming?.targetDurationMs ?? entry.payload.liveTiming?.targetDurationMs
+    // Choose speed at a chunk boundary so rate updates never jump within a stroke.
+    // A server-measured limit bounds source wrist/limb velocity; manual previews stay at 1x.
+    this.motionPlaybackRate = entry.payload.playbackTiming && Number.isFinite(targetMs) && targetMs > 0
+      ? Math.max(0.25, Math.min(4, durationMs / Math.max(targetMs, 250)))
+      : entry.tag === 'live-motion' && Number.isFinite(targetMs) && targetMs > 0
+        ? Math.max(1, Math.min(1.5, entry.payload.maxPlaybackRate ?? 1,
+          Math.max(durationMs / Math.max(targetMs, 250), 1 + upcomingMs / 5000))) : 1
+    this.playbackRate = this.motionPlaybackRate * this.externalPlaybackRate
+    this.segments = entry.payload.segments ?? []
+    this.segmentIndex = -1
+    this.reportedSigns.clear()
+    this.activeMarker = -1
+    const firstSign = this.segments.find((segment) => segment.kind === 'sign')
+    const deadline = entry.payload.liveTiming?.desiredSignAt
+    // Only an idle neutral opening may wait. Never insert a hold into a flowing boundary.
+    const opening = entry.payload.streamingLibrary && entry.payload.startsFromNeutral
+    if (opening && Number.isFinite(deadline) && firstSign) {
+      startedAt += Math.max(0, Math.min(100, deadline - startedAt - firstSign.startFrame / entry.payload.fps * 1000))
+    }
+    this.startedAt = startedAt
+    if (document.hidden) this.pauseReasons.add('visibility')
+    this.pausedAt = this.pauseReasons.size ? startedAt : null
+    this.#watchVisibility()
+    this.frameIndex = 0
+  }
+
+  cancelQueued(tag) {
+    const before = this.queue.length
+    this.queue = this.queue.filter((entry) => entry.tag !== tag)
+    return before - this.queue.length
+  }
+
+  queuedDurationMs() {
+    const queued = this.queue.reduce(
+      (total, entry) => total + entry.payload.frameCount / entry.payload.fps * 1000, 0,
+    )
+    if (!this.track) return queued
+    const elapsed = Math.max((this.pausedAt ?? performance.now()) - this.startedAt, 0)
+    const remaining = Math.max(this.track.frameCount / this.track.fps * 1000 / this.playbackRate - elapsed, 0)
+    return remaining + queued
+  }
+
+  /** Where the avatar rests between sentences, in the performer's proportions. */
+  setIdlePose(frame) {
+    this.idlePose = {
+      pose: frame.pose, leftHand: frame.leftHand, rightHand: frame.rightHand,
+      faceBlendshapes: frame.faceBlendshapes ?? null,
+    }
+  }
+
+  #setPaused(reason, paused) {
+    const wasPaused = this.pauseReasons.size > 0
+    if (paused) this.pauseReasons.add(reason)
+    else this.pauseReasons.delete(reason)
+    const isPaused = this.pauseReasons.size > 0
+    const now = performance.now()
+    if (!wasPaused && isPaused && this.track) this.pausedAt = now
+    if (wasPaused && !isPaused && this.track && this.pausedAt !== null) {
+      this.startedAt += now - this.pausedAt
+      this.pausedAt = null
+    }
+  }
+
+  pause() {
+    this.#setPaused('media', true)
+  }
+
+  resume() {
+    this.#setPaused('media', false)
+  }
+
+  /** Keep wall-clock avatar speed aligned with the video's user-selected playback speed. */
+  setPlaybackRate(rate) {
+    const next = Number(rate)
+    if (!Number.isFinite(next) || next <= 0) return
+    const now = performance.now()
+    if (this.track && this.pausedAt === null) {
+      const elapsedSourceSeconds = Math.max(0, now - this.startedAt) / 1000 * this.playbackRate
+      this.externalPlaybackRate = next
+      this.playbackRate = this.motionPlaybackRate * this.externalPlaybackRate
+      this.startedAt = now - elapsedSourceSeconds / this.playbackRate * 1000
+      return
+    }
+    this.externalPlaybackRate = next
+    this.playbackRate = this.motionPlaybackRate * this.externalPlaybackRate
+  }
+
+  resetToIdle() {
+    this.clear()
+    this.lastPose = this.idlePose ?? this.calibrationPose
+    this.frameIndex = 0
+  }
+
+  clear() {
+    this.pausedAt = null
+    this.pauseReasons.clear()
+    this.track = null
+    this.queue = []
+    this.segments = []
+    this.segmentIndex = -1
+    this.appliedMarkers.clear()
+    this.reportedSigns.clear()
+  }
+
+  stop() {
+    this.clear()
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer)
+    this.retryTimer = null
+    if (this.raf !== null) cancelAnimationFrame(this.raf)
+    this.raf = null
+    if (this.onVisibilityChange) {
+      document.removeEventListener('visibilitychange', this.onVisibilityChange)
+      this.visibilityBound = false
+    }
+  }
+
+  #ensureLoop() {
+    if (this.raf === null) this.raf = requestAnimationFrame(this.#tick)
+  }
+
+  #emit(pose, leftHand, rightHand, faceBlendshapes, state) {
+    this.sequence += 1
+    const now = performance.now()
+    const segment = this.segments.find((entry) => entry.kind === 'sign'
+      && this.frameIndex >= entry.startFrame && this.frameIndex < entry.endFrame)
+    let marker = segment ? this.activeMarker : -1
+    if (state === 'playing' && segment && !this.reportedSigns.has(segment.occurrenceIndex)) {
+      this.reportedSigns.add(segment.occurrenceIndex)
+      marker = this.sequence
+      this.activeMarker = marker
+      const detail = { frameSequence: marker, occurrenceIndex: segment.occurrenceIndex,
+        gloss: segment.gloss, sourceEndAt: this.track?.liveTiming?.sourceEndAt, at: now }
+      this.appliedMarkers.set(marker, detail)
+      if (this.appliedMarkers.size > 128) this.appliedMarkers.delete(this.appliedMarkers.keys().next().value)
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('signsure-sign-submitted', { detail }))
+    }
+    const facing = faceForward(this.facing, pose, leftHand, rightHand)
+    this.send(RUNTIME_OBJECT, 'ReceiveFrame', buildFrame({
+      sequence: this.sequence, timeMs: now,
+      pose: facing.pose, leftHand: facing.leftHand, rightHand: facing.rightHand,
+      faceBlendshapeNames: this.faceBlendshapeNames, faceBlendshapes, state,
+      signMarker: marker,
+    }))
+  }
+
+  handleApplied(marker) {
+    const detail = this.appliedMarkers.get(marker)
+    if (!detail) return
+    this.appliedMarkers.delete(marker)
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('signsure-sign-applied', {
+      detail: { ...detail, at: performance.now() },
+    }))
+  }
+
+  /** Linear blend between the two frames bracketing a time, so playback is not quantised to rAF. */
+  #sample(time) {
+    const { pose, leftHand, rightHand, faceBlendshapes, frameCount, fps } = this.track
+    const exact = Math.max(time * fps, 0)
+    const i = Math.min(Math.floor(exact), frameCount - 1)
+    const j = Math.min(i + 1, frameCount - 1)
+    const f = exact - i
+
+    // Neighbouring frames are 1/60s apart, so this cannot meaningfully bend the skeleton the way
+    // interpolating between two *different* signs would; the composed track already did that work.
+    const mix = (a, b) => (f <= 0 || i === j ? a : a.map((p, k) => [
+      p[0] + (b[k][0] - p[0]) * f,
+      p[1] + (b[k][1] - p[1]) * f,
+      p[2] + (b[k][2] - p[2]) * f,
+    ]))
+    const mixScalars = (a, b) => (f <= 0 || i === j ? a : a.map(
+      (value, k) => value + (b[k] - value) * f,
+    ))
+
+    return {
+      index: i,
+      pose: mix(pose[i], pose[j]),
+      leftHand: mix(leftHand[i], leftHand[j]),
+      rightHand: mix(rightHand[i], rightHand[j]),
+      faceBlendshapes: faceBlendshapes ? mixScalars(faceBlendshapes[i], faceBlendshapes[j]) : null,
+    }
+  }
+
+  #announce(index) {
+    // Walk every crossed segment, including a boundary crossed between two rAF callbacks.
+    while (this.segmentIndex + 1 < this.segments.length && this.segments[this.segmentIndex + 1].startFrame <= index) {
+      const segment = this.segments[++this.segmentIndex]
+      if (segment.kind === 'sign') this.onSignStart?.(segment.gloss, segment.occurrenceIndex)
+    }
+  }
+
+  #tick = () => {
+    this.raf = requestAnimationFrame(this.#tick)
+    const now = performance.now()
+
+    // Hold the reference pose steady until the runtime confirms it calibrated on it.
+    if (!this.calibrated) {
+      const { pose, leftHand, rightHand, faceBlendshapes } = this.calibrationPose
+      this.#emit(pose, leftHand, rightHand, faceBlendshapes, 'calibrating')
+      return
+    }
+
+    while (this.track) {
+      const elapsed = ((this.pausedAt ?? now) - this.startedAt) / 1000 * this.playbackRate
+      const duration = this.track.frameCount / this.track.fps
+      if (elapsed < duration) {
+        const frame = this.#sample(elapsed)
+        this.frameIndex = frame.index
+        this.#announce(frame.index)
+        this.lastPose = frame
+        this.#emit(frame.pose, frame.leftHand, frame.rightHand, frame.faceBlendshapes, 'playing')
+        return
+      }
+      const final = this.#sample((this.track.frameCount - 1) / this.track.fps)
+      this.#announce(this.track.frameCount - 1)
+      this.lastPose = final
+      this.frameIndex = final.index
+      const spilloverMs = Math.max(elapsed - duration, 0) * 1000 / this.playbackRate
+      const next = this.queue.shift()
+      if (next) {
+        this.#startEntry(next, now - spilloverMs)
+        continue
+      }
+      this.track = null
+      this.segments = []
+      this.segmentIndex = -1
+      this.currentSequence = null
+      this.currentTag = null
+      this.onFinished?.()
+    }
+
+    if (!KEEPALIVE) return
+
+    // Nothing playing. Hold the pose the avatar actually reached - resending the calibration pose
+    // here would snap it back to the avatar's T-pose the moment a sentence ended.
+    const resting = this.lastPose ?? this.idlePose ?? this.calibrationPose
+    this.#emit(resting.pose, resting.leftHand, resting.rightHand, resting.faceBlendshapes, 'idle')
+  }
+}

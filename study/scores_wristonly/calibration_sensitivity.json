@@ -1,0 +1,55 @@
+{
+  "selected": {
+    "suit": 0.5663,
+    "non_suit": 0.6984
+  },
+  "range": {
+    "suit": [
+      0.5663,
+      0.739
+    ],
+    "non_suit": [
+      0.618,
+      0.6984
+    ]
+  },
+  "ratio_selected": 0.8108533791523482,
+  "ratio_range": [
+    0.8108533791523482,
+    1.1957928802588997
+  ],
+  "branches": {
+    "suit": [
+      {
+        "torso_rmse": 0.0492,
+        "wrist_error": 0.5663
+      },
+      {
+        "torso_rmse": 0.0493,
+        "wrist_error": 0.7263
+      },
+      {
+        "torso_rmse": 0.3031,
+        "wrist_error": 0.7136
+      },
+      {
+        "torso_rmse": 0.31,
+        "wrist_error": 0.739
+      }
+    ],
+    "non_suit": [
+      {
+        "torso_rmse": 0.0355,
+        "wrist_error": 0.6984
+      },
+      {
+        "torso_rmse": 0.0364,
+        "wrist_error": 0.618
+      },
+      {
+        "torso_rmse": 0.3095,
+        "wrist_error": 0.6454
+      }
+    ]
+  }
+}

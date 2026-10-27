@@ -1,0 +1,10 @@
+{
+  "removedSigns": [
+    "FATHER",
+    "GOOD_MORNING",
+    "HELLO",
+    "NAMASTE",
+    "THANKYOU"
+  ],
+  "reason": "User requested removing the old recordings before FBX import."
+}

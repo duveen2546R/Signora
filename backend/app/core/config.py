@@ -1,0 +1,34 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+class Settings(BaseSettings):
+    app_name: str = "SignSure"
+    base_dir: Path = BASE_DIR
+    repo_root: Path = BASE_DIR.parent
+    database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'signsure.db'}"
+    upload_dir: Path = BASE_DIR / "data" / "uploads"
+    clip_dir: Path = BASE_DIR / "data" / "clips"
+    transition_dir: Path = BASE_DIR / "data" / "transitions"
+    video_plan_dir: Path = BASE_DIR / "data" / "video-plans"
+    analysis_dir: Path = BASE_DIR / "data" / "analyses"
+    analysis_pose_model: Path = BASE_DIR.parent / "study" / "models" / "pose_landmarker_full.task"
+    analysis_hand_model: Path = BASE_DIR.parent / "study" / "models" / "hand_landmarker.task"
+    speech_model_dir: Path = BASE_DIR / "data" / "speech-model"
+    speech_threads: int = 2
+    # Vite dev server; tighten for deployment.
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    model_config = SettingsConfigDict(env_prefix="SIGNSURE_")
+
+
+settings = Settings()
+settings.upload_dir.mkdir(parents=True, exist_ok=True)
+settings.clip_dir.mkdir(parents=True, exist_ok=True)
+settings.transition_dir.mkdir(parents=True, exist_ok=True)
+settings.video_plan_dir.mkdir(parents=True, exist_ok=True)

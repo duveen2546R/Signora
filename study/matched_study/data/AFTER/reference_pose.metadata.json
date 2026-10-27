@@ -1,0 +1,35 @@
+{
+  "video": "reference.mp4",
+  "landmarks": "reference_pose.csv",
+  "frames": 128,
+  "frame_rate": 24.0,
+  "width": 2160,
+  "height": 3840,
+  "pose_model": "rtmlib_dwpose_wholebody",
+  "video_sha256": "48a6ccbc782657a9402a71f7f02392ef7586510b55b1ec1de0c3bd0f5573ff44",
+  "landmarks_sha256": "86e9f0ee34f508fa9fa081486078bb0c432a3868bbc846a6a4b0a2cd670321d3",
+  "timestamp_policy": "unrounded decoder seconds",
+  "joint_names": [
+    "left_shoulder",
+    "right_shoulder",
+    "left_hip",
+    "right_hip",
+    "left_wrist",
+    "right_wrist",
+    "left_elbow",
+    "right_elbow",
+    "left_index",
+    "right_index"
+  ],
+  "tracking_review": "unreviewed",
+  "upper_body": {
+    "file": "reference_pose.upper.npz",
+    "sha256": "8d8073519c51f322727d33641118e442e17caf5ea05421faff4cc7b09e98dff4",
+    "hand_model_available": true,
+    "hand_quality": "DWPose ONNX Direct Output",
+    "hand_observed_frame_fraction": [
+      1.0,
+      1.0
+    ]
+  }
+}

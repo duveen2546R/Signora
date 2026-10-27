@@ -1,0 +1,35 @@
+{
+  "video": "reference.mp4",
+  "landmarks": "reference_pose.csv",
+  "frames": 121,
+  "frame_rate": 24.0,
+  "width": 2160,
+  "height": 3840,
+  "pose_model": "rtmlib_dwpose_wholebody",
+  "video_sha256": "1a45a51132b7cd0c6b5b1af120c01183f76916829a809ca61fdfe1ba9c06ebb4",
+  "landmarks_sha256": "16d55a46c4088a5734e5c1cbc47cdad2e9e4e085590c3627717845dbd779b1e6",
+  "timestamp_policy": "unrounded decoder seconds",
+  "joint_names": [
+    "left_shoulder",
+    "right_shoulder",
+    "left_hip",
+    "right_hip",
+    "left_wrist",
+    "right_wrist",
+    "left_elbow",
+    "right_elbow",
+    "left_index",
+    "right_index"
+  ],
+  "tracking_review": "unreviewed",
+  "upper_body": {
+    "file": "reference_pose.upper.npz",
+    "sha256": "3b7c8b3ad4efdb00088adbd56f5dba36709e1e2253a67ad33748bf8ba404ad10",
+    "hand_model_available": true,
+    "hand_quality": "DWPose per-point score >= 0.70; scores are not calibrated uncertainty",
+    "hand_observed_frame_fraction": [
+      1.0,
+      1.0
+    ]
+  }
+}

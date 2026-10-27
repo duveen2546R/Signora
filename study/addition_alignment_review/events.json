@@ -1,0 +1,68 @@
+{
+  "video": {
+    "left": {
+      "baseline_height": -889.3296432495117,
+      "raised_height": -10.443534851074219,
+      "rise_midpoint_s": 1.2974755009121737,
+      "fall_midpoint_s": 3.42499124561917,
+      "all_crossings": [
+        1.2974755009121737,
+        3.42499124561917
+      ]
+    },
+    "right": {
+      "baseline_height": -924.3727397918701,
+      "raised_height": -69.02841567993164,
+      "rise_midpoint_s": 1.2470657044235316,
+      "fall_midpoint_s": 3.4845994253598227,
+      "all_crossings": [
+        1.2470657044235316,
+        3.4845994253598227
+      ]
+    }
+  },
+  "suit": {
+    "left": {
+      "baseline_height": -0.447444780304614,
+      "raised_height": 0.08485982070879405,
+      "rise_midpoint_s": 1.7923298790143378,
+      "fall_midpoint_s": 4.034303003136653,
+      "all_crossings": [
+        1.7923298790143378,
+        4.034303003136653
+      ]
+    },
+    "right": {
+      "baseline_height": -0.4643147790282909,
+      "raised_height": -0.05475671765936885,
+      "rise_midpoint_s": 1.7575948515959503,
+      "fall_midpoint_s": 4.079331580913422,
+      "all_crossings": [
+        1.7575948515959503,
+        4.079331580913422
+      ]
+    }
+  },
+  "non_suit": {
+    "left": {
+      "baseline_height": -0.5283354315506561,
+      "raised_height": 0.011484834948775058,
+      "rise_midpoint_s": 1.2421014989560877,
+      "fall_midpoint_s": 3.4978228916379166,
+      "all_crossings": [
+        1.2421014989560877,
+        3.4978228916379166
+      ]
+    },
+    "right": {
+      "baseline_height": -0.5416286471026686,
+      "raised_height": -0.00022466579884894422,
+      "rise_midpoint_s": 1.2126869857746276,
+      "fall_midpoint_s": 3.5984191776905172,
+      "all_crossings": [
+        1.2126869857746276,
+        3.5984191776905172
+      ]
+    }
+  }
+}

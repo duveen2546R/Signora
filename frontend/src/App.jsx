@@ -1,0 +1,29 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
+import Landing from './pages/Landing'
+import SignPage from './pages/SignPage'
+import Capture from './pages/Capture'
+import Watch from './pages/Watch'
+import Analysis from './pages/Analysis'
+import AvatarHost from './pages/AvatarHost'
+import './App.css'
+
+export default function App() {
+  const youtubeSigning = import.meta.env.VITE_YOUTUBE_SIGNING !== 'false'
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Landing />} />
+          <Route path="sign" element={<SignPage />} />
+          <Route path="capture" element={<Capture />} />
+          <Route path="analysis" element={<Analysis />} />
+          {youtubeSigning && <Route path="watch" element={<Watch />} />}
+        </Route>
+        {/* No Layout: embedded as a bare iframe by the Chrome extension's Unity adapter
+            (extension/src/avatar/unity-iframe.js), never visited directly. */}
+        <Route path="signora-avatar" element={<AvatarHost />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}

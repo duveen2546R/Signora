@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "trials": [
+    {
+      "performance_id": "P01-AFTER-01",
+      "action_id": "AFTER",
+      "performer_id": "P01",
+      "repetition": "01",
+      "pairing_verified_by": "User supplied After.mp4 and After_New_2_mixamo.fbx as the same physical take",
+      "recording_relationship": "same_performance",
+      "reference_independent": true,
+      "suit_fbx": "data/AFTER/motioncapture.fbx",
+      "reference_video": "data/AFTER/reference.mp4",
+      "video_landmarks": "data/AFTER/reference_pose.csv",
+      "sha256": {
+        "suit_fbx": "53b8b2ecf97dc2487cbd25bddb8fe2cc656fccdac8586db18b88b9cc3fd5c774",
+        "reference_video": "48a6ccbc782657a9402a71f7f02392ef7586510b55b1ec1de0c3bd0f5573ff44",
+        "video_landmarks": "86e9f0ee34f508fa9fa081486078bb0c432a3868bbc846a6a4b0a2cd670321d3"
+      },
+      "windows": {
+        "video": [
+          1.083,
+          3.625
+        ],
+        "suit": [
+          1.675,
+          4.217
+        ]
+      },
+      "calibration_phase": [
+        0,
+        0.07
+      ]
+    }
+  ],
+  "case_study": {
+    "video_metadata": "data/AFTER/reference_pose.metadata.json",
+    "video_metadata_sha256": "934ebc5cb1fdbe8e28bd911efecf21a814043a790eb2172a88cbd3f28ff0bd90",
+    "pose_model": "/Users/duveen/Projects/SignSure/study/models/pose_landmarker_full.task",
+    "review": {
+      "tracking": "unreviewed",
+      "boundaries": "provisional",
+      "calibration": "provisional"
+    },
+    "review_notes": [
+      "Boundaries: wrists leave/return to rest pose (10% of peak displacement), detected on video and mapped to FBX by the sync offset.",
+      "Sync: wrist-height cross-correlation, r=0.992."
+    ],
+    "reference_view": "front",
+    "tolerance_profile": "intelligibility",
+    "synchronization": {
+      "suit": {
+        "clock_verified": true,
+        "clock_evidence": "Same physical take; automatic wrist-height cross-correlation r=0.992",
+        "event": {
+          "reviewed": true,
+          "description": "Sign onset (wrists leave rest), aligned by cross-correlation",
+          "video_seconds": 1.083,
+          "fbx_seconds": 1.675
+        },
+        "video_seconds_per_fbx_second": 1.0,
+        "rate_evidence": "normal speed"
+      }
+    }
+  }
+}

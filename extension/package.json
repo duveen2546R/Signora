@@ -1,0 +1,14 @@
+{
+  "name": "signora-youtube-extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Manifest V3 Chrome extension that signs YouTube English captions with the Signora avatar.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "check-build": "node tools/build.mjs --check",
+    "test": "node tools/build.mjs && node --test",
+    "sync-vendor": "node tools/sync-vendor.mjs",
+    "check-vendor": "node tools/sync-vendor.mjs --check"
+  }
+}

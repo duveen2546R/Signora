@@ -1,0 +1,608 @@
+{
+  "diagnosis": "Separate performances prevent capture-accuracy inference; additional limitations include skeleton geometry, initial preparation poses, and camera ambiguity.",
+  "cases": [
+    {
+      "set": 1,
+      "original_job": "d9984b925866449ea1be7bc0a36d7929",
+      "corrected_job": "9f4abae6c1e84c69975ef3cae0f01a04",
+      "source_sha256": {
+        "suit_fbx": "4c35e5cd196add70455ba3a7ff43570e9fa135db65c7e025cec41cc11ced2f02",
+        "non_suit_fbx": "5f235503d51abe3390af7a7f5444ca4f2d59b22208b0cffc248fa31f42b98e12",
+        "reference_video": "2b5b28370ebd15e1857cd5ead9180905ce792535f548a9ef2eb73fe2f4b2b331"
+      },
+      "relationship": "separate_repetitions",
+      "status": "descriptive",
+      "proportions": {
+        "suit": {
+          "shoulder_width_m": 0.34511391359551435,
+          "lengths_per_shoulder_width": {
+            "left_upper_arm": 0.6511639591686076,
+            "right_upper_arm": 0.6511644013038279,
+            "left_forearm": 0.7170289440404984,
+            "right_forearm": 0.7170279492346124
+          },
+          "torso_length_per_shoulder_width": 1.2250866791974464
+        },
+        "non_suit": {
+          "shoulder_width_m": 0.26312962532157425,
+          "lengths_per_shoulder_width": {
+            "left_upper_arm": 1.0222659368219191,
+            "right_upper_arm": 1.0222448539818871,
+            "left_forearm": 0.8559345525725932,
+            "right_forearm": 0.8559509976396154
+          },
+          "torso_length_per_shoulder_width": 1.8452021450656362
+        }
+      },
+      "means": {
+        "suit": 0.4540059611770142,
+        "non_suit": 0.3597936662325668
+      },
+      "camera_sensitivity": {
+        "fit_rmse_slack": 0.005,
+        "error_spread_flag_shoulder_widths": 0.01,
+        "error_ranges": {
+          "suit": [
+            0.2685716310476076,
+            0.4540059611770142
+          ],
+          "non_suit": [
+            0.3597936662325668,
+            0.4227572610966407
+          ]
+        },
+        "old_minus_motioncapture_range": [
+          -0.09421229494444738,
+          0.15418563004903307
+        ],
+        "ranking_changes": true,
+        "unresolved": true,
+        "sensitivity_not_confidence_interval": true
+      },
+      "previous_corrected_job": "754cf33958374d5188da48ddfe0e8588",
+      "frontal_camera_diagnostic": {
+        "interpretation": "Hypothetical frontal, upright view. Shoulder direction and gravity define the view; torso aspect ratio and wrist/elbow residuals are not fitted. Same rule for both FBXs. This is a camera sensitivity check, not verified capture accuracy.",
+        "methods": {
+          "suit": {
+            "status": "descriptive_sensitivity",
+            "camera": {
+              "rotation_vector_rad": [
+                -3.140905777488413,
+                -0.003978609349090382,
+                -0.06308582200197768
+              ],
+              "scale": 1.0,
+              "status": "assumed_frontal_view_not_verified"
+            },
+            "metrics": {
+              "position": {
+                "left_wrist": {
+                  "n": 101,
+                  "mean": 0.4310655716131985,
+                  "median": 0.36728764848539075,
+                  "p95": 0.8775689472881786,
+                  "signed_bias_x": -0.26862631222833167,
+                  "signed_bias_y": -0.21811324246497638
+                },
+                "right_wrist": {
+                  "n": 101,
+                  "mean": 0.25382115970622304,
+                  "median": 0.23542796245231307,
+                  "p95": 0.5985394097701171,
+                  "signed_bias_x": 0.014918167990557058,
+                  "signed_bias_y": -0.17027273660768863
+                },
+                "left_elbow": {
+                  "n": 101,
+                  "mean": 0.2952807900688859,
+                  "median": 0.19773579206472736,
+                  "p95": 0.5302802996489347,
+                  "signed_bias_x": -0.1965886688709771,
+                  "signed_bias_y": -0.19050465488159382
+                },
+                "right_elbow": {
+                  "n": 101,
+                  "mean": 0.23513127001629774,
+                  "median": 0.18467988849557596,
+                  "p95": 0.4014954493028976,
+                  "signed_bias_x": 0.07403852782083074,
+                  "signed_bias_y": -0.2011505365611649
+                }
+              },
+              "combined_position": {
+                "n": 404,
+                "mean": 0.3038246978511513,
+                "median": 0.2513946487295359,
+                "p95": 0.6346550875780397
+              },
+              "elbow_angle": {
+                "left": {
+                  "n": 101,
+                  "mean": 35.37188008719157,
+                  "median": 42.43258573601055,
+                  "p95": 85.97667558603948
+                },
+                "right": {
+                  "n": 101,
+                  "mean": 29.51961944041902,
+                  "median": 11.081730002181217,
+                  "p95": 111.17584041780717
+                }
+              }
+            }
+          },
+          "non_suit": {
+            "status": "descriptive_sensitivity",
+            "camera": {
+              "rotation_vector_rad": [
+                -3.141590048344782,
+                -0.003979476120212894,
+                -0.00010309627357958581
+              ],
+              "scale": 1.0,
+              "status": "assumed_frontal_view_not_verified"
+            },
+            "metrics": {
+              "position": {
+                "left_wrist": {
+                  "n": 101,
+                  "mean": 0.5556860386332491,
+                  "median": 0.44025782888298365,
+                  "p95": 1.102600561673582,
+                  "signed_bias_x": -0.14676081347059744,
+                  "signed_bias_y": 0.02048120337657192
+                },
+                "right_wrist": {
+                  "n": 101,
+                  "mean": 0.5517248491724928,
+                  "median": 0.3342972627928305,
+                  "p95": 1.2409902813563767,
+                  "signed_bias_x": 0.10619357392104704,
+                  "signed_bias_y": -0.007488733420472533
+                },
+                "left_elbow": {
+                  "n": 101,
+                  "mean": 0.2503488230351921,
+                  "median": 0.24385071125997587,
+                  "p95": 0.34803229588621837,
+                  "signed_bias_x": 0.03563205658305454,
+                  "signed_bias_y": 0.11006312459410508
+                },
+                "right_elbow": {
+                  "n": 101,
+                  "mean": 0.20645453952824405,
+                  "median": 0.19783136206651133,
+                  "p95": 0.34618561672864945,
+                  "signed_bias_x": 0.010678130505763389,
+                  "signed_bias_y": 0.12532577200191686
+                }
+              },
+              "combined_position": {
+                "n": 404,
+                "mean": 0.3910535625922945,
+                "median": 0.2530482512515041,
+                "p95": 1.1248268321866255
+              },
+              "elbow_angle": {
+                "left": {
+                  "n": 101,
+                  "mean": 52.611921080121135,
+                  "median": 34.29407214977835,
+                  "p95": 146.29906049696174
+                },
+                "right": {
+                  "n": 101,
+                  "mean": 47.84918811942492,
+                  "median": 11.652096622914797,
+                  "p95": 151.2873868420966
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "set": 2,
+      "original_job": "616a8d7077dd4fa4b041494b590ce620",
+      "corrected_job": "d11507ff288d4cec934a3639756a4050",
+      "source_sha256": {
+        "suit_fbx": "939d55ac5387cf6fe6d90800b1e67e96b7bfabb2b54f6169b81fb2d3707c000e",
+        "non_suit_fbx": "0c4947a2b226d039c4c4ca0622725d924e93bcc85fe0a71a99dc43c81d4f7959",
+        "reference_video": "d13033d7c45b12a5452ca7d25f17c5e76efeb9bc6d167def713baca565cbc2ed"
+      },
+      "relationship": "separate_repetitions",
+      "status": "descriptive",
+      "proportions": {
+        "suit": {
+          "shoulder_width_m": 0.344234797004672,
+          "lengths_per_shoulder_width": {
+            "left_upper_arm": 0.6528269201616416,
+            "right_upper_arm": 0.6528273634259992,
+            "left_forearm": 0.7188601129005472,
+            "right_forearm": 0.7188591155540976
+          },
+          "torso_length_per_shoulder_width": 1.2270693328134121
+        },
+        "non_suit": {
+          "shoulder_width_m": 0.26312962532170064,
+          "lengths_per_shoulder_width": {
+            "left_upper_arm": 1.0222656018446812,
+            "right_upper_arm": 1.0222451512281838,
+            "left_forearm": 0.8559344366242656,
+            "right_forearm": 0.8559510510551556
+          },
+          "torso_length_per_shoulder_width": 1.8477148662815321
+        }
+      },
+      "means": {
+        "suit": 0.39230151139414693,
+        "non_suit": 0.4045168720995243
+      },
+      "camera_sensitivity": {
+        "fit_rmse_slack": 0.005,
+        "error_spread_flag_shoulder_widths": 0.01,
+        "error_ranges": {
+          "suit": [
+            0.2512035289952827,
+            0.39230151139414693
+          ],
+          "non_suit": [
+            0.28085941094121186,
+            0.4045168720995243
+          ]
+        },
+        "old_minus_motioncapture_range": [
+          -0.11144210045293507,
+          0.1533133431042416
+        ],
+        "ranking_changes": true,
+        "unresolved": true,
+        "sensitivity_not_confidence_interval": true
+      },
+      "previous_corrected_job": "9e097c674fc64a3eb0723eb9c5ea8c0f",
+      "frontal_camera_diagnostic": {
+        "interpretation": "Hypothetical frontal, upright view. Shoulder direction and gravity define the view; torso aspect ratio and wrist/elbow residuals are not fitted. Same rule for both FBXs. This is a camera sensitivity check, not verified capture accuracy.",
+        "methods": {
+          "suit": {
+            "status": "descriptive_sensitivity",
+            "camera": {
+              "rotation_vector_rad": [
+                3.1412547764540797,
+                0.024072535991275214,
+                -0.02684241247916055
+              ],
+              "scale": 1.0,
+              "status": "assumed_frontal_view_not_verified"
+            },
+            "metrics": {
+              "position": {
+                "left_wrist": {
+                  "n": 101,
+                  "mean": 0.5014539019608167,
+                  "median": 0.3943758403687703,
+                  "p95": 1.0561243352628251,
+                  "signed_bias_x": -0.20770405731280805,
+                  "signed_bias_y": -0.3415640990777872
+                },
+                "right_wrist": {
+                  "n": 101,
+                  "mean": 0.348071788554566,
+                  "median": 0.2726505547694567,
+                  "p95": 0.8464702762594397,
+                  "signed_bias_x": -0.03386876959888101,
+                  "signed_bias_y": -0.2189753785117344
+                },
+                "left_elbow": {
+                  "n": 101,
+                  "mean": 0.17284855464526186,
+                  "median": 0.17563940566800584,
+                  "p95": 0.23761698492287212,
+                  "signed_bias_x": -0.0779419729959294,
+                  "signed_bias_y": -0.12614127598174846
+                },
+                "right_elbow": {
+                  "n": 101,
+                  "mean": 0.11225408411032503,
+                  "median": 0.11828224323538657,
+                  "p95": 0.1773937576545329,
+                  "signed_bias_x": 0.010909104519205801,
+                  "signed_bias_y": -0.10464263711281602
+                }
+              },
+              "combined_position": {
+                "n": 404,
+                "mean": 0.2836570823177424,
+                "median": 0.18395771585159273,
+                "p95": 0.8979724153949296
+              },
+              "elbow_angle": {
+                "left": {
+                  "n": 101,
+                  "mean": 40.362864405998984,
+                  "median": 24.434074601007367,
+                  "p95": 113.48123317677474
+                },
+                "right": {
+                  "n": 101,
+                  "mean": 41.219397482782234,
+                  "median": 6.619703633439398,
+                  "p95": 155.1782211567693
+                }
+              }
+            }
+          },
+          "non_suit": {
+            "status": "descriptive_sensitivity",
+            "camera": {
+              "rotation_vector_rad": [
+                -3.141439145269483,
+                -0.02407394887410718,
+                -0.009570050428775258
+              ],
+              "scale": 1.0,
+              "status": "assumed_frontal_view_not_verified"
+            },
+            "metrics": {
+              "position": {
+                "left_wrist": {
+                  "n": 101,
+                  "mean": 0.541789132892779,
+                  "median": 0.4191453036953976,
+                  "p95": 1.133219697606504,
+                  "signed_bias_x": -0.007276081638254245,
+                  "signed_bias_y": 0.04602374604915202
+                },
+                "right_wrist": {
+                  "n": 101,
+                  "mean": 0.4705726904282381,
+                  "median": 0.39282550868991223,
+                  "p95": 0.8912013079379869,
+                  "signed_bias_x": 0.06898726394240762,
+                  "signed_bias_y": -0.016754849640866827
+                },
+                "left_elbow": {
+                  "n": 101,
+                  "mean": 0.2993265881075293,
+                  "median": 0.2954061080509552,
+                  "p95": 0.4775571794624805,
+                  "signed_bias_x": 0.15816151765666905,
+                  "signed_bias_y": 0.10467872146498883
+                },
+                "right_elbow": {
+                  "n": 101,
+                  "mean": 0.309230616307493,
+                  "median": 0.304985412014818,
+                  "p95": 0.44713387297437834,
+                  "signed_bias_x": -0.1679983643575991,
+                  "signed_bias_y": 0.13794128805603414
+                }
+              },
+              "combined_position": {
+                "n": 404,
+                "mean": 0.4052297569340099,
+                "median": 0.32697732215953756,
+                "p95": 0.9992609367147778
+              },
+              "elbow_angle": {
+                "left": {
+                  "n": 101,
+                  "mean": 43.43105375638764,
+                  "median": 10.340595761363119,
+                  "p95": 139.61145769153757
+                },
+                "right": {
+                  "n": 101,
+                  "mean": 47.074978539121496,
+                  "median": 26.24444363455558,
+                  "p95": 152.6606351793848
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "set": 3,
+      "original_job": "1b97c3a9d5fb426babd49d47a1d464d1",
+      "corrected_job": "60c2d8bf1bc24b15bcea214b871e9844",
+      "source_sha256": {
+        "suit_fbx": "6c013aeb7ea0da407a3eb5ec4671ff196c1a28860ca46a8e412392445bf16d1e",
+        "non_suit_fbx": "b9be2e517c3bff2c2657c9c8ebb4840aa467abc1887cbad60e7d23599f5512f7",
+        "reference_video": "5505b0379f808b3baca28a84f2b730b4d0b541b6917e8e1b11ff86dcaabbef91"
+      },
+      "relationship": "separate_repetitions",
+      "status": "descriptive",
+      "proportions": {
+        "suit": {
+          "shoulder_width_m": 0.3442019111944793,
+          "lengths_per_shoulder_width": {
+            "left_upper_arm": 0.6528892926862757,
+            "right_upper_arm": 0.6528897359929839,
+            "left_forearm": 0.7189287943821401,
+            "right_forearm": 0.718927796940402
+          },
+          "torso_length_per_shoulder_width": 1.2263634409686617
+        },
+        "non_suit": {
+          "shoulder_width_m": 0.2631296064320014,
+          "lengths_per_shoulder_width": {
+            "left_upper_arm": 1.0222657221400757,
+            "right_upper_arm": 1.0222447492088724,
+            "left_forearm": 0.8559344250225351,
+            "right_forearm": 0.8559515785514286
+          },
+          "torso_length_per_shoulder_width": 1.8473681193278204
+        }
+      },
+      "means": {
+        "suit": 0.4495405565003362,
+        "non_suit": 0.3720977447264845
+      },
+      "camera_sensitivity": {
+        "fit_rmse_slack": 0.005,
+        "error_spread_flag_shoulder_widths": 0.01,
+        "error_ranges": {
+          "suit": [
+            0.33432295021141156,
+            0.4495405565003362
+          ],
+          "non_suit": [
+            0.35864094518653267,
+            0.3720977447264845
+          ]
+        },
+        "old_minus_motioncapture_range": [
+          -0.09089961131380353,
+          0.03777479451507293
+        ],
+        "ranking_changes": true,
+        "unresolved": true,
+        "sensitivity_not_confidence_interval": true
+      },
+      "previous_corrected_job": "152bf5dd2db04876ad433b53e2caa184",
+      "frontal_camera_diagnostic": {
+        "interpretation": "Hypothetical frontal, upright view. Shoulder direction and gravity define the view; torso aspect ratio and wrist/elbow residuals are not fitted. Same rule for both FBXs. This is a camera sensitivity check, not verified capture accuracy.",
+        "methods": {
+          "suit": {
+            "status": "descriptive_sensitivity",
+            "camera": {
+              "rotation_vector_rad": [
+                3.1412908627281673,
+                0.0246848721816135,
+                -0.023446924332709906
+              ],
+              "scale": 1.0,
+              "status": "assumed_frontal_view_not_verified"
+            },
+            "metrics": {
+              "position": {
+                "left_wrist": {
+                  "n": 101,
+                  "mean": 0.39858233725000447,
+                  "median": 0.3395591194752592,
+                  "p95": 1.0594571762599951,
+                  "signed_bias_x": -0.08016232245835286,
+                  "signed_bias_y": 8.361582742560441e-05
+                },
+                "right_wrist": {
+                  "n": 101,
+                  "mean": 0.376621574342726,
+                  "median": 0.2736917205264115,
+                  "p95": 1.0453582715647713,
+                  "signed_bias_x": -0.028803573808660908,
+                  "signed_bias_y": 0.14403519737359607
+                },
+                "left_elbow": {
+                  "n": 101,
+                  "mean": 0.21594392037897792,
+                  "median": 0.21532231665412238,
+                  "p95": 0.2898417496317472,
+                  "signed_bias_x": -0.10172661451697103,
+                  "signed_bias_y": -0.17845848221086916
+                },
+                "right_elbow": {
+                  "n": 101,
+                  "mean": 0.19593426699193153,
+                  "median": 0.19527792549131473,
+                  "p95": 0.2656842337251987,
+                  "signed_bias_x": 0.08050584842075037,
+                  "signed_bias_y": -0.1566566263047349
+                }
+              },
+              "combined_position": {
+                "n": 404,
+                "mean": 0.29677052474091,
+                "median": 0.23050481916630572,
+                "p95": 0.8401826815612708
+              },
+              "elbow_angle": {
+                "left": {
+                  "n": 101,
+                  "mean": 43.244288062805055,
+                  "median": 20.701904593146395,
+                  "p95": 165.78479121670708
+                },
+                "right": {
+                  "n": 101,
+                  "mean": 43.44207003433642,
+                  "median": 12.139998350539377,
+                  "p95": 160.64325978966033
+                }
+              }
+            }
+          },
+          "non_suit": {
+            "status": "descriptive_sensitivity",
+            "camera": {
+              "rotation_vector_rad": [
+                3.1413018578028336,
+                0.024684958583040376,
+                -0.022554805048284925
+              ],
+              "scale": 1.0,
+              "status": "assumed_frontal_view_not_verified"
+            },
+            "metrics": {
+              "position": {
+                "left_wrist": {
+                  "n": 101,
+                  "mean": 0.6060718214682405,
+                  "median": 0.3633907112215265,
+                  "p95": 1.6228662143159784,
+                  "signed_bias_x": 0.08167178452732173,
+                  "signed_bias_y": 0.4610263956698127
+                },
+                "right_wrist": {
+                  "n": 101,
+                  "mean": 0.5200548708607569,
+                  "median": 0.3695755476965828,
+                  "p95": 1.2696232710669357,
+                  "signed_bias_x": -0.010644793563634238,
+                  "signed_bias_y": 0.052283957259598536
+                },
+                "left_elbow": {
+                  "n": 101,
+                  "mean": 0.25859410613764333,
+                  "median": 0.23053700364486626,
+                  "p95": 0.38105489399450787,
+                  "signed_bias_x": 0.09213096732925985,
+                  "signed_bias_y": 0.15761310824050143
+                },
+                "right_elbow": {
+                  "n": 101,
+                  "mean": 0.23498839091591123,
+                  "median": 0.24688556709931467,
+                  "p95": 0.3627875846822487,
+                  "signed_bias_x": -0.11419295483744521,
+                  "signed_bias_y": 0.07054156149748222
+                }
+              },
+              "combined_position": {
+                "n": 404,
+                "mean": 0.40492729734563804,
+                "median": 0.2886170070527797,
+                "p95": 1.2317148170819174
+              },
+              "elbow_angle": {
+                "left": {
+                  "n": 101,
+                  "mean": 47.97143373039828,
+                  "median": 21.189334014405485,
+                  "p95": 173.1404044049884
+                },
+                "right": {
+                  "n": 101,
+                  "mean": 36.16349638968194,
+                  "median": 11.500776108897627,
+                  "p95": 146.0078062706152
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
