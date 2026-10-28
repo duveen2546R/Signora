@@ -50,15 +50,16 @@ namespace Signora.EditorTools
         // The shot. Measured off the imported avatar: hip joint at y 0.471, shoulders 1.145, eye line
         // 1.256, top of the head 1.400. The box runs from the hip line to a hand's width above the
         // head, which is the interpreter framing - the whole signing space, nothing spare.
-        // The Avatar GLB's visual centre is at world Y=0.  Earlier values used its old
-        // calibration-space chest height (0.98), which pointed the WebGL camera above the
-        // actual signer and left only the top of the head visible in a compact embed.
-        static readonly Vector3 FocusPoint = Vector3.zero;
-        // Sign comprehension takes precedence over portrait-style framing.  This box keeps the
-        // whole performer, including hands at their furthest signing positions, in a compact
-        // extension viewport.  Extra backdrop is preferable to cropped hands or feet.
-        const float FramingWidth = 3.0f;
-        const float FramingHeight = 4.2f;
+        // Re-measured from SignoraNewAvatar.glb with the avatar sunk to FootHeight: hips 0.50,
+        // shoulder joints 1.04, head joint 1.18, top of the hair about 1.40. World Y=0 is around
+        // the knees, so an earlier full-body box centred there (3.0 x 4.2) left the signer small
+        // with the legs in shot. This box is the signing space only - just below the hips to a
+        // hand's width above the head, and wide enough for the hands at full reach.
+        static readonly Vector3 FocusPoint = new Vector3(0f, 0.95f, 0f);
+        // Width decides in the near-square extension panel (about 1.1:1), which still shows
+        // 0.36-1.54 m of height there; the wider /sign stage is decided by the height instead.
+        const float FramingWidth = 1.3f;
+        const float FramingHeight = 1.1f;
 
         // Far enough back that the lens does not distort the face the way a wide angle would, which
         // matters here because mouthing and expression are part of the grammar.
