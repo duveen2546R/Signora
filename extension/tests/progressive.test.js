@@ -5,6 +5,7 @@ import {
   diffNewlyReady,
   isPlanTerminal,
   progressSummary,
+  summarizeIssues,
 } from '../src/plan/progressive.js'
 
 const UNIT = (id, startMs, endMs, status, motionAvailable) => ({ id, startMs, endMs, status, motionAvailable })
@@ -109,4 +110,33 @@ test('progressSummary counts settled and ready independently', () => {
   ]
   const summary = progressSummary(units, new Set([1]))
   assert.deepEqual(summary, { total: 3, settled: 2, ready: 1 })
+})
+
+test('summarizeIssues reports a rejected unit as its caption, never blaming innocent glosses', () => {
+  // Before the fix, "Add all." being rejected (only the join into ADD failed) put
+  // "ALL (motion rejected)" on screen although ALL plays fine on its own.
+  const { notSigned } = summarizeIssues([{
+    text: 'Add all.', glosses: ['ADD', 'ALL'], motionAvailable: false,
+    issues: [{ code: 'motion-rejected', message: 'Cannot blend rest to ADD' }],
+  }])
+  assert.deepEqual(notSigned, ['“Add all.” (motion rejected)'])
+  assert.ok(!notSigned.some((entry) => entry.includes('ALL (')))
+})
+
+test('summarizeIssues counts labelled fallbacks as playable, not as unsupported', () => {
+  const { notSigned, fallbackUnits } = summarizeIssues([
+    { text: 'Thank you.', glosses: ['THANKYOU'], motionAvailable: true,
+      issues: [{ code: 'motion-fallback', blendStatus: 'reviewed-direct', message: '...' }] },
+    { text: 'Hello.', glosses: ['HELLO'], motionAvailable: true, issues: [] },
+  ])
+  assert.deepEqual(notSigned, [])
+  assert.equal(fallbackUnits, 1)
+})
+
+test('summarizeIssues still lists genuinely unsupported words', () => {
+  const { notSigned } = summarizeIssues([{
+    text: 'zebra quixotic', glosses: [], motionAvailable: false,
+    issues: [{ code: 'unsupported-unit', sourceWords: ['zebra', 'quixotic'] }],
+  }])
+  assert.deepEqual(notSigned, ['zebra', 'quixotic'])
 })

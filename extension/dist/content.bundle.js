@@ -1479,13 +1479,17 @@ class Overlay {
       bits.push(`<span>Coverage <b>${s.coverage.percent}%</b></span>`)
       bits.push(`<span>Units <b>${s.coverage.signedUnits}/${s.coverage.totalUnits}</b></span>`)
     }
+    if (s.fallbackUnits) {
+      // Playable, but a join used a labelled fallback (rest pass-through or a reviewed settle).
+      bits.push(`<span title="Units whose transitions used a labelled fallback">Fallback <b>${s.fallbackUnits}</b></span>`)
+    }
     if (s.adapterName) bits.push(`<span>Avatar <b>${s.adapterName}</b></span>`)
     this.el.meta.innerHTML = bits.join('')
 
     const unsupported = s.unsupported || []
     this.el.warn.hidden = unsupported.length === 0
     if (unsupported.length) {
-      this.el.warn.textContent = `No sign for: ${unsupported.slice(0, 12).join(', ')}`
+      this.el.warn.textContent = `Not signed: ${unsupported.slice(0, 12).join(', ')}`
         + (unsupported.length > 12 ? ` (+${unsupported.length - 12} more)` : '')
     }
 
@@ -1602,6 +1606,30 @@ function describeReadiness(mediaMs, units, readyIds, planStatus, lookaheadCount 
   return { state: 'idle' }
 }
 
+/**
+ * What the overlay should report as not signed, and how many units played through a labelled
+ * transition fallback, from the backend's own per-unit issue reports.
+ *
+ * A rejected unit is reported as the caption it came from. Blaming each gloss inside it named signs
+ * that were never the problem: when "Add all." was rejected only the join into ADD had failed, yet
+ * the overlay listed "ALL (motion rejected)". A `motion-fallback` unit is playable motion, so it is
+ * counted, never listed as unsupported.
+ */
+function summarizeIssues(units) {
+  const notSigned = new Set()
+  let fallbackUnits = 0
+  for (const unit of units ?? []) {
+    const issues = unit.issues ?? []
+    for (const issue of issues) {
+      const words = issue.sourceWords ?? (issue.sourceWord ? [issue.sourceWord] : [])
+      for (const word of words) if (word) notSigned.add(String(word))
+      if (issue.code === 'motion-rejected') notSigned.add(`“${unit.text}” (motion rejected)`)
+    }
+    if (unit.motionAvailable && issues.some((issue) => issue.code === 'motion-fallback')) fallbackUnits += 1
+  }
+  return { notSigned: [...notSigned], fallbackUnits }
+}
+
 /** Human-readable coverage summary for the overlay, usable mid-processing. */
 function progressSummary(units, readyIds) {
   const settled = units.filter(isSettled).length
@@ -1616,6 +1644,7 @@ function progressSummary(units, readyIds) {
   __x.isPlanTerminal = isPlanTerminal;
   __x.diffNewlyReady = diffNewlyReady;
   __x.describeReadiness = describeReadiness;
+  __x.summarizeIssues = summarizeIssues;
   __x.progressSummary = progressSummary;
 });
 
@@ -1641,7 +1670,9 @@ const { WATCHED_EVENTS, createYouTubeMedia, videoEventToPlayerState } = __req("s
 const { MockAvatarAdapter } = __req("src/avatar/adapter.js");
 const { UnityIframeAvatarAdapter } = __req("src/avatar/unity-iframe.js");
 const { Overlay } = __req("src/overlay/overlay.js");
-const { describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary } = __req("src/plan/progressive.js");
+const {
+  describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary, summarizeIssues,
+} = __req("src/plan/progressive.js");
 const YouTubeSignScheduler = __req("vendor/YouTubeSignScheduler.js").default; const { YT_STATE } = __req("vendor/YouTubeSignScheduler.js");
 
 /** Promise-wrapped chrome.runtime.sendMessage; rejects with the worker's error text. */
@@ -1874,8 +1905,9 @@ class SignoraSession {
       const summary = progressSummary(plan.units, this.readyIds)
 
       if (isPlanTerminal(plan.status)) {
-        this.unsupported = this.collectUnsupported(plan)
-        this.overlay.update({ coverage: plan.coverage, unsupported: this.unsupported })
+        const { notSigned, fallbackUnits } = summarizeIssues(plan.units)
+        this.unsupported = notSigned
+        this.overlay.update({ coverage: plan.coverage, unsupported: notSigned, fallbackUnits })
         if (plan.status === 'failed' && summary.ready === 0) {
           this.overlay.update({ status: 'plan-failed', detail: plan.error || 'The sign plan failed.' })
         } else {
@@ -1899,24 +1931,6 @@ class SignoraSession {
       }
       await sleep(interval)
     }
-  }
-
-  /**
-   * Gather words the backend could not sign, from its own issue reports. The backend already
-   * refuses to invent a sign, so this only surfaces what it told us.
-   */
-  collectUnsupported(plan) {
-    const words = new Set()
-    for (const unit of plan.units) {
-      for (const issue of unit.issues || []) {
-        const list = issue.sourceWords || (issue.sourceWord ? [issue.sourceWord] : [])
-        for (const word of list) if (word) words.add(String(word))
-        if (issue.code === 'motion-rejected' && unit.glosses?.length) {
-          for (const gloss of unit.glosses) words.add(`${gloss} (motion rejected)`)
-        }
-      }
-    }
-    return [...words]
   }
 
   // --- scheduling --------------------------------------------------------------------------
@@ -2142,7 +2156,7 @@ class SignoraSession {
     this.lastVtt = ''
     this.overlay.update({
       status: 'idle', caption: '', glosses: [], activeGloss: null,
-      progress: 0, coverage: null, unsupported: [], detail: '',
+      progress: 0, coverage: null, unsupported: [], fallbackUnits: 0, detail: '',
     })
     this.video = await waitForVideo()
     if (this.video) this.media = createYouTubeMedia(this.video)

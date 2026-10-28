@@ -301,7 +301,7 @@ This video (*"signora testing"*, 58 s) **does** expose an English caption track 
 | **Speed change** (0.5×–2×) | Overlay's **Speed** updates and the avatar consumes motion at the new rate. |
 | **Sign longer than its cue** | Status `Video paused while the sign finishes`; YouTube pauses; when the sign ends YouTube resumes **only because the extension paused it**. |
 | **Mid-video, waiting on a slow unit** | Status `Buffering next signs…` with the actual upcoming caption text shown — never a frozen "0/10". |
-| **Unsupported word** | Listed under **No sign for: …**. No substitute sign is ever played. |
+| **Unsupported word** | Listed under **Not signed: …**. No substitute sign is ever played. A rejected unit is listed as its caption, not by blaming each gloss in it. |
 | **Backend stopped** | Status `Signora backend unavailable` with the exact uvicorn command to start it. |
 | **Download captions** | Click it any time after captions are found; saves the exact VTT sent to the backend. Never required for playback. |
 
@@ -385,14 +385,16 @@ These are properties of the current recording library and backend policy, not ex
    caption unit if any word lacks a sign and fingerspelling is unavailable. One unknown word
    therefore discards the signable words grouped with it. Observed: a unit containing six
    signable words plus `"zebra quixotic"` was dropped entirely.
-3. **12 of 27 recordings fail blend validation standalone.** Even with reviewed timestamps,
-   `ADD, ADJECTIVE, ADVISE, ALWAYS, APPLY, APPOINTMENT, ASSUME, AWAY, B, E, N, THANKYOU` are
-   rejected on their own with *"wrist speed exceeds the avatar limit"* — the reviewed Sign
-   boundary marks where meaning starts, which need not be a posture the avatar can be delivered
-   to from rest. They often **do** compose inside a longer sequence, where the seam is
-   sign-to-sign rather than rest-to-sign (`THANKYOU B E N D` composed fine at 80% speed). Expect
-   partial coverage, and expect it to vary with phrasing. Fixing this means re-reviewing those
-   boundaries or re-recording — explicitly out of scope here.
+3. **Five reviewed recordings play through a labelled settle, not a fully direct blend.**
+   *(Fixed: all 27 recordings now play; previously 12 were rejected.)* The root cause of most
+   rejections was a one-frame reference T-pose that opens every Rokoko combined FBX and survived
+   on some takes, becoming the rest pose; it is now trimmed (`segment.CORRUPT_WRIST_SPEED_CM_S`).
+   `THANKYOU, ADD, ADVISE, AWAY, E` were also captured slightly short — starting in motion or
+   ending before the hands are back at rest — so their rest joins use a settle (decelerate, then
+   return to rest). The seam is labelled `reviewed-direct`, never claims `passed`, and lists the
+   boundary-envelope checks it waived; every integrity check stays mandatory. The overlay counts
+   these units under **Fallback**. Re-recording those five with clean rest bookends would make
+   them fully direct.
 4. **Motion is much longer than caption timing.** Sequences commonly run 2–4× their cue, so the
    video spends real time paused for catch-up.
 5. **Composing a single unit can take 30+ seconds.** Measured directly: a 4-gloss sequence that
@@ -404,8 +406,8 @@ These are properties of the current recording library and backend policy, not ex
 6. **Run the backend without `--reload` while testing.** A ~90 s background task dies silently if
    the dev server auto-restarts mid-run, leaving a plan permanently stuck in `"processing"` with
    no error — this is what produced the two orphaned rows diagnosed above, not an extension bug.
-7. **`ADVICE` → `ADVISE`** is a registry alias (`isl_patterns.json`), not a separate recording.
-   It inherits `ADVISE`'s standalone blend failure.
+7. **`ADVICE` → `ADVISE`** is a registry alias (`isl_patterns.json`), not a separate recording,
+   so it plays exactly as `ADVISE` does (with its labelled settle into the first frame).
 8. **Translations are literal previews, not reviewed ISL.** Every pattern is still
    `reviewStatus: "candidate"`; the backend labels output `literal-preview`.
 9. **Enabling captions is visible.** Asking the player for its timed text turns YouTube's own CC

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_session
 from app.models import Gloss, SignClip
 from app.services.artifact_paths import clip_file, source_file
-from app.services.compose_service import ComposeError, compose_clips, landmark_path
+from app.services.compose_service import ComposeError, compose_clips, compose_playable, landmark_path
 from app.services.phase_service import edit_phases
 from app.services.source_motion import load_source_motion, raw_payload
 
@@ -65,7 +65,8 @@ def preview_sequence(body: SequencePreview, session: Session = Depends(get_sessi
         raise HTTPException(404, "one or more recordings no longer exist")
     try:
         composition, warnings = compose_clips(
-            [(clip.gloss.name, clip) for clip in clips], allow_neutral_fallback=True,
+            [(clip.gloss.name, clip) for clip in clips],
+            allow_neutral_fallback=True, allow_reviewed_direct=True,
         )
         return {"purpose": "motion-review", "track": composition.to_payload(),
                 "blendQuality": composition.blend_quality, "warnings": warnings, "error": None}
@@ -78,13 +79,14 @@ def preview_sequence(body: SequencePreview, session: Session = Depends(get_sessi
 def sign_track(clip_id: int, session: Session = Depends(get_session)):
     """One sign as a playable track: rest, transition in, the stroke, transition back to rest.
 
-    The same composition a sentence uses, so previewing a sign shows what it will look like in one.
+    The same composition a sentence uses, so previewing a sign shows what it will look like in one,
+    including the labelled settle a reviewed take captured short needs (`blendQuality.status`).
     """
     clip = session.get(SignClip, clip_id)
     if clip is None:
         raise HTTPException(404, "no such clip")
     try:
-        composition, _warnings = compose_clips([(clip.gloss.name, clip)])
+        composition, _warnings = compose_playable([(clip.gloss.name, clip)])
         return composition.to_payload()
     except ComposeError as exc:
         raise HTTPException(409, str(exc)) from exc

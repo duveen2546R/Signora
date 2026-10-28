@@ -223,13 +223,17 @@ export class Overlay {
       bits.push(`<span>Coverage <b>${s.coverage.percent}%</b></span>`)
       bits.push(`<span>Units <b>${s.coverage.signedUnits}/${s.coverage.totalUnits}</b></span>`)
     }
+    if (s.fallbackUnits) {
+      // Playable, but a join used a labelled fallback (rest pass-through or a reviewed settle).
+      bits.push(`<span title="Units whose transitions used a labelled fallback">Fallback <b>${s.fallbackUnits}</b></span>`)
+    }
     if (s.adapterName) bits.push(`<span>Avatar <b>${s.adapterName}</b></span>`)
     this.el.meta.innerHTML = bits.join('')
 
     const unsupported = s.unsupported || []
     this.el.warn.hidden = unsupported.length === 0
     if (unsupported.length) {
-      this.el.warn.textContent = `No sign for: ${unsupported.slice(0, 12).join(', ')}`
+      this.el.warn.textContent = `Not signed: ${unsupported.slice(0, 12).join(', ')}`
         + (unsupported.length > 12 ? ` (+${unsupported.length - 12} more)` : '')
     }
 

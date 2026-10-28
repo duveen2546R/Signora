@@ -1163,3 +1163,102 @@ def coast(
         right_hand=np.stack([p.right_hand for p in poses]),
         face_blendshapes=np.repeat(take.face_blendshapes[index:index + 1], frames, axis=0),
     )
+
+
+# --- Reviewed-direct rest legs ------------------------------------------------------------------
+#
+# Some reviewed recordings were captured slightly short: the take opens with the hands already
+# moving (ADVISE), or stops before they are back at rest (ADD, E, THANKYOU) or while they still
+# drift (AWAY). The meaning-bearing Sign inside them is valid; only the synthetic bridge to or from
+# the neutral pose cannot satisfy every direct-transition check. Stretching that bridge makes it
+# worse, because it carries the recorded edge velocity forward as a boundary condition and swings
+# the hand wide. A settle instead decelerates the recorded velocity to a stop first (`coast`), then
+# returns to rest along a bridge with zero velocity at both ends.
+#
+# Only checks describing how a synthetic bridge meets the 8 recorded frames beside it may be waived
+# for a settle - at a truncated edge those measure a third derivative across the last captured
+# sample. Every check that would show visibly broken motion stays mandatory: finite values, bone
+# lengths, wrist and joint speed, torso/head intersection, contact handshape and excursion.
+SETTLE_WAIVABLE_REASONS = frozenset({
+    "seam acceleration exceeds the adjacent-motion envelope",
+    "seam jerk exceeds the adjacent-motion envelope",
+    "direct transition requires more than 600 ms",
+})
+
+# Deceleration used to bring a recorded edge to a stop: 1.5 m/s takes 1 s, bounded so a nearly still
+# edge still gets a perceptible ease and a fast one never coasts far past where the sign ended.
+SETTLE_DECELERATION_M_S = 1.5
+SETTLE_COAST_SECONDS = (0.12, 0.45)
+_SETTLE_CONTEXT_FRAMES = 12
+
+
+def _reversed(take: LandmarkTake) -> LandmarkTake:
+    return LandmarkTake(
+        name=f"{take.name}-reversed", fps=take.fps,
+        pose=take.pose[::-1].copy(), left_hand=take.left_hand[::-1].copy(),
+        right_hand=take.right_hand[::-1].copy(),
+        face_blendshapes=take.face_blendshapes[::-1].copy(),
+    )
+
+
+def _settle_from(
+    skel: LandmarkSkeleton, take: LandmarkTake, index: int, rest: LandmarkTake, fps: float,
+) -> LandmarkTake:
+    """`take[index]` -> coast to a stop -> zero-velocity bridge to `rest[0]`."""
+    previous = max(index - 1, 0)
+    edge_speed = max(
+        float(np.linalg.norm(take.pose[index, wrist] - take.pose[previous, wrist])) * take.fps
+        for wrist in (15, 16)
+    )
+    seconds = float(np.clip(edge_speed / SETTLE_DECELERATION_M_S, *SETTLE_COAST_SECONDS))
+    glide = coast(skel, take, index, max(int(round(seconds * fps)), 1), fps)
+    home = plan_transition(skel, glide, glide.frame_count - 1, rest, 0, fps)
+    return lm.concat([glide, home.track])
+
+
+def plan_rest_settle(
+    skel: LandmarkSkeleton,
+    a: LandmarkTake,
+    a_index: int,
+    b: LandmarkTake,
+    b_index: int,
+    fps: float,
+    *,
+    entering: bool,
+) -> TransitionResult:
+    """A rest leg for a reviewed recording whose own edge cannot join rest directly.
+
+    `entering=False` settles from `a[a_index]` (a recorded frame) into `b[b_index]` (rest).
+    `entering=True` is the same construction in reversed time: from `a[a_index]` (rest), accelerate
+    into `b[b_index]` (a recorded frame) so the hand arrives already moving at the recorded speed.
+
+    The result is evaluated with the same `evaluate_transition` as every direct bridge, so its
+    reasons are reported faithfully; callers decide which of them, if any, may be waived.
+    """
+    if entering:
+        context = slice_frames_view(b, b_index, min(b_index + _SETTLE_CONTEXT_FRAMES, b.frame_count))
+        backwards = _reversed(context)
+        track = _reversed(_settle_from(skel, backwards, backwards.frame_count - 1, a, fps))
+    else:
+        track = _settle_from(skel, a, a_index, b, fps)
+    contacts = {
+        "outgoing": _stable_contact(a, a_index, forward=False),
+        "incoming": _stable_contact(b, b_index, forward=True),
+    }
+    quality = evaluate_transition(skel, a, a_index, track, b, b_index, contacts)
+    return TransitionResult(track, quality, track.frame_count / fps, False, contacts)
+
+
+def settle_is_acceptable(quality: TransitionQuality) -> bool:
+    """True when every failed check is one a settle may waive (see SETTLE_WAIVABLE_REASONS)."""
+    return all(reason in SETTLE_WAIVABLE_REASONS for reason in quality.reasons)
+
+
+def slice_frames_view(take: LandmarkTake, start: int, end: int) -> LandmarkTake:
+    """A plain [start, end) frame slice carrying only the motion channels a settle needs."""
+    return LandmarkTake(
+        name=f"{take.name}[{start}:{end}]", fps=take.fps,
+        pose=take.pose[start:end], left_hand=take.left_hand[start:end],
+        right_hand=take.right_hand[start:end],
+        face_blendshapes=take.face_blendshapes[start:end],
+    )

@@ -19,7 +19,9 @@ import { WATCHED_EVENTS, createYouTubeMedia, videoEventToPlayerState } from './m
 import { MockAvatarAdapter } from './avatar/adapter.js'
 import { UnityIframeAvatarAdapter } from './avatar/unity-iframe.js'
 import { Overlay } from './overlay/overlay.js'
-import { describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary } from './plan/progressive.js'
+import {
+  describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary, summarizeIssues,
+} from './plan/progressive.js'
 import YouTubeSignScheduler, { YT_STATE } from '../vendor/YouTubeSignScheduler.js'
 
 /** Promise-wrapped chrome.runtime.sendMessage; rejects with the worker's error text. */
@@ -252,8 +254,9 @@ export class SignoraSession {
       const summary = progressSummary(plan.units, this.readyIds)
 
       if (isPlanTerminal(plan.status)) {
-        this.unsupported = this.collectUnsupported(plan)
-        this.overlay.update({ coverage: plan.coverage, unsupported: this.unsupported })
+        const { notSigned, fallbackUnits } = summarizeIssues(plan.units)
+        this.unsupported = notSigned
+        this.overlay.update({ coverage: plan.coverage, unsupported: notSigned, fallbackUnits })
         if (plan.status === 'failed' && summary.ready === 0) {
           this.overlay.update({ status: 'plan-failed', detail: plan.error || 'The sign plan failed.' })
         } else {
@@ -277,24 +280,6 @@ export class SignoraSession {
       }
       await sleep(interval)
     }
-  }
-
-  /**
-   * Gather words the backend could not sign, from its own issue reports. The backend already
-   * refuses to invent a sign, so this only surfaces what it told us.
-   */
-  collectUnsupported(plan) {
-    const words = new Set()
-    for (const unit of plan.units) {
-      for (const issue of unit.issues || []) {
-        const list = issue.sourceWords || (issue.sourceWord ? [issue.sourceWord] : [])
-        for (const word of list) if (word) words.add(String(word))
-        if (issue.code === 'motion-rejected' && unit.glosses?.length) {
-          for (const gloss of unit.glosses) words.add(`${gloss} (motion rejected)`)
-        }
-      }
-    }
-    return [...words]
   }
 
   // --- scheduling --------------------------------------------------------------------------
@@ -520,7 +505,7 @@ export class SignoraSession {
     this.lastVtt = ''
     this.overlay.update({
       status: 'idle', caption: '', glosses: [], activeGloss: null,
-      progress: 0, coverage: null, unsupported: [], detail: '',
+      progress: 0, coverage: null, unsupported: [], fallbackUnits: 0, detail: '',
     })
     this.video = await waitForVideo()
     if (this.video) this.media = createYouTubeMedia(this.video)

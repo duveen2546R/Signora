@@ -35,6 +35,14 @@ MIN_ACTIVITY_CM_S = 1.0
 # broken sample. Real signing sits near 0.1 cm per frame here; the corrupt frames measure 8-17 cm.
 CORRUPT_MEDIAN_STEP_CM = 3.0
 
+# A wrist cannot cover more than this in one frame. Every combined Rokoko FBX export opens with the
+# reference T-pose at time zero and snaps to the performer's real rest pose on the next frame: the
+# wrists jump ~70 cm (43 m/s) while the legs, hips and head barely move. The median test above
+# misses that - only the arms move, so the median lands at 1.7-3.3 cm, either side of its threshold
+# depending on the take - and a kept T-pose frame becomes the sentence's rest pose. Fast signing
+# peaks near 2-5 m/s, so 10 m/s cannot be real motion at any capture rate this pipeline accepts.
+CORRUPT_WRIST_SPEED_CM_S = 1000.0
+
 # Cap how far a boundary may slide downhill looking for a velocity minimum.
 MAX_WALK_SECONDS = 0.15
 
@@ -173,13 +181,25 @@ def body_step_cm(take: LandmarkTake) -> np.ndarray:
     return np.median(np.linalg.norm(np.diff(take.pose, axis=0), axis=2), axis=1) * 100.0
 
 
+def wrist_step_speed(take: LandmarkTake) -> np.ndarray:
+    """Raw, unsmoothed frame-to-frame speed of the faster wrist, in cm/s.
+
+    Deliberately unsmoothed: `wrist_speed` runs a Savitzky-Golay filter that spreads a one-frame
+    teleport over its neighbours, which is exactly what has to stay isolated here.
+    """
+    if take.frame_count < 2:
+        return np.zeros(0)
+    steps = np.linalg.norm(np.diff(take.pose[:, WRISTS], axis=0), axis=2).max(axis=1)
+    return steps * take.fps * 100.0
+
+
 def usable_range(take: LandmarkTake) -> tuple[int, int, int]:
     """Trim corrupt frames from the ends. Returns (start, end, interior_defects)."""
     step = body_step_cm(take)
     if step.size == 0:
         return 0, take.frame_count, 0
 
-    bad = step > CORRUPT_MEDIAN_STEP_CM
+    bad = (step > CORRUPT_MEDIAN_STEP_CM) | (wrist_step_speed(take) > CORRUPT_WRIST_SPEED_CM_S)
     start, end = 0, take.frame_count
     while start < len(bad) and bad[start]:
         start += 1

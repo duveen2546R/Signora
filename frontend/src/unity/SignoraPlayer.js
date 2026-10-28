@@ -157,8 +157,9 @@ export default class SignoraPlayer {
   /** Append a validated motion chunk without restarting the current avatar stream. */
   enqueue(payload, sequence = null, tag = null) {
     assertPayloadShape(payload)
-    // A rest-pose fallback is a validated track too; anything else failed transition validation.
-    if (payload.blendQuality && !['direct', 'neutral-fallback'].includes(payload.blendQuality.status)) {
+    // A rest-pose fallback and a reviewed recording's labelled settle are validated tracks too;
+    // anything else (including "rejected") failed transition validation.
+    if (payload.blendQuality && !['direct', 'neutral-fallback', 'reviewed-direct'].includes(payload.blendQuality.status)) {
       throw new Error('Animation failed transition validation.')
     }
     if (!this.calibrated) {

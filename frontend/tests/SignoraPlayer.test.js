@@ -137,6 +137,18 @@ test('a rejected track cannot reach the runtime', () => {
     const player = new SignoraPlayer(() => { throw new Error('should not emit') })
     player.calibrated = true
     assert.throws(() => player.play({ ...sentence(), blendQuality: { status: 'degraded' } }), /failed transition validation/)
+    assert.throws(() => player.play({ ...sentence(), blendQuality: { status: 'rejected' } }), /failed transition validation/)
+  })
+})
+test('labelled fallbacks for reviewed recordings reach the runtime', () => {
+  withBrowserStubs(() => {
+    for (const status of ['neutral-fallback', 'reviewed-direct']) {
+      const player = new SignoraPlayer(() => {})
+      player.calibrated = true
+      assert.doesNotThrow(() => player.play({ ...sentence(), blendQuality: { status } }), status)
+      assert.ok(player.track, `${status} track was not started`)
+      player.stop()
+    }
   })
 })
 

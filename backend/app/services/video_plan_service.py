@@ -15,13 +15,15 @@ from app.core.config import settings
 from app.core.db import SessionLocal
 from app.ingest.compose import ALGORITHM_VERSION
 from app.models import Gloss, SignClip, VideoPlan, VideoPlanUnit
-from app.services.compose_service import ComposeError, compose_clips
+from app.services.compose_service import PLAYABLE_STATUSES, ComposeError, compose_playable
 from app.services.live_motion_service import library_version
 from app.services.live_translate_service import _aliases
 from app.services.subtitle_service import TranslationUnit
 from app.services.translate_service import Interpretation, PlaylistItem, interpret, load_registry, normalise
 
-POLICY_VERSION = 1
+# 2: reviewed recordings that cannot blend with rest directly play through labelled fallbacks
+#    (`compose_service.compose_playable`) instead of being rejected.
+POLICY_VERSION = 2
 ARTICLES = {"a", "an", "the"}
 REMOVABLE_COPULAS = {"am", "is", "are"}
 QUESTION_WORDS = {"who", "what", "when", "where", "why", "how", "which", "whose"}
@@ -172,12 +174,20 @@ def prepare_plan(plan_id: str) -> None:
                         if clip is None or not (clip.qc or {}).get("phases", {}).get("reviewed"):
                             raise ComposeError(f"{item.gloss} needs reviewed phase timestamps.")
                         ordered.append((item.gloss, clip))
-                    composition, warnings = compose_clips(ordered)
-                    if composition.blend_quality.get("status") != "direct":
+                    composition, warnings = compose_playable(ordered)
+                    status = composition.blend_quality.get("status")
+                    if status not in PLAYABLE_STATUSES:
                         raise ComposeError("Sentence transitions did not pass validation.", composition.blend_quality)
                     payload = composition.to_payload()
                     unit.motion_path = str(_artifact_path(payload, [clip for _, clip in ordered], plan.library_version))
                     unit.motion_duration_ms = int(payload["frameCount"] / payload["fps"] * 1000)
+                    if status != "direct":
+                        # Playable, but not a fully blended sentence - say which fallback it used.
+                        unit.issues = [*unit.issues, {
+                            "code": "motion-fallback", "blendStatus": status,
+                            "message": "Played with a labelled transition fallback "
+                                       f"({status}); see the seam details for what was waived.",
+                        }]
                     if warnings:
                         unit.issues = [*unit.issues, *({"code": "motion-warning", "message": w} for w in warnings)]
                 except ComposeError as exc:

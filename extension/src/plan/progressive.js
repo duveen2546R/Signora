@@ -84,6 +84,30 @@ export function describeReadiness(mediaMs, units, readyIds, planStatus, lookahea
   return { state: 'idle' }
 }
 
+/**
+ * What the overlay should report as not signed, and how many units played through a labelled
+ * transition fallback, from the backend's own per-unit issue reports.
+ *
+ * A rejected unit is reported as the caption it came from. Blaming each gloss inside it named signs
+ * that were never the problem: when "Add all." was rejected only the join into ADD had failed, yet
+ * the overlay listed "ALL (motion rejected)". A `motion-fallback` unit is playable motion, so it is
+ * counted, never listed as unsupported.
+ */
+export function summarizeIssues(units) {
+  const notSigned = new Set()
+  let fallbackUnits = 0
+  for (const unit of units ?? []) {
+    const issues = unit.issues ?? []
+    for (const issue of issues) {
+      const words = issue.sourceWords ?? (issue.sourceWord ? [issue.sourceWord] : [])
+      for (const word of words) if (word) notSigned.add(String(word))
+      if (issue.code === 'motion-rejected') notSigned.add(`“${unit.text}” (motion rejected)`)
+    }
+    if (unit.motionAvailable && issues.some((issue) => issue.code === 'motion-fallback')) fallbackUnits += 1
+  }
+  return { notSigned: [...notSigned], fallbackUnits }
+}
+
 /** Human-readable coverage summary for the overlay, usable mid-processing. */
 export function progressSummary(units, readyIds) {
   const settled = units.filter(isSettled).length

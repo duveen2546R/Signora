@@ -24,7 +24,9 @@ from .landmarks import FACE_BLENDSHAPE_COUNT, LandmarkSkeleton, LandmarkTake, co
 from .segment import Phases, Stroke, boundary_candidates, find_phases, find_stroke, usable_range
 
 TARGET_FPS = 60.0
-ALGORITHM_VERSION = 10
+# 11: the reference T-pose frame that opens every Rokoko FBX export is now always trimmed
+#     (segment.CORRUPT_WRIST_SPEED_CM_S); before, it survived on some takes and became the rest pose.
+ALGORITHM_VERSION = 11
 
 # Stillness after each sign so one word reads as finished before the next begins.
 HOLD_SECONDS = 0.10
@@ -240,12 +242,19 @@ def compose(
     rest: Pose | None = None,
     algorithm_version: int = ALGORITHM_VERSION,
     allow_neutral_fallback: bool = False,
+    allow_reviewed_direct: bool = False,
 ) -> Composition:
     """Build and quality-gate a continuous sentence from prepared sign recordings.
 
     With `allow_neutral_fallback`, a sign-to-sign join that no direct strategy can bridge passes
     through the rest pose instead of rejecting the sentence. The status is then "neutral-fallback"
     rather than "direct", so callers that require a direct sentence still refuse it.
+
+    With `allow_reviewed_direct`, a join between rest and a *reviewed* recording that cannot be
+    bridged directly - because the take was captured slightly short - uses a settle
+    (`blend.plan_rest_settle`) instead, provided only boundary-envelope checks fail. Such a seam is
+    reported with mode "reviewed-direct", keeps its failed checks under `waivedChecks`, and never
+    claims `passed`; the sentence status becomes "reviewed-direct" so strict callers still refuse it.
     """
     if not clips:
         raise ValueError("a sentence needs at least one sign")
@@ -428,6 +437,24 @@ def compose(
         ))
         cursor += track.frame_count
 
+    def rest_leg(
+        a: LandmarkTake, a_index: int, b: LandmarkTake, b_index: int,
+        *, entering: bool, reviewed: bool,
+    ) -> tuple[blend.TransitionResult, str, bool]:
+        """One bridge between rest and a recorded frame: (result, mode, acceptable).
+
+        Direct when it passes. Otherwise a settle, but only for a reviewed recording and only when
+        the caller allowed it and nothing but boundary-envelope checks fail.
+        """
+        direct_leg = blend.plan_transition(skel, a, a_index, b, b_index, fps)
+        if direct_leg.quality.passed:
+            return direct_leg, "direct", True
+        if allow_reviewed_direct and reviewed:
+            settle = blend.plan_rest_settle(skel, a, a_index, b, b_index, fps, entering=entering)
+            if blend.settle_is_acceptable(settle.quality):
+                return settle, "reviewed-direct", True
+        return direct_leg, "direct", False
+
     def join(
         previous: LandmarkTake,
         previous_index: int,
@@ -439,6 +466,8 @@ def compose(
         to_frame: int,
         phase_outgoing: tuple[LandmarkTake, Phases] | None = None,
         phase_incoming: tuple[LandmarkTake, Phases] | None = None,
+        outgoing_reviewed: bool = False,
+        incoming_reviewed: bool = False,
     ) -> str:
         direct = blend.plan_transition(
             skel, previous, previous_index, following, following_index, fps,
@@ -464,6 +493,29 @@ def compose(
             add(direct.track, to_gloss, "transition", "direct", direct.quality.score)
             seams.append(seam)
             return "direct"
+
+        # A join with rest opens or closes the sentence. When the reviewed recording on the other
+        # side was captured slightly short, settle into or out of it instead of rejecting a valid
+        # sign. Reported as what it is: mode "reviewed-direct", failed checks kept as waived.
+        if not from_gloss or not to_gloss:
+            entering = not from_gloss
+            settle, mode, acceptable = rest_leg(
+                previous, previous_index, following, following_index,
+                entering=entering,
+                reviewed=incoming_reviewed if entering else outgoing_reviewed,
+            )
+            if acceptable and mode == "reviewed-direct":
+                seam.update(settle.quality.as_dict())
+                seam.update({
+                    "mode": "reviewed-direct",
+                    "strategy": "settle",
+                    "durationMs": int(round(settle.duration * 1000)),
+                    "directAttempt": direct.quality.as_dict(),
+                    "waivedChecks": list(settle.quality.reasons),
+                })
+                add(settle.track, to_gloss, "transition", "reviewed-direct", settle.quality.score)
+                seams.append(seam)
+                return "reviewed-direct"
 
         if phase_outgoing is not None and phase_incoming is not None:
             outgoing_take, outgoing_phase = phase_outgoing
@@ -597,17 +649,20 @@ def compose(
                         and incoming_phase.stroke_start > incoming_phase.prep_start):
                     preparation = slice_frames(incoming_take, *incoming_phase.preparation)
 
-            outgoing = (
-                blend.plan_transition(skel, retraction, retraction.frame_count - 1, rest_track, 0, fps)
+            outgoing, outgoing_mode, outgoing_ok = (
+                rest_leg(retraction, retraction.frame_count - 1, rest_track, 0,
+                         entering=False, reviewed=outgoing_reviewed)
                 if retraction is not None
-                else blend.plan_transition(skel, previous, previous_index, rest_track, 0, fps)
+                else rest_leg(previous, previous_index, rest_track, 0,
+                              entering=False, reviewed=outgoing_reviewed)
             )
-            incoming = (
-                blend.plan_transition(skel, rest_track, 0, preparation, 0, fps)
+            incoming, incoming_mode, incoming_ok = (
+                rest_leg(rest_track, 0, preparation, 0, entering=True, reviewed=incoming_reviewed)
                 if preparation is not None
-                else blend.plan_transition(skel, rest_track, 0, following, following_index, fps)
+                else rest_leg(rest_track, 0, following, following_index,
+                              entering=True, reviewed=incoming_reviewed)
             )
-            if outgoing.quality.passed and incoming.quality.passed:
+            if outgoing_ok and incoming_ok:
                 score = min(outgoing.quality.score, incoming.quality.score)
                 hold = _hold(rest_track, 0, int(round(HOLD_SECONDS * fps)), fps)
                 pieces_in_order = [
@@ -616,14 +671,23 @@ def compose(
                 duration_seconds = sum(
                     piece.frame_count for piece in pieces_in_order if piece is not None
                 ) / fps
+                waived = [
+                    reason
+                    for leg, mode in ((outgoing, outgoing_mode), (incoming, incoming_mode))
+                    if mode == "reviewed-direct"
+                    for reason in leg.quality.reasons
+                ]
                 seam.update({
                     "mode": "neutral-fallback",
-                    "passed": True,
+                    # Only claim the strict gate when neither leg needed a settle.
+                    "passed": not waived,
                     "score": score,
                     "reasons": [],
                     "durationMs": int(round(duration_seconds * 1000)),
                     "directAttempt": direct.quality.as_dict(),
                     "fallbackLegs": [outgoing.quality.as_dict(), incoming.quality.as_dict()],
+                    "legModes": [outgoing_mode, incoming_mode],
+                    "waivedChecks": waived,
                     "recordedPhases": {
                         "retractionFrames": retraction.frame_count if retraction is not None else 0,
                         "preparationFrames": preparation.frame_count if preparation is not None else 0,
@@ -667,6 +731,8 @@ def compose(
             if position > 0 else None,
             phase_incoming=(clips[position][1], phases[position])
             if position > 0 else None,
+            outgoing_reviewed=position > 0 and clips[position - 1][1].phase_reviewed,
+            incoming_reviewed=clips[position][1].phase_reviewed,
         )
 
         if position == 0 and lead_in is not None:
@@ -689,13 +755,20 @@ def compose(
     join(
         previous, previous_index, rest_track, 0,
         previous_gloss, "", exits[-1], 0,
+        outgoing_reviewed=clips[-1][1].phase_reviewed,
     )
     add(_hold(rest_track, 0, int(round(FINAL_HOLD_SECONDS * fps)), fps), "", "hold")
 
     score = min((float(seam["score"]) for seam in seams), default=100.0)
+    # The least strict seam names the sentence, so a caller that accepts only "direct" (live
+    # streaming) or only "direct"/"neutral-fallback" (Studio) refuses a settle it did not ask for.
+    settled = any(
+        seam["mode"] == "reviewed-direct" or "reviewed-direct" in seam.get("legModes", ())
+        for seam in seams
+    )
     fallback = any(seam["mode"] == "neutral-fallback" for seam in seams)
     quality = {
-        "status": "neutral-fallback" if fallback else "direct",
+        "status": "reviewed-direct" if settled else "neutral-fallback" if fallback else "direct",
         "score": round(score, 1),
         "algorithmVersion": ALGORITHM_VERSION,
         "seams": seams,

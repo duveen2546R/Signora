@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { blendNotices, playableTrack } from './blendQuality.js'
+import { blendNotices, playableTrack, seamPlayable } from './blendQuality.js'
 
 function ready() {
   const frame = (n) => Array.from({ length: n }, () => [0, 0, 0])
@@ -50,6 +50,31 @@ test('failed seam metadata blocks even a claimed direct track', () => {
   const result = ready()
   result.blendQuality.seams[0].passed = false
   assert.equal(playableTrack(result), null)
+})
+const JERK = 'seam jerk exceeds the adjacent-motion envelope'
+
+test('a reviewed settle is playable and labelled, without claiming it passed', () => {
+  const result = ready()
+  const blendQuality = { status: 'reviewed-direct', seams: [
+    { mode: 'direct', passed: true, fromGloss: '', toGloss: 'THANKYOU' },
+    { mode: 'reviewed-direct', passed: false, fromGloss: 'THANKYOU', toGloss: '', waivedChecks: [JERK] },
+  ] }
+  result.blendQuality = blendQuality
+  result.track.blendQuality = blendQuality
+  assert.ok(playableTrack(result))
+  assert.ok(blendNotices(result).some((notice) => /THANKYOU → rest/.test(notice)))
+  assert.ok(!blendNotices(result).some((notice) => /Playback blocked/.test(notice)))
+})
+test('a settle seam must list what it waived to be playable', () => {
+  assert.equal(seamPlayable({ mode: 'reviewed-direct', passed: false, waivedChecks: [JERK] }), true)
+  assert.equal(seamPlayable({ mode: 'reviewed-direct', passed: false }), false)
+  assert.equal(seamPlayable({ mode: 'rejected', passed: false, waivedChecks: [JERK] }), false)
+})
+test('a rest pass-through whose leg needed a settle is playable only with its waiver listed', () => {
+  const settled = { mode: 'neutral-fallback', passed: false, legModes: ['direct', 'reviewed-direct'] }
+  assert.equal(seamPlayable({ ...settled, waivedChecks: [JERK] }), true)
+  assert.equal(seamPlayable(settled), false)
+  assert.equal(seamPlayable({ mode: 'neutral-fallback', passed: false, waivedChecks: [] }), false)
 })
 test('rejected pairs and missing signs produce actionable notices', () => {
   const notices = blendNotices({ blendQuality: { status: 'rejected', seams: [

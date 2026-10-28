@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_session
 from app.models import SignClip
-from app.services.compose_service import ComposeError, compose_clips
+from app.services.compose_service import PLAYABLE_STATUSES, ComposeError, compose_clips
 from app.services.translate_service import interpret, interpret_literal_sequence, load_registry
 
 router = APIRouter(tags=["translate"])
@@ -48,10 +48,11 @@ def translate(body: TranslateRequest, session: Session = Depends(get_session)):
                                    "message": f"Review phase timestamps for {item.gloss}."})
                     raise ComposeError(f"Review phase timestamps for {item.gloss}.")
             composition, warnings = compose_clips(
-                [(i.gloss, by_id[i.clip_id]) for i in items], allow_neutral_fallback=True,
+                [(i.gloss, by_id[i.clip_id]) for i in items],
+                allow_neutral_fallback=True, allow_reviewed_direct=True,
             )
             blend_quality = composition.blend_quality
-            if blend_quality.get("status") not in {"direct", "neutral-fallback"}:
+            if blend_quality.get("status") not in PLAYABLE_STATUSES:
                 raise ComposeError("Sentence transitions did not pass validation.", blend_quality)
             track = composition.to_payload()
         except ComposeError as exc:

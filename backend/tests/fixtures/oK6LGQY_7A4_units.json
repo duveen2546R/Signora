@@ -1,0 +1,200 @@
+[
+ {
+  "ordinal": 0,
+  "startMs": 3040,
+  "endMs": 4640,
+  "text": "Hello."
+ },
+ {
+  "ordinal": 1,
+  "startMs": 4640,
+  "endMs": 6200,
+  "text": "Good morning."
+ },
+ {
+  "ordinal": 2,
+  "startMs": 6200,
+  "endMs": 7360,
+  "text": "Father."
+ },
+ {
+  "ordinal": 3,
+  "startMs": 7360,
+  "endMs": 8720,
+  "text": "Thank you."
+ },
+ {
+  "ordinal": 4,
+  "startMs": 8720,
+  "endMs": 10200,
+  "text": "Hello again."
+ },
+ {
+  "ordinal": 5,
+  "startMs": 10200,
+  "endMs": 11480,
+  "text": "Able."
+ },
+ {
+  "ordinal": 6,
+  "startMs": 11480,
+  "endMs": 12680,
+  "text": "Father."
+ },
+ {
+  "ordinal": 7,
+  "startMs": 12680,
+  "endMs": 15160,
+  "text": "Agree."
+ },
+ {
+  "ordinal": 8,
+  "startMs": 15920,
+  "endMs": 17520,
+  "text": "Add all."
+ },
+ {
+  "ordinal": 9,
+  "startMs": 17520,
+  "endMs": 18640,
+  "text": "Addition."
+ },
+ {
+  "ordinal": 10,
+  "startMs": 18640,
+  "endMs": 20160,
+  "text": "After action."
+ },
+ {
+  "ordinal": 11,
+  "startMs": 20160,
+  "endMs": 22000,
+  "text": "Advise again."
+ },
+ {
+  "ordinal": 12,
+  "startMs": 22000,
+  "endMs": 24440,
+  "text": "Answer. Age."
+ },
+ {
+  "ordinal": 13,
+  "startMs": 24440,
+  "endMs": 25960,
+  "text": "App."
+ },
+ {
+  "ordinal": 14,
+  "startMs": 25960,
+  "endMs": 28880,
+  "text": "Apply. Appointment."
+ },
+ {
+  "ordinal": 15,
+  "startMs": 28880,
+  "endMs": 30600,
+  "text": "After."
+ },
+ {
+  "ordinal": 16,
+  "startMs": 30600,
+  "endMs": 32160,
+  "text": "Apply."
+ },
+ {
+  "ordinal": 17,
+  "startMs": 32160,
+  "endMs": 33400,
+  "text": "Assume."
+ },
+ {
+  "ordinal": 18,
+  "startMs": 33400,
+  "endMs": 34880,
+  "text": "All."
+ },
+ {
+  "ordinal": 19,
+  "startMs": 34880,
+  "endMs": 36240,
+  "text": "Always."
+ },
+ {
+  "ordinal": 20,
+  "startMs": 36240,
+  "endMs": 37480,
+  "text": "Agree."
+ },
+ {
+  "ordinal": 21,
+  "startMs": 37480,
+  "endMs": 38920,
+  "text": "Away again."
+ },
+ {
+  "ordinal": 22,
+  "startMs": 38920,
+  "endMs": 41160,
+  "text": "Adjective. Action."
+ },
+ {
+  "ordinal": 23,
+  "startMs": 41160,
+  "endMs": 42520,
+  "text": "Bend."
+ },
+ {
+  "ordinal": 24,
+  "startMs": 42520,
+  "endMs": 43600,
+  "text": "Hello."
+ },
+ {
+  "ordinal": 25,
+  "startMs": 43600,
+  "endMs": 45760,
+  "text": "Good morning, father."
+ },
+ {
+  "ordinal": 26,
+  "startMs": 45760,
+  "endMs": 46840,
+  "text": "Bend."
+ },
+ {
+  "ordinal": 27,
+  "startMs": 46840,
+  "endMs": 49120,
+  "text": "Namaste. Thank you."
+ },
+ {
+  "ordinal": 28,
+  "startMs": 49120,
+  "endMs": 50280,
+  "text": "Father."
+ },
+ {
+  "ordinal": 29,
+  "startMs": 50280,
+  "endMs": 51720,
+  "text": "Hello."
+ },
+ {
+  "ordinal": 30,
+  "startMs": 51720,
+  "endMs": 53480,
+  "text": "Father."
+ },
+ {
+  "ordinal": 31,
+  "startMs": 53480,
+  "endMs": 55160,
+  "text": "Add."
+ },
+ {
+  "ordinal": 32,
+  "startMs": 55160,
+  "endMs": 57840,
+  "text": "Advise."
+ }
+]

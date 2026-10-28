@@ -58,9 +58,29 @@ def test_rest_pose_fallback_is_requested_and_played(monkeypatch):
     monkeypatch.setattr(endpoint, "interpret", lambda *_: resolved())
     monkeypatch.setattr(endpoint, "compose_clips", compose)
     result = endpoint.translate(endpoint.TranslateRequest(text="hello"), _Session())
-    assert requested == {"allow_neutral_fallback": True}
+    # Both labelled fallbacks are requested; each seam still reports which one it used.
+    assert requested == {"allow_neutral_fallback": True, "allow_reviewed_direct": True}
     assert result["track"] is not None and result["error"] is None
     assert result["blendQuality"]["status"] == "neutral-fallback"
+
+
+def test_reviewed_settle_is_played_but_rejection_is_not(monkeypatch):
+    settle = {"status": "reviewed-direct", "score": 80.0, "algorithmVersion": 11, "seams": [
+        {"mode": "reviewed-direct", "passed": False,
+         "waivedChecks": ["seam jerk exceeds the adjacent-motion envelope"]}]}
+    composition = SimpleNamespace(blend_quality=settle,
+                                  to_payload=lambda: {"fps": 60, "frameCount": 60, "blendQuality": settle})
+    monkeypatch.setattr(endpoint, "interpret", lambda *_: resolved())
+    monkeypatch.setattr(endpoint, "compose_clips", lambda _, **__: (composition, []))
+    result = endpoint.translate(endpoint.TranslateRequest(text="hello"), _Session())
+    assert result["track"] is not None and result["error"] is None
+
+    rejected = {**settle, "status": "rejected"}
+    composition = SimpleNamespace(blend_quality=rejected,
+                                  to_payload=lambda: {"fps": 60, "frameCount": 60, "blendQuality": rejected})
+    monkeypatch.setattr(endpoint, "compose_clips", lambda _, **__: (composition, []))
+    result = endpoint.translate(endpoint.TranslateRequest(text="hello"), _Session())
+    assert result["track"] is None and result["error"]
 
 
 def test_rejection_preserves_seam_diagnostics(monkeypatch):

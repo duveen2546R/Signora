@@ -102,6 +102,7 @@ def _compose_cached(
     key: tuple[tuple[str, str, str, str, str], ...],
     algorithm_version: int,
     allow_neutral_fallback: bool = False,
+    allow_reviewed_direct: bool = False,
 ) -> tuple[Composition, tuple[str, ...]]:
     """Cache immutable compositions by ordered content hashes and algorithm version."""
     raw = []
@@ -148,6 +149,7 @@ def _compose_cached(
         composition = compose(
             shared, prepared, fps=TARGET_FPS, algorithm_version=algorithm_version,
             allow_neutral_fallback=allow_neutral_fallback,
+            allow_reviewed_direct=allow_reviewed_direct,
         )
     except BlendRejected as exc:
         # A reviewed boundary may lie in fast motion. Keep its source position
@@ -162,6 +164,7 @@ def _compose_cached(
                 shared, [(gloss, _pace_reviewed(track, shared)) for gloss, track in prepared],
                 fps=TARGET_FPS, algorithm_version=algorithm_version,
                 allow_neutral_fallback=allow_neutral_fallback,
+                allow_reviewed_direct=allow_reviewed_direct,
             )
         except BlendRejected as paced_exc:
             raise ComposeError(str(paced_exc), paced_exc.blend_quality) from paced_exc
@@ -178,11 +181,15 @@ def _compose_cached(
 
 
 def compose_clips(
-    clips: list[tuple[str, SignClip]], allow_neutral_fallback: bool = False,
+    clips: list[tuple[str, SignClip]],
+    allow_neutral_fallback: bool = False,
+    allow_reviewed_direct: bool = False,
 ) -> tuple[Composition, list[str]]:
     """Build the sentence track for `(gloss, clip)` pairs, in order.
 
-    `allow_neutral_fallback` lets an unjoinable pair pass through the rest pose (see `compose`).
+    `allow_neutral_fallback` lets an unjoinable pair pass through the rest pose, and
+    `allow_reviewed_direct` lets a reviewed take that was captured short settle to or from rest
+    (see `compose`). Both are off by default: every caller opts in to exactly what it can label.
 
     Every clip is measured, reconciled onto one shared skeleton, and then composed. Using the first
     clip's proportions for the whole sentence would quietly reshape the others - a sign recorded in
@@ -207,7 +214,7 @@ def compose_clips(
             raise ComposeError(f"{gloss}: source capture is missing; re-ingest it.") from exc
         key.append((gloss, str(path), clip.content_hash, source_capture, source_hash))
 
-    cache_key = (tuple(key), ALGORITHM_VERSION, allow_neutral_fallback)
+    cache_key = (tuple(key), ALGORITHM_VERSION, allow_neutral_fallback, allow_reviewed_direct)
     try:
         if cache_key in _rejected:
             message, blend_quality = _rejected[cache_key]
@@ -245,3 +252,41 @@ def compose_clips(
         },
     )
     return composition, list(warnings)
+
+
+# Every status a playback surface may play. "rejected" is never among them.
+PLAYABLE_STATUSES = frozenset({"direct", "neutral-fallback", "reviewed-direct"})
+
+
+def compose_playable(clips: list[tuple[str, SignClip]]) -> tuple[Composition, list[str]]:
+    """The strictest composition that can play these reviewed recordings, escalating only on need.
+
+    1. Direct - every join blended (including the uniform 80% retry in `_compose_cached`).
+    2. Otherwise the same sentence with labelled fallbacks enabled: an unjoinable sign-to-sign pair
+       passes through rest, and a take captured short settles to or from rest. Each seam still
+       reports which strategy it used and which checks, if any, were waived.
+
+    Corrupt or geometrically impossible motion is still refused: a settle is only accepted when
+    every mandatory integrity check passes (see `blend.SETTLE_WAIVABLE_REASONS`).
+    """
+    try:
+        return compose_clips(clips)
+    except ComposeError:
+        # If this also fails, its error carries the fallback attempts too - that is the answer.
+        composition, warnings = compose_clips(
+            clips, allow_neutral_fallback=True, allow_reviewed_direct=True,
+        )
+    status = composition.blend_quality.get("status")
+    if status == "reviewed-direct":
+        waived = sorted({
+            reason for seam in composition.blend_quality.get("seams", [])
+            for reason in seam.get("waivedChecks", [])
+        })
+        warnings = [
+            *warnings,
+            "Reviewed recording played with a settle to or from rest because the capture starts "
+            "or ends in motion; waived boundary checks: " + "; ".join(waived) + ".",
+        ]
+    elif status == "neutral-fallback":
+        warnings = [*warnings, "Unjoinable sign pair played through the rest pose."]
+    return composition, warnings
