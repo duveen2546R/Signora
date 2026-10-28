@@ -7,6 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Gloss, SignClip
+from app.services.function_words import (
+    letter_gloss, match_phrases, may_fingerspell, phrase_key, plan_function_words,
+)
 from app.services.translate_service import (
     Interpretation,
     PlaylistItem,
@@ -26,13 +29,19 @@ def _aliases(registry: Registry, recordings: dict[str, SignClip]) -> list[tuple[
         if gloss not in recordings:
             continue
         for form in pattern.forms:
-            words = tuple(normalise(form).split())
+            # Same normalisation the input gets, so an omitted article never prevents a match.
+            words = phrase_key(form)
             if words and all(re.fullmatch(r"[a-z]+", word) for word in words):
                 options = values.setdefault(words, [])
                 if gloss not in options:
                     options.append(gloss)
     for gloss, clip in recordings.items():
-        english = tuple(normalise(clip.gloss.english or "").split())
+        if len(gloss) == 1:
+            # A letter recording is a fingerspelling unit, not a word: its English name "i" or "a"
+            # would otherwise turn the pronoun "I" into the letter I. Letters are reached only
+            # through an explicit letter reference or fingerspelling.
+            continue
+        english = phrase_key(clip.gloss.english or "")
         if english and all(re.fullmatch(r"[a-z]+", word) for word in english):
             options = values.setdefault(english, [])
             if gloss not in options:
@@ -56,11 +65,19 @@ def interpret_live(session: Session, text: str, registry: Registry | None = None
                     "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
                     "nineteen", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
                     "hundred", "thousand", "million", "billion"}
-    if not value or not re.fullmatch(r"[a-z ]+" if literal else r"[a-z' ]+", value) or (literal and number_words.intersection(value.split())):
+    # Function words are decided before any sign is chosen (see `function_words`): an omitted
+    # article leaves its neighbours adjacent instead of blocking the phrase for want of letters.
+    # Apostrophes are accepted in both modes because contractions are expanded, never spelled.
+    plan = plan_function_words(text)
+    omitted = [plan.issue()] if plan.issue() else []
+    if not value or not re.fullmatch(r"[a-z' ]+", value) or (literal and number_words.intersection(plan.words)):
         return Interpretation("unsupported", registry.version, issues=[{
             "code": "unsupported-speech-token",
             "message": "Live signing currently supports spoken English words, not numbers or symbols.",
         }])
+    if not plan.tokens:
+        # Nothing to sign is not an error: the stream keeps its tail and the next phrase joins it.
+        return Interpretation("function-only", registry.version, pattern_id="literal-live", issues=omitted)
 
     recordings = session.scalars(
         select(SignClip).join(Gloss).where(SignClip.is_canonical.is_(True))
@@ -71,26 +88,30 @@ def interpret_live(session: Session, text: str, registry: Registry | None = None
         by_gloss.setdefault(clip.gloss.name, clip)
     aliases = _aliases(registry, by_gloss)
 
-    words = value.split()
     resolved: list[tuple[str, str, bool]] = []
     missing_words: list[str] = []
     missing_letters: list[str] = []
-    at = 0
-    while at < len(words):
-        matched = next((entry for entry in aliases
-                        if tuple(words[at:at + len(entry[0])]) == entry[0]), None)
-        if matched:
-            phrase, glosses = matched
+    needs_sign: list[str] = []
+    for token, phrase, glosses in match_phrases(plan.tokens, aliases):
+        if glosses is not None:
             if len(glosses) != 1:
                 return Interpretation("unsupported", registry.version, issues=[{
                     "code": "ambiguous-literal-alias", "message": "Multiple recordings match: " + " ".join(phrase),
                 }])
-            source = " ".join(phrase)
-            resolved.extend((gloss, source, False) for gloss in glosses)
-            at += len(phrase)
+            resolved.extend((gloss, " ".join(phrase), False) for gloss in glosses)
             continue
-
-        source = words[at]
+        if token.kind == "letter":
+            if letter_gloss(token) in by_gloss:
+                resolved.append((letter_gloss(token), token.source, True))
+            else:
+                missing_words.append(token.source)
+                missing_letters.append(letter_gloss(token))
+            continue
+        source = token.text
+        if not may_fingerspell(token):
+            # The pronoun "I" needs its own recorded sign; it is never the letter I.
+            needs_sign.append(source)
+            continue
         letters = [letter.upper() for letter in source if letter.isalpha()]
         absent = [letter for letter in dict.fromkeys(letters) if letter not in by_gloss]
         if absent:
@@ -98,18 +119,23 @@ def interpret_live(session: Session, text: str, registry: Registry | None = None
             missing_letters.extend(absent)
         else:
             resolved.extend((letter, source, True) for letter in letters)
-        at += 1
 
-    result = Interpretation("preview", registry.version, pattern_id="literal-live")
-    if missing_words:
+    result = Interpretation("preview", registry.version, pattern_id="literal-live", issues=list(omitted))
+    if missing_words or needs_sign:
         result.status = "missing-signs"
-        result.unmapped = missing_words
-        result.issues.append({
-            "code": "missing-alphabet",
-            "sourceWords": missing_words,
-            "glosses": list(dict.fromkeys(missing_letters)),
-            "message": "Record canonical alphabet signs for: " + ", ".join(dict.fromkeys(missing_letters)),
-        })
+        result.unmapped = [*missing_words, *needs_sign]
+        if missing_words:
+            result.issues.append({
+                "code": "missing-alphabet",
+                "sourceWords": missing_words,
+                "glosses": list(dict.fromkeys(missing_letters)),
+                "message": "Record canonical alphabet signs for: " + ", ".join(dict.fromkeys(missing_letters)),
+            })
+        if needs_sign:
+            result.issues.append({
+                "code": "missing-sign", "sourceWords": needs_sign,
+                "message": "Record a sign for: " + ", ".join(dict.fromkeys(needs_sign)),
+            })
         return result
 
     for occurrence, (gloss, source, fingerspelled) in enumerate(resolved):

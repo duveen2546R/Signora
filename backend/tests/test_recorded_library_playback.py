@@ -121,6 +121,31 @@ def test_caption_resolution_is_unchanged(caption, glosses, spelled):
     assert [item.occurrence_index for item in result.items] == list(range(len(glosses)))
 
 
+@pytest.mark.parametrize("with_article, without", [
+    ("Hello, the father.", "Hello father."),
+    ("The father, thank you.", "Father, thank you."),
+])
+def test_an_omitted_article_leaves_no_pause_or_blank_frame(with_article, without):
+    """Omission happens before composition, so the track is frame-for-frame the same and the two
+    neighbouring signs are joined by transitions only - no hold, no gap, no blank animation."""
+    from app.services.compose_service import compose_playable
+    from app.services.video_plan_service import resolve_caption
+
+    def compose(text):
+        with SessionLocal() as session:
+            items = resolve_caption(session, text).items
+            clips = {c.id: c for c in session.scalars(
+                select(SignClip).where(SignClip.id.in_([i.clip_id for i in items])))}
+            return compose_playable([(i.gloss, clips[i.clip_id]) for i in items])[0]
+
+    composed, plain = compose(with_article), compose(without)
+    assert composed.track.frame_count == plain.track.frame_count
+    signs = [i for i, s in enumerate(composed.segments) if s.kind == "sign"]
+    assert len(signs) == 2
+    between = {s.kind for s in composed.segments[signs[0] + 1:signs[1]]}
+    assert between == {"transition"}, between
+
+
 def test_words_without_any_recording_stay_unsupported():
     from app.services.video_plan_service import resolve_caption
     with SessionLocal() as session:

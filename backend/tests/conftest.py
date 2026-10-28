@@ -118,3 +118,17 @@ def skeleton(library):
 def prepared(library, skeleton):
     from app.ingest.compose import prepare
     return {name: prepare(take, skeleton) for name, take in library.items()}
+
+
+@pytest.fixture
+def session():
+    """An empty, isolated in-memory library. Tests add only the recordings they need."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from app.core.db import Base
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with sessionmaker(bind=engine)() as value:
+        yield value

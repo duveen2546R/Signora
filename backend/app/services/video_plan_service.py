@@ -4,7 +4,6 @@ import datetime as dt
 import gzip
 import hashlib
 import json
-import re
 import uuid
 from pathlib import Path
 
@@ -16,18 +15,17 @@ from app.core.db import SessionLocal
 from app.ingest.compose import ALGORITHM_VERSION
 from app.models import Gloss, SignClip, VideoPlan, VideoPlanUnit
 from app.services.compose_service import PLAYABLE_STATUSES, ComposeError, compose_playable
+from app.services.function_words import letter_gloss, match_phrases, may_fingerspell, plan_function_words
 from app.services.live_motion_service import library_version
 from app.services.live_translate_service import _aliases
 from app.services.subtitle_service import TranslationUnit
-from app.services.translate_service import Interpretation, PlaylistItem, interpret, load_registry, normalise
+from app.services.translate_service import Interpretation, PlaylistItem, interpret, load_registry
 
 # 2: reviewed recordings that cannot blend with rest directly play through labelled fallbacks
 #    (`compose_service.compose_playable`) instead of being rejected.
-POLICY_VERSION = 2
-ARTICLES = {"a", "an", "the"}
-REMOVABLE_COPULAS = {"am", "is", "are"}
-QUESTION_WORDS = {"who", "what", "when", "where", "why", "how", "which", "whose"}
-NEGATIONS = {"not", "no", "never", "neither", "nor"}
+# 3: function words follow the shared `function_words` policy (contractions expanded, do-support
+#    omitted, letter references and "a hundred" kept as meaning).
+POLICY_VERSION = 3
 
 
 def resolve_caption(session: Session, text: str) -> Interpretation:
@@ -38,8 +36,6 @@ def resolve_caption(session: Session, text: str) -> Interpretation:
         exact.status = "ready" if exact.status == "ready" else "literal-preview"
         return exact
 
-    normalized = normalise(text)
-    words = re.findall(r"[a-z]+(?:'[a-z]+)?", normalized)
     recordings = session.scalars(
         select(SignClip).join(Gloss).where(SignClip.is_canonical.is_(True))
         .order_by(SignClip.created_at.desc(), SignClip.id.desc())
@@ -48,43 +44,39 @@ def resolve_caption(session: Session, text: str) -> Interpretation:
     for clip in recordings:
         by_gloss.setdefault(clip.gloss.name, clip)
 
-    retained = [word for word in words if word not in ARTICLES]
-    has_question = "?" in normalized or bool(QUESTION_WORDS.intersection(words))
-    has_negation = bool(NEGATIONS.intersection(words)) or any("n't" in word for word in words)
-    copula_removable = not has_question and not has_negation and len(retained) >= 3
-    if copula_removable:
-        retained = [word for word in retained if word not in REMOVABLE_COPULAS]
-    if not retained:
+    plan = plan_function_words(text)
+    omitted = [plan.issue()] if plan.issue() else []
+    if not plan.tokens:
         return Interpretation("function-only", registry.version, pattern_id="caption-policy", issues=[{
             "code": "function-only", "message": "This unit contains only contextual function words.",
-        }])
+        }, *omitted])
 
     aliases = _aliases(registry, by_gloss)
     resolved: list[tuple[str, str, bool]] = []
     missing_words: list[str] = []
-    at = 0
-    while at < len(retained):
-        matched = next((entry for entry in aliases
-                        if tuple(retained[at:at + len(entry[0])]) == entry[0]), None)
-        if matched and len(matched[1]) == 1:
-            phrase, glosses = matched
+    for token, phrase, glosses in match_phrases(plan.tokens, aliases, accept=lambda g: len(g) == 1):
+        if glosses is not None:
             resolved.append((glosses[0], " ".join(phrase), False))
-            at += len(phrase)
-            continue
-        word = retained[at]
-        letters = [letter.upper() for letter in word if letter.isalpha()]
-        if letters and all(letter in by_gloss for letter in letters):
-            resolved.extend((letter, word, True) for letter in letters)
+        elif token.kind == "letter":
+            if letter_gloss(token) in by_gloss:
+                resolved.append((letter_gloss(token), token.source, True))
+            else:
+                missing_words.append(token.source)
         else:
-            missing_words.append(word)
-        at += 1
+            word = token.text
+            letters = [letter.upper() for letter in word if letter.isalpha()]
+            if may_fingerspell(token) and letters and all(letter in by_gloss for letter in letters):
+                resolved.extend((letter, word, True) for letter in letters)
+            else:
+                missing_words.append(word)
     if missing_words:
         return Interpretation("unsupported", registry.version, pattern_id="caption-policy",
                               unmapped=missing_words, issues=[{
             "code": "unsupported-unit", "sourceWords": missing_words,
             "message": "The complete subtitle unit was skipped because some words have no sign and the A-Z alphabet is incomplete.",
-        }])
-    result = Interpretation("literal-preview", registry.version, pattern_id="caption-policy")
+        }, *omitted])
+    result = Interpretation("literal-preview", registry.version, pattern_id="caption-policy",
+                            issues=omitted)
     for gloss, source, spelled in resolved:
         clip = by_gloss[gloss]
         result.items.append(PlaylistItem(

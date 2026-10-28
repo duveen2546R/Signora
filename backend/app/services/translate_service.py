@@ -13,6 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Gloss, SignClip
+from app.services.function_words import (
+    letter_gloss, match_phrases, may_fingerspell, phrase_key, plan_function_words,
+)
 
 REGISTRY_PATH = Path(__file__).with_name("isl_patterns.json")
 
@@ -191,9 +194,14 @@ def interpret(session: Session, text: str, registry: Registry | None = None) -> 
 def interpret_literal_sequence(
     session: Session, text: str, registry: Registry | None = None,
 ) -> Interpretation:
-    """Plan an ordered preview from locally recorded words without claiming ISL translation."""
+    """Plan an ordered preview from locally recorded words without claiming ISL translation.
+
+    Function words follow the shared policy in `function_words`: articles and other words with no
+    separate sign are omitted (and reported, not treated as missing), so their neighbours are signed
+    back to back.
+    """
     registry = registry or load_registry()
-    words = re.findall(r"[a-z]+(?:'[a-z]+)?", normalise(text))
+    plan = plan_function_words(text)
     recordings = session.scalars(
         select(SignClip).join(Gloss).where(SignClip.is_canonical.is_(True))
         .order_by(SignClip.created_at.desc(), SignClip.id.desc())
@@ -208,7 +216,7 @@ def interpret_literal_sequence(
             continue
         glosses = tuple(pattern.glosses)
         for form in pattern.forms:
-            phrase = tuple(re.findall(r"[a-z]+(?:'[a-z]+)?", normalise(form)))
+            phrase = phrase_key(form)
             if not phrase:
                 continue
             existing = phrases.get(phrase, glosses)
@@ -231,38 +239,43 @@ def interpret_literal_sequence(
         ))
         return True
 
-    at = 0
-    ordered_phrases = sorted(phrases.items(), key=lambda entry: len(entry[0]), reverse=True)
-    while at < len(words):
-        matched = next((entry for entry in ordered_phrases
-                        if entry[1] is not None and tuple(words[at:at + len(entry[0])]) == entry[0]), None)
-        if matched:
-            phrase, glosses = matched
-            source = " ".join(phrase)
-            if all(name in by_gloss for name in glosses):
-                for name in glosses:
-                    append_gloss(name, source)
-                at += len(phrase)
-                continue
+    def unmapped(word: str) -> None:
+        result.unmapped.append(word)
+        result.issues.append({
+            "code": "unmapped-vocabulary-word",
+            "sourceWord": word,
+            "message": f"No recorded word or complete alphabet spelling for: {word}",
+        })
 
-        word = words[at]
-        if append_gloss(word.upper(), word):
-            at += 1
+    def playable(glosses: tuple[str, ...] | None) -> bool:
+        return glosses is not None and all(name in by_gloss for name in glosses)
+
+    for token, phrase, glosses in match_phrases(plan.tokens, list(phrases.items()), accept=playable):
+        if glosses is not None:
+            for name in glosses:
+                append_gloss(name, " ".join(phrase))
+            continue
+        if token.kind == "letter":
+            # "grade A", "an A": the named letter, never an article.
+            if not append_gloss(letter_gloss(token), token.source, fingerspelled=True):
+                unmapped(token.source)
+            continue
+        word = token.text
+        # A one-letter word is never looked up as a letter gloss: the pronoun "I" is not the
+        # letter I, and an article has already been omitted.
+        if len(word) > 1 and append_gloss(word.upper(), word):
             continue
         letters = [letter.upper() for letter in word if letter.isalpha()]
-        if letters and all(letter in by_gloss for letter in letters):
+        if may_fingerspell(token) and letters and all(letter in by_gloss for letter in letters):
             for letter in letters:
                 append_gloss(letter, word, fingerspelled=True)
         else:
-            result.unmapped.append(word)
-            result.issues.append({
-                "code": "unmapped-vocabulary-word",
-                "sourceWord": word,
-                "message": f"No recorded word or complete alphabet spelling for: {word}",
-            })
-        at += 1
+            unmapped(word)
+    if plan.issue():
+        result.issues.append(plan.issue())
     if not result.items:
-        result.status = "unsupported"
+        # Nothing but omitted function words is not a failure; there is simply nothing to sign.
+        result.status = "function-only" if plan.omitted and not result.unmapped else "unsupported"
     return result
 
 
