@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
-import { SOURCES, buildAnalysisOptions } from '../analysisForm'
+import { EQUIVALENCE_SOURCES, SOURCES, buildAnalysisOptions } from '../analysisForm'
 
 
 const STAGES = { queued: 'Waiting for the comparison to start…', inspecting: 'Checking files and recording clocks…', extracting: 'Tracking the joints in your video…', scoring: 'Comparing motion and preparing the report…' }
@@ -11,8 +11,53 @@ const observedDecision = (value) => ({ EQUIVALENT: 'Observed tolerance satisfied
 const format = (value) => Number.isFinite(value) ? value.toFixed(3) : '—'
 
 
+const VERDICT_STYLE = {
+  EQUIVALENT: { backgroundColor: '#e6ffe6', borderColor: '#4CAF50', color: '#1b5e20' },
+  'NOT EQUIVALENT': { backgroundColor: '#ffebee', borderColor: '#e53935', color: '#b71c1c' },
+  INCONCLUSIVE: { backgroundColor: '#fff8e1', borderColor: '#f9a825', color: '#7a5a00' },
+}
+const CLAIM_LABEL = { rms: 'RMS difference', mean: 'Mean difference', whole_curve: 'Whole curve' }
+const range = (pair) => Array.isArray(pair) ? `${format(pair[0])} to ${format(pair[1])}` : '—'
+
+export function SingleTakeResult({ job }) {
+  const summary = job.summary
+  const take = summary.single_take
+  const figure = summary.artifacts?.single_take_plot
+  const noise = take.noise_model ?? {}
+  const diagnostics = take.diagnostics ?? {}
+  return (
+    <section className="analysis__results" aria-labelledby="results-heading">
+      <div className="panel__head"><div><p className="analysis__eyebrow">Two-view single-take equivalence</p><h2 id="results-heading">Analysis Results</h2></div><span className="status">Report generated</span></div>
+      <p>{summary.performance_id}</p>
+      <div className="analysis__notice" style={{ ...(VERDICT_STYLE[take.decision] ?? VERDICT_STYLE.INCONCLUSIVE), marginBottom: '1.5rem' }}>
+        <strong style={{ fontSize: '1.05rem', display: 'block', marginBottom: '0.25rem' }}>{take.decision} — {summary.message}</strong>
+        <p style={{ margin: 0 }}>{summary.message_detail}</p>
+      </div>
+      <div className="analysis__table-wrap"><table>
+        <thead><tr><th>Angle</th><th>Decision</th><th>Mean diff (90% CI, °)</th><th>RMS diff (90% CI, °)</th><th>Whole curve</th><th>Replicate check</th></tr></thead>
+        <tbody>{Object.entries(take.angles).map(([name, angle]) => <tr key={name}>
+          <td>{name.replaceAll('_', ' ')}</td>
+          <td><strong>{angle.decision}</strong> <span className="hint">(margin ±{angle.margin_deg}°)</span></td>
+          <td>{format(angle.mean_difference_deg)} ({range(angle.mean_ci_deg)}) · {angle.mean_decision}</td>
+          <td>{format(angle.rms_deg)} ({range(angle.rms_ci_deg)}) · {angle.rms_decision}</td>
+          <td>{angle.curve_decision} <span className="hint">(band max ±{format(angle.max_band_abs_deg)}°)</span></td>
+          <td>{angle.replicate_check?.pass ? 'pass' : 'fail'}</td>
+        </tr>)}</tbody>
+      </table></div>
+      <p className="hint">Primary claim: {CLAIM_LABEL[take.primary_claim] ?? take.primary_claim}, fixed in advance. Noise model: {noise.source} · calibration baseline {format(diagnostics.baseline_angle_deg)}° · reprojection {format(diagnostics.reprojection_rms_px)} px.</p>
+      <p className="analysis__notice">{take.scope}</p>
+      {figure && <figure className="analysis__figure" style={{ border: '1px solid var(--rule-on-light, #e2e8f0)', margin: '2rem 0', padding: '1.25rem', background: '#fff', borderRadius: '16px' }}>
+        <img src={api.analysisFile(job.jobId, figure)} alt="FBX and two-view video elbow flexion, and their difference with its simultaneous band against the equivalence margin" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+        <figcaption style={{ marginTop: '0.85rem' }}>Top: elbow flexion from the FBX and from the two-view video. Bottom: their bias-corrected difference with a simultaneous band; dashed lines mark the margin.</figcaption>
+      </figure>}
+      <p><a className="button button--ghost" href={api.analysisFile(job.jobId, summary.artifacts.single_take_report, true)}>Download full report (JSON)</a></p>
+    </section>
+  )
+}
+
 export function Result({ job }) {
   const summary = job.summary
+  if (summary.single_take) return <SingleTakeResult job={job} />
   const primaryMode = summary.primary_analysis ?? (summary.analyses?.synchronized?.status === 'descriptive' ? 'synchronized' : 'phase_normalized')
   const analysis = summary.analyses?.[primaryMode] ?? { status: 'indeterminate', reason: 'No position analysis is available in this report.' }
   const available = analysis.status === 'descriptive'
@@ -32,8 +77,6 @@ export function Result({ job }) {
     ?? figures.find((f) => f.includes('synchronized_angles') && !f.includes('errors'))
     ?? figures.find((f) => f.includes('phase_normalized_angles') && !f.includes('errors'))
     ?? figures.find((f) => (f.endsWith('angles.png') || f.endsWith('angles.svg')) && !f.includes('errors'))
-
-  const ftostPlot = artifacts.ftost_plot
 
   return (
     <section className="analysis__results" aria-labelledby="results-heading">
@@ -61,8 +104,8 @@ export function Result({ job }) {
         <p className="analysis__notice"><strong>Statistical equivalence not established.</strong> This report measures observable projected movement. Both tolerance profiles are exploratory; measurement uncertainty and acceptance margins have not been independently validated.</p>
       )}
 
-      {/* Visual Graphs: 2D Trajectories, Projected Elbow Angles, and fTOST */}
-      {(trajectoriesPlot || anglesPlot || ftostPlot) && (
+      {/* Visual Graphs: 2D Trajectories and Projected Elbow Angles */}
+      {(trajectoriesPlot || anglesPlot) && (
         <div className="analysis__graphs" style={{ margin: '2rem 0' }}>
           <div className="panel__head" style={{ marginBottom: '1.25rem' }}>
             <div>
@@ -97,18 +140,6 @@ export function Result({ job }) {
             </figure>
           )}
 
-          {ftostPlot && (
-            <figure className="analysis__figure" style={{ border: '1px solid var(--rule-on-light, #e2e8f0)', marginBottom: '2rem', padding: '1.25rem', background: '#fff', borderRadius: '16px' }}>
-              <img
-                src={api.analysisFile(job.jobId, ftostPlot)}
-                alt={`Figure 4.7: Statistical Equivalence (fTOST) for ${summary.performance_id || 'the action'}`}
-                style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }}
-              />
-              <figcaption style={{ marginTop: '0.85rem', fontWeight: 500, color: 'var(--charcoal, #1e293b)', lineHeight: 1.5 }}>
-                <strong>FIGURE 4.7:</strong> Statistical Equivalence (fTOST) for {summary.performance_id || 'the action'} with SPM1d continuous tolerance bounds.
-              </figcaption>
-            </figure>
-          )}
         </div>
       )}
       {!summary.message && historical && <p className="hint">Historical report: earlier scores and coverage rules are retained. Earlier equivalence labels describe observed thresholds only. Run a new comparison for native-clock coverage checks.</p>}
@@ -203,7 +234,6 @@ export function Result({ job }) {
           ['manifest.json', 'Download annotations'],
           ...(trajectoriesPlot ? [[trajectoriesPlot, 'Download trajectories plot']] : []),
           ...(anglesPlot ? [[anglesPlot, 'Download elbow angles plot']] : []),
-          ...(ftostPlot ? [[ftostPlot, 'Download fTOST equivalence plot']] : []),
           ...Object.values(summary.artifacts?.traces ?? {}).map((name) => [name, ({ synchronized_traces: 'Download timing traces', phase_normalized_traces: 'Download position traces', action_shape_traces: 'Download action angles', action_alignment: 'Download time alignment', finger_animation_traces: 'Download finger articulation' })[name.replace('.csv', '')] || 'Download traces']),
         ].map(([name, label]) => <a className="link" key={name} href={api.analysisFile(job.jobId, name, true)}>{label}</a>)}
       </div>
@@ -223,6 +253,7 @@ export default function Analysis() {
   const [relationship, setRelationship] = useState('unknown')
   const [referenceView, setReferenceView] = useState('automatic')
   const [toleranceProfile, setToleranceProfile] = useState('replication')
+  const [focal35mm, setFocal35mm] = useState('')
   const [verifiedTiming, setVerifiedTiming] = useState(false)
   const [timing, setTiming] = useState(INITIAL_TIMING)
   const [readiness, setReadiness] = useState(null)
@@ -283,7 +314,7 @@ export default function Analysis() {
     event.preventDefault()
     setError(null)
     try {
-      const options = buildAnalysisOptions({ files, action, pairing, relationship, referenceView, toleranceProfile, windows, calibration, verifiedTiming, timing })
+      const options = buildAnalysisOptions({ files, action, pairing, relationship, referenceView, toleranceProfile, windows, calibration, verifiedTiming, timing, focal35mm })
       setUploading(true)
       const created = await api.createAnalysis(files, options)
       setJob(created)
@@ -302,7 +333,7 @@ export default function Analysis() {
             <label className="field">Comparison name<input value={action} onChange={(e) => setAction(e.target.value)} maxLength={120} placeholder="For example: ACTION — take 01" /></label>
             <label className="field">How were these recordings made?<select value={relationship} onChange={(e) => { setRelationship(e.target.value); setPairing(false); setVerifiedTiming(false) }}><option value="unknown">I’m not sure — movement similarity only</option><option value="separate_repetitions">Separate repetitions of the same action — movement similarity</option><option value="same_performance">One simultaneous performance — agreement comparison</option></select></label>
             <label className="field">Reference video camera view<select value={referenceView} onChange={(e) => setReferenceView(e.target.value)}><option value="automatic">Automatic — estimate camera orientation</option><option value="front">Front view — performer faces the camera</option></select></label>
-            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option><option value="statistical_equivalence">Statistical Equivalence — SPM1d + fTOST</option></select></label>
+            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option><option value="statistical_equivalence">Statistical Equivalence — two views of one take (TOST)</option></select></label>
             <p className="hint">For a front-facing video, choose Front view. The FBX may face any direction in its viewer; comparison uses the anatomical shoulders to align its projection.</p>
             {relationship !== 'same_performance' && <p className="analysis__notice">Separate repetitions can differ in hand paths, speed, and body position even with perfect capture. These uploads cannot establish which capture method is more accurate. For that, each FBX needs a video of its exact performance.</p>}
             <div className="analysis__uploads">{SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>
@@ -311,6 +342,15 @@ export default function Analysis() {
               {files[source.key] && <p className="analysis__filename">{files[source.key].name} · {(files[source.key].size / 1024 / 1024).toFixed(1)} MB</p>}
               <div className="analysis__times"><label className="field">Action start (s)<input type="number" min="0" step="0.001" value={windows[source.key].start} onChange={(e) => updateWindow(source.key, 'start', e.target.value)} placeholder="Full clip" /></label><label className="field">Action end (s)<input type="number" min="0" step="0.001" value={windows[source.key].end} onChange={(e) => updateWindow(source.key, 'end', e.target.value)} placeholder="Full clip" /></label></div>
             </div>)}</div>
+            {toleranceProfile === 'statistical_equivalence' && <div className="analysis__equivalence">
+              <p className="analysis__notice">Statistical equivalence needs the reference video filmed from the front and a second video of the same performance from 30–45° to the side, recorded at the same time as the FBX. Hold still for about a second before and after the sign: those frames measure the video’s own noise. The result applies to this recording only.</p>
+              <div className="analysis__uploads">{EQUIVALENCE_SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>
+                <span className="analysis__number">0{SOURCES.length + index + 1}</span><h3>{source.title}</h3><p className="hint">{source.hint}</p>
+                <label className="field">Select {source.title.toLowerCase()}<input type="file" accept={source.accept} onChange={(e) => selectFile(source.key, e.target.files?.[0] ?? null)} /></label>
+                {files[source.key] && <p className="analysis__filename">{files[source.key].name} · {(files[source.key].size / 1024 / 1024).toFixed(1)} MB</p>}
+              </div>)}</div>
+              <label className="field">Phone focal length, 35 mm-equivalent (optional)<input type="number" min="8" max="300" step="0.1" value={focal35mm} onChange={(e) => setFocal35mm(e.target.value)} placeholder="Default 28 mm (typical phone video); refined from the videos" /></label>
+            </div>}
             <p className="hint">Leave both timestamps blank to compare the full clip, or trim each source to the same action. The video may be at most two minutes long.</p>
             {videoUrl && <div className="analysis__preview"><video controls src={videoUrl} preload="metadata" aria-label="Reference video preview" /><p className="hint">Preview the video to choose its action boundaries and a stable neutral calibration interval.</p></div>}
             <details className="analysis__advanced"><summary>Calibration and verified timing</summary>

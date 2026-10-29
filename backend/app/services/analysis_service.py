@@ -86,7 +86,7 @@ def run_job(directory: Path):
                     stdout=log,
                     stderr=log,
                     env=environment,
-                    timeout=600,
+                    timeout=2400,  # two-view equivalence runs pose replicates on both videos
                 )
             if process.returncode and read_status(directory)["status"] != "failed":
                 worker_error = None

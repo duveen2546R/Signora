@@ -3,7 +3,15 @@ export const SOURCES = [
   { key: 'video', title: 'Reference video', accept: '.mp4,.mov,.m4v', hint: 'The real person performing the action · up to 250 MB and 2 minutes' },
 ]
 
-export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', toleranceProfile = 'replication', windows, calibration, verifiedTiming, timing }) {
+// Statistical equivalence: a second view of the same performance, and an optional noise recording
+// (both phones unmoved; the performer holds still ~10 s, then moves slowly).
+export const EQUIVALENCE_SOURCES = [
+  { key: 'oblique', title: 'Oblique video (30–45°)', accept: '.mp4,.mov,.m4v', required: true, hint: 'The same performance filmed by a second phone 30–45° to the side · up to 250 MB' },
+  { key: 'noise_front', title: 'Noise recording — front (optional)', accept: '.mp4,.mov,.m4v', required: false, hint: 'Same front phone, not moved: hold still ~10 s, then move slowly' },
+  { key: 'noise_oblique', title: 'Noise recording — oblique (optional)', accept: '.mp4,.mov,.m4v', required: false, hint: 'The same noise recording from the oblique phone' },
+]
+
+export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', toleranceProfile = 'replication', windows, calibration, verifiedTiming, timing, focal35mm = '' }) {
   for (const source of SOURCES) {
     const file = files[source.key]
     if (!file) throw new Error(`Select ${source.title.toLowerCase()} to continue.`)
@@ -17,6 +25,22 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
   if (verifiedTiming && relationship !== 'same_performance') throw new Error('Synchronized accuracy requires the exact same performance.')
   if (!['automatic', 'front'].includes(referenceView)) throw new Error('Select the reference camera view.')
   if (!['intelligibility', 'replication', 'statistical_equivalence'].includes(toleranceProfile)) throw new Error('Select the tolerance standard.')
+  let focal = null
+  if (toleranceProfile === 'statistical_equivalence') {
+    if (relationship !== 'same_performance') throw new Error('Statistical equivalence needs videos of the exact same performance as the FBX.')
+    for (const source of EQUIVALENCE_SOURCES) {
+      const file = files[source.key]
+      if (!file) { if (source.required) throw new Error(`Select the ${source.title.toLowerCase()} to continue.`); continue }
+      const extension = `.${file.name.split('.').pop().toLowerCase()}`
+      if (!source.accept.split(',').includes(extension)) throw new Error(`${source.title}: select a ${source.accept} file.`)
+      if (!file.size || file.size > 250 * 1024 * 1024) throw new Error(`${source.title}: use a nonempty file under 250 MB.`)
+    }
+    if (!files.noise_front !== !files.noise_oblique) throw new Error('A noise recording needs both the front and the oblique video.')
+    if (focal35mm !== '') {
+      focal = Number(focal35mm)
+      if (!Number.isFinite(focal) || focal <= 8 || focal >= 300) throw new Error('Enter a 35 mm-equivalent focal length between 8 and 300 mm, or leave it blank.')
+    }
+  }
   const selectedWindows = {}
   for (const source of SOURCES) {
     const entry = windows[source.key]
@@ -42,5 +66,5 @@ export function buildAnalysisOptions({ files, action, pairing, relationship = 'u
       }
     }
   }
-  return { action: action.trim() || 'Action comparison', pairing_confirmed: true, recording_relationship: relationship, reference_view: referenceView, tolerance_profile: toleranceProfile, windows: selectedWindows, calibration_phase: calibrationPhase, synchronization }
+  return { action: action.trim() || 'Action comparison', pairing_confirmed: true, recording_relationship: relationship, reference_view: referenceView, tolerance_profile: toleranceProfile, windows: selectedWindows, calibration_phase: calibrationPhase, synchronization, ...(focal !== null ? { focal_35mm: focal } : {}) }
 }

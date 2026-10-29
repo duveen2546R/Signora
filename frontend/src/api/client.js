@@ -26,6 +26,9 @@ export const api = {
       form.append('old_fbx', files.non_suit)
     }
     form.append('reference_video', files.video)
+    for (const [key, field] of [['oblique', 'oblique_video'], ['noise_front', 'noise_front_video'], ['noise_oblique', 'noise_oblique_video']]) {
+      if (files[key]) form.append(field, files[key])
+    }
     form.append('options', JSON.stringify(options))
     return request('/analyses', { method: 'POST', body: form })
   },

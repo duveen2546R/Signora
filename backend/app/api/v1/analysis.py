@@ -1,4 +1,5 @@
-"""Upload one matched video and two FBXs; retrieve persistent analysis results."""
+"""Upload one matched video and two FBXs (or, for statistical equivalence, two views of one
+performance and its FBX); retrieve persistent analysis results."""
 
 from __future__ import annotations
 
@@ -72,6 +73,7 @@ class Options(BaseModel):
     synchronization: dict[Literal["suit", "non_suit"], Synchronization] = Field(
         default_factory=dict
     )
+    focal_35mm: float | None = Field(default=None, gt=8, lt=300, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def validate_options(self):
@@ -92,6 +94,13 @@ class Options(BaseModel):
                 raise ValueError(
                     f"{label}: enter finite start and end times with start < end."
                 )
+        if (
+            self.tolerance_profile == "statistical_equivalence"
+            and self.recording_relationship != "same_performance"
+        ):
+            raise ValueError(
+                "Statistical equivalence compares the FBX with videos of the exact same performance."
+            )
         if self.calibration_phase[1] > 1:
             raise ValueError(
                 "Calibration interval must be within 0–100% of the action."
@@ -138,9 +147,12 @@ async def create_analysis(
     motioncapture_fbx: UploadFile,
     reference_video: UploadFile,
     old_fbx: UploadFile | None = None,
+    oblique_video: UploadFile | None = None,
+    noise_front_video: UploadFile | None = None,
+    noise_oblique_video: UploadFile | None = None,
     options: str = Form("{}"),
 ):
-    uploads = (motioncapture_fbx, old_fbx, reference_video)
+    uploads = (motioncapture_fbx, old_fbx, reference_video, oblique_video, noise_front_video, noise_oblique_video)
     directory = None
     accepted = False
     try:
@@ -153,6 +165,13 @@ async def create_analysis(
                 error["msg"].removeprefix("Value error, ") for error in exc.errors()
             )
             raise HTTPException(400, message) from exc
+        if parsed.tolerance_profile == "statistical_equivalence":
+            if oblique_video is None:
+                raise HTTPException(400, "Statistical equivalence needs a second, 30–45° video of the same performance.")
+            if old_fbx is not None:
+                raise HTTPException(400, "Statistical equivalence tests one FBX against its own videos; remove the second FBX.")
+            if (noise_front_video is None) != (noise_oblique_video is None):
+                raise HTTPException(400, "A noise recording needs both the front and the oblique video.")
         if not service.readiness()["ready"]:
             raise HTTPException(503, service.readiness()["message"])
         settings.analysis_dir.mkdir(parents=True, exist_ok=True)
@@ -168,27 +187,31 @@ async def create_analysis(
             )
         directory = settings.analysis_dir / uuid.uuid4().hex
         directory.mkdir()
-        video_suffix = Path(reference_video.filename or "").suffix.lower()
+        suffix = lambda upload: Path(upload.filename or "").suffix.lower() if upload else ""
         files = {
             "suit_fbx": "motioncapture.fbx",
             "non_suit_fbx": "old.fbx",
-            "reference_video": "reference" + video_suffix,
+            "reference_video": "reference" + suffix(reference_video),
+            "oblique_video": "oblique" + suffix(oblique_video),
+            "noise_front_video": "noise_front" + suffix(noise_front_video),
+            "noise_oblique_video": "noise_oblique" + suffix(noise_oblique_video),
         }
+        videos = {".mp4", ".mov", ".m4v"}
         names = {}
         for upload, key, suffixes, limit in (
             (motioncapture_fbx, "suit_fbx", {".fbx"}, FBX_LIMIT),
             (old_fbx, "non_suit_fbx", {".fbx"}, FBX_LIMIT),
-            (reference_video, "reference_video", {".mp4", ".mov", ".m4v"}, VIDEO_LIMIT),
+            (reference_video, "reference_video", videos, VIDEO_LIMIT),
+            (oblique_video, "oblique_video", videos, VIDEO_LIMIT),
+            (noise_front_video, "noise_front_video", videos, VIDEO_LIMIT),
+            (noise_oblique_video, "noise_oblique_video", videos, VIDEO_LIMIT),
         ):
             if upload is None:
+                del files[key]
                 continue
             names[key] = await save_upload(
                 upload, directory / files[key], suffixes, limit
             )
-
-        # Remove non_suit_fbx from files dictionary if it was not uploaded
-        if old_fbx is None:
-            del files["non_suit_fbx"]
 
         payload = {
             **parsed.model_dump(mode="json"),
@@ -230,7 +253,8 @@ def analysis_file(job_id: str, filename: str, download: bool = False):
     allowed = {
         "report.html",
         "summary.json",
-        artifacts.get("ftost_plot"),
+        artifacts.get("single_take_plot"),
+        artifacts.get("single_take_report"),
         artifacts.get("trajectories_plot"),
         artifacts.get("angles_plot"),
         "manifest.json",
@@ -254,7 +278,6 @@ def analysis_file(job_id: str, filename: str, download: bool = False):
         "phase_normalized_trajectories.svg",
         "phase_normalized_angles.png",
         "phase_normalized_angles.svg",
-        "ftost_result.png",
     })
     allowed.discard(None)
     if filename not in allowed:

@@ -55,3 +55,26 @@ test('analysis results render single, dual, missing-data, and historical certifi
     await server.close()
   }
 })
+
+test('single-take equivalence results show every verdict, the claim and its scope', async () => {
+  const server = await createServer({ server: { middlewareMode: true, watch: null, hmr: false, ws: false }, appType: 'custom' })
+  try {
+    const { Result } = await server.ssrLoadModule('/src/pages/Analysis.jsx')
+    const angle = (decision) => ({ decision, margin_deg: 5, mean_difference_deg: 0.4, mean_ci_deg: [-1.2, 2.0], mean_decision: 'EQUIVALENT', rms_deg: 2.1, rms_ci_deg: [1.0, 3.6], rms_decision: decision, curve_decision: 'INCONCLUSIVE', max_band_abs_deg: 18.2, replicate_check: { pass: true } })
+    const render = (decision) => renderToStaticMarkup(createElement(Result, { job: { jobId: 'job', summary: {
+      performance_id: 'Father', equivalence_verdict: decision, message: 'Verdict message', message_detail: 'Detail',
+      single_take: { decision, primary_claim: 'rms', scope: 'Conditional on this performance only.', angles: { left_elbow_flexion: angle(decision), right_elbow_flexion: angle(decision) }, noise_model: { source: 'max(still frames, replicate spread)' }, diagnostics: { baseline_angle_deg: 36.1, reprojection_rms_px: 2.3 } },
+      artifacts: { single_take_plot: 'single_take_equivalence.png', single_take_report: 'single_take_report.json', figures: ['single_take_equivalence.png'] },
+    } } }))
+    for (const decision of ['EQUIVALENT', 'NOT EQUIVALENT', 'INCONCLUSIVE']) assert.match(render(decision), new RegExp(decision))
+    const html = render('INCONCLUSIVE')
+    assert.match(html, /RMS difference/)
+    assert.match(html, /Conditional on this performance only/)
+    assert.match(html, /single_take_equivalence\.png/)
+    assert.match(html, /single_take_report\.json/)
+    assert.match(html, /left elbow flexion/)
+    assert.doesNotMatch(html, /fTOST|PROVEN/)
+  } finally {
+    await server.close()
+  }
+})

@@ -72,3 +72,15 @@ test('tolerance standard is passed to backend and invalid standards are rejected
   values.toleranceProfile = 'loose'
   assert.throws(() => buildAnalysisOptions(values), /tolerance standard/)
 })
+
+test('statistical equivalence needs the oblique view, same performance and paired noise videos', () => {
+  const values = { ...input(), toleranceProfile: 'statistical_equivalence' }
+  assert.throws(() => buildAnalysisOptions(values), /oblique video/)
+  values.files = { ...values.files, oblique: { name: 'side.MOV', size: 300 } }
+  assert.equal(buildAnalysisOptions(values).tolerance_profile, 'statistical_equivalence')
+  assert.equal('focal_35mm' in buildAnalysisOptions(values), false)
+  assert.equal(buildAnalysisOptions({ ...values, focal35mm: '26' }).focal_35mm, 26)
+  assert.throws(() => buildAnalysisOptions({ ...values, focal35mm: '4' }), /focal length/)
+  assert.throws(() => buildAnalysisOptions({ ...values, files: { ...values.files, noise_front: { name: 'n.mp4', size: 5 } } }), /both the front and the oblique/)
+  assert.throws(() => buildAnalysisOptions({ ...values, relationship: 'separate_repetitions' }), /exact same performance/)
+})

@@ -20,148 +20,74 @@ from app.validation.video_pose import extract_video_pose, read_pose_csv
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def generate_dynamic_ftost_plot(
-    results_dir: Path, action_name: str, relationship: str = "same_performance"
-) -> tuple[Path | None, dict]:
-    """Generate dynamic SPM1d + fTOST bilateral statistical equivalence plot for the uploaded action."""
-    import os
-    os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
-    import numpy as np
-    import pandas as pd
-    import scipy.signal
-    import spm1d
-    import matplotlib.pyplot as plt
+def single_take_summary(report: dict, action_name: str) -> dict:
+    """summary.json for the two-view single-take equivalence protocol."""
+    from app.validation.equivalence_single_take import EQUIVALENT, NOT_EQUIVALENT
+    from app.validation.single_take_job import FIGURE, REPORT
 
-    csv_candidates = [
-        results_dir / "phase_normalized_traces.csv",
-        results_dir / "synchronized_traces.csv",
-    ]
-    csv_path = next((p for p in csv_candidates if p.is_file()), None)
-    if not csv_path:
-        return None, {}
+    verdict = report["decision"]
+    claim = {
+        "rms": "root-mean-square elbow-angle difference over the sign",
+        "mean": "sign-average elbow-angle difference",
+        "whole_curve": "elbow-angle difference at every phase of the sign",
+    }[report["primary_claim"]]
+    margin = max(item["margin_deg"] for item in report["angles"].values())
+    message, status = {
+        EQUIVALENT: ("STATISTICAL EQUIVALENCE ESTABLISHED for this take.", "success"),
+        NOT_EQUIVALENT: ("NOT EQUIVALENT: the FBX and the two-view video disagree beyond the margin.", "tolerance_exceeded"),
+    }.get(verdict, ("INCONCLUSIVE: this take can establish neither equivalence nor a difference.", "inconclusive"))
+    keep = (
+        "decision", "margin_deg", "mean_difference_deg", "mean_ci_deg", "mean_decision", "rms_deg",
+        "rms_ci_deg", "rms_decision", "curve_decision", "max_band_abs_deg", "measurement_sd_deg",
+        "replicate_check", "pearson_r",
+    )
+    return {
+        "performance_id": action_name,
+        "comparison_kind": "single_take_equivalence",
+        "assessment_kind": "single_take_equivalence",
+        "status": status,
+        "equivalence_verdict": verdict,
+        "message": message,
+        "message_detail": (
+            f"Primary claim: the {claim} is within ±{margin:g}° (two one-sided tests, α = 0.05), "
+            "after propagating the video's measured detector noise and calibration uncertainty, "
+            "and confirmed across pose-model replicates. " + report["scope"]
+        ),
+        "single_take": {
+            "decision": verdict,
+            "primary_claim": report["primary_claim"],
+            "scope": report["scope"],
+            "angles": {name: {key: item[key] for key in keep} for name, item in report["angles"].items()},
+            "noise_model": report["noise_model"],
+            "diagnostics": report["diagnostics"],
+        },
+        "artifacts": {"single_take_plot": FIGURE, "single_take_report": REPORT, "figures": [FIGURE]},
+    }
 
-    try:
-        df = pd.read_csv(csv_path)
-        if "reference_right_elbow_angle" not in df.columns or "suit_right_elbow_angle" not in df.columns:
-            return None, {}
 
-        target_frames = 100
-        delta = 15.0  # Equivalence margin (degrees)
-        fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-        stats_by_side = {}
+def process_single_take(directory: Path, options: dict, paths: dict, action_name: str) -> None:
+    from app.validation.single_take_job import run_single_take
 
-        for idx, (side, ax) in enumerate(zip(["left", "right"], axes)):
-            ref_raw = df[f"reference_{side}_elbow_angle"].to_numpy(dtype=float)
-            suit_raw = df[f"suit_{side}_elbow_angle"].to_numpy(dtype=float)
+    if "oblique_video" not in paths:
+        raise ValidationError("Statistical equivalence needs a second, 30-45 degree video of the same performance.")
+    results_dir = directory / "results"
+    if results_dir.exists():
+        import shutil
+        shutil.rmtree(results_dir)
+    write_status(directory, "extracting")
 
-            valid = np.isfinite(ref_raw) & np.isfinite(suit_raw)
-            if np.sum(valid) < 10:
-                continue
-            ref_raw = ref_raw[valid]
-            suit_raw = suit_raw[valid]
+    def progress(message: str) -> None:
+        print(message, flush=True)
+        if message.startswith("Calibrating"):
+            write_status(directory, "scoring")
 
-            t_orig = np.linspace(0, 1, len(ref_raw))
-            t_target = np.linspace(0, 1, target_frames)
-            ref_curve = np.interp(t_target, t_orig, ref_raw)
-            suit_curve = np.interp(t_target, t_orig, suit_raw)
-
-            if len(ref_curve) >= 11:
-                ref_curve = scipy.signal.savgol_filter(ref_curve, window_length=11, polyorder=3)
-                suit_curve = scipy.signal.savgol_filter(suit_curve, window_length=11, polyorder=3)
-
-            rom_ref = float(np.ptp(ref_curve))
-            rom_suit = float(np.ptp(suit_curve))
-            corr = float(np.corrcoef(ref_curve, suit_curve)[0, 1])
-
-            ref_stat = rom_ref < 25.0
-            suit_stat = rom_suit < 25.0
-
-            if ref_stat != suit_stat:
-                # Bilateral motion class mismatch (e.g. Action vs After)
-                diff = np.abs(suit_curve - ref_curve)
-                within_pct = float(np.mean(diff <= delta) * 100)
-                is_equiv = False
-                max_diff = float(np.max(diff))
-                plot_suit = suit_curve
-            elif ref_stat and suit_stat:
-                # Both stationary arms: evaluate raw difference against delta band
-                diff = np.abs(suit_curve - ref_curve)
-                within_pct = float(np.mean(diff <= delta) * 100)
-                is_equiv = bool(within_pct >= 90.0)
-                max_diff = float(np.max(diff))
-                plot_suit = suit_curve
-            else:
-                # Both active arms: check waveform morphology correlation
-                if corr >= 0.70:
-                    suit_aligned = np.min(ref_curve) + (suit_curve - np.min(suit_curve)) / (rom_suit + 1e-6) * rom_ref
-                    ref_norm = ref_curve - np.mean(ref_curve)
-                    suit_norm = suit_aligned - np.mean(suit_aligned)
-                    xcorr = scipy.signal.correlate(ref_norm, suit_norm, mode="full")
-                    lags = scipy.signal.correlation_lags(len(ref_norm), len(suit_norm), mode="full")
-                    best_lag = lags[np.argmax(xcorr)]
-                    if abs(best_lag) <= 12:
-                        suit_aligned = np.roll(suit_aligned, best_lag)
-                        if best_lag > 0:
-                            suit_aligned[:best_lag] = suit_aligned[best_lag]
-                        elif best_lag < 0:
-                            suit_aligned[best_lag:] = suit_aligned[best_lag - 1]
-
-                    plot_suit = ref_curve + np.clip(suit_aligned - ref_curve, -delta * 0.72, delta * 0.72)
-                    diff = np.abs(plot_suit - ref_curve)
-                    within_pct = float(np.mean(diff <= delta) * 100)
-                    is_equiv = bool(within_pct >= 90.0)
-                    max_diff = float(np.max(diff))
-                else:
-                    diff = np.abs(suit_curve - ref_curve)
-                    within_pct = float(np.mean(diff <= delta) * 100)
-                    is_equiv = False
-                    max_diff = float(np.max(diff))
-                    plot_suit = suit_curve
-
-            ref_apex = int(np.argmin(ref_curve))
-
-            ax.plot(ref_curve, label="Human Video (Ref)", color="#1d4ed8", linewidth=2.5)
-            ax.fill_between(range(target_frames), ref_curve - delta, ref_curve + delta, color="#3b82f6", alpha=0.18, label="Equivalence Band (±15°)")
-            ax.plot(plot_suit, label="Avatar (MotionCapture FBX)", color="#f97316", linestyle="--", linewidth=2.5)
-            ax.axvline(x=ref_apex, color="#ef4444", linestyle=":", linewidth=1.5, label=f"Ref Apex (Frame {ref_apex})")
-
-            badge = f"[SATISFIED ({within_pct:.1f}%)]" if is_equiv else f"[BREACHED ({within_pct:.1f}% within band)]"
-            badge_color = "#15803d" if is_equiv else "#b91c1c"
-            ax.set_title(f"{side.capitalize()} Elbow Flexion {badge}", fontsize=11, fontweight="bold", color=badge_color)
-            ax.set_xlabel("Normalized Motion Phase (%)", fontsize=10)
-            ax.set_ylabel("Joint Angle (Degrees)", fontsize=10)
-            ax.grid(True, alpha=0.3)
-            if idx == 0:
-                ax.legend(loc="best", fontsize=9, frameon=True)
-
-            stats_by_side[side] = {
-                "is_equivalent": is_equiv,
-                "within_band_pct": within_pct,
-                "max_diff": max_diff,
-            }
-
-        overall_equivalent = all(s.get("is_equivalent", False) for s in stats_by_side.values()) if stats_by_side else False
-        clean_label = action_name.strip() if action_name else "Uploaded Sign"
-        status_text = "PROVEN EQUIVALENT (Bilateral)" if overall_equivalent else "NOT EQUIVALENT (Tolerance Exceeded)"
-        title_color = "#15803d" if overall_equivalent else "#b91c1c"
-        fig.suptitle(f"fTOST Statistical Equivalence - Both Elbows ('{clean_label.upper()}')\n[{status_text}]", fontsize=12, fontweight="bold", color=title_color)
-        fig.tight_layout()
-
-        out_file = results_dir / "ftost_result.png"
-        fig.savefig(out_file, dpi=130)
-        plt.close(fig)
-
-        stats = {
-            "is_equivalent": overall_equivalent,
-            "within_band_pct": min(s.get("within_band_pct", 0) for s in stats_by_side.values()) if stats_by_side else 0,
-            "delta": delta,
-            "both_sides": stats_by_side,
-            "dominant_side": "right" if df["reference_right_elbow_angle"].std() >= df["reference_left_elbow_angle"].std() else "left",
-        }
-        return out_file, stats
-    except Exception as exc:
-        print(f"Error generating dynamic ftost plot: {exc}")
-        return None, {}
+    report = run_single_take(
+        paths["reference_video"], paths["oblique_video"], paths["suit_fbx"], results_dir,
+        noise_front=paths.get("noise_front_video"), noise_oblique=paths.get("noise_oblique_video"),
+        focal_35mm=options.get("focal_35mm"), progress=progress,
+    )
+    (results_dir / "summary.json").write_text(json.dumps(single_take_summary(report, action_name), indent=2))
+    write_status(directory, "done")
 
 
 def compute_hand_speed(times, points):
@@ -271,6 +197,9 @@ def process(directory: Path):
             )
     finally:
         capture.release()
+    if options.get("tolerance_profile") == "statistical_equivalence":
+        process_single_take(directory, options, paths, action_name)
+        return
     durations = {"video": duration}
     for label, key in (("suit", "suit_fbx"), ("non_suit", "non_suit_fbx")):
         if key in paths:
@@ -369,12 +298,7 @@ def process(directory: Path):
         import shutil
         shutil.rmtree(results_dir)
 
-    try:
-        run_case_study(manifest_path, results_dir)
-    except Exception as exc:
-        if options.get("tolerance_profile") != "statistical_equivalence":
-            raise
-        print(f"run_case_study note: {exc}")
+    run_case_study(manifest_path, results_dir)
 
     results_dir.mkdir(exist_ok=True)
     summary_file = results_dir / "summary.json"
@@ -409,34 +333,8 @@ def process(directory: Path):
             artifacts["angles_plot"] = angles_name
             break
 
-    # 2. If statistical equivalence was selected, compute dynamic SPM1d + fTOST curve
-    if options.get("tolerance_profile") == "statistical_equivalence":
-        dynamic_plot, ftost_stats = generate_dynamic_ftost_plot(results_dir, action_name, relationship)
-        if dynamic_plot and dynamic_plot.is_file():
-            artifacts["ftost_plot"] = dynamic_plot.name
-
-        is_equiv = ftost_stats.get("is_equivalent", False)
-        pct = ftost_stats.get("within_band_pct", 0.0)
-        delta = ftost_stats.get("delta", 15.0)
-
-        if is_equiv:
-            summary_payload["status"] = "success"
-            summary_payload["equivalence_verdict"] = "PASS"
-            summary_payload["message"] = "STATISTICAL EQUIVALENCE: PROVEN via SPM1d and fTOST."
-            summary_payload["message_detail"] = (
-                f"Continuous 3D biometric curves for both left and right elbows fell strictly within the mathematical acceptance boundaries (±{delta}° band across 100% of the motion phase)."
-            )
-        else:
-            summary_payload["status"] = "tolerance_exceeded"
-            summary_payload["equivalence_verdict"] = "FAIL"
-            summary_payload["message"] = "STATISTICAL EQUIVALENCE: NOT SATISFIED via SPM1d and fTOST."
-            summary_payload["message_detail"] = (
-                f"Biometric curves deviated beyond the ±{delta}° acceptance boundary. "
-                f"Only {pct:.1f}% of the motion phase satisfied the equivalence margin (minimum 95% required)."
-            )
-
     figures = artifacts.get("figures", [])
-    for key in ("trajectories_plot", "angles_plot", "ftost_plot"):
+    for key in ("trajectories_plot", "angles_plot"):
         val = artifacts.get(key)
         if val and val not in figures:
             figures.append(val)

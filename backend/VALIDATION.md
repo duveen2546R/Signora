@@ -323,3 +323,52 @@ native finger articulation can still be inspected.
 
 Method references: Google's [Hand Landmarker documentation](https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker)
 and Müller's [DTW tutorial](https://www.audiolabs-erlangen.de/resources/MIR/FMP/C3/C3S2_DTWbasic.html).
+
+## Two-view single-take equivalence (statistical_equivalence profile)
+
+Tests one FBX against two simultaneous phone videos of the **same performance**. The claim is
+conditional: *for this recording*, the FBX agrees with the two-view video within the margin,
+beyond what the video's own measured error explains. It says nothing about other performers,
+signs or sessions.
+
+### Recording
+- Front phone facing the signer; second phone 30–45° to one side, same height, ~2.5–3 m away.
+  Neither phone moves between recordings. Whole upper body and both hands in frame.
+- Start both phones before the suit; **hold still ~1 s before and after the sign** (these frames
+  measure detector noise). Optional, recommended: a separate noise recording with the same
+  unmoved phones — hold still 10 s, then move the arms slowly for ~10 s.
+
+### Run
+```
+python tools/single_take_equivalence.py --front front.mp4 --oblique side.mp4 --fbx sign.fbx \
+    --output results/sign [--focal-35mm 26] [--noise-front nf.mp4 --noise-oblique no.mp4]
+```
+Or choose *Statistical Equivalence — two views of one take* on the Analysis page. Expect
+~3 min of pose extraction per 4K video (six test-time augmentations) plus ~1 min of testing.
+
+### Method
+1. RTMW keypoints per view with five test-time augmentations (mirror, box scale, box shift).
+2. Board-free self-calibration from body keypoints: multi-start from the 30–45° setup plus
+   bone-length constancy; focal length with a 15% log-normal prior. The FBX is never used.
+3. Detector noise (px, AR(1)) from still frames, at its 95% upper confidence bound, and never
+   below the augmentation spread during the sign.
+4. Monte Carlo (parametric bootstrap) of the whole chain — noise, re-fitted calibration,
+   triangulation, 6 Hz filtering, elbow angles — for this exact sign.
+5. Claims, alpha = 0.05 per tail: **RMS difference < margin (primary, prespecified in
+   `app/validation/equivalence_margins.json`)**, mean difference within ±margin, and a
+   simultaneous whole-curve band. Each must also pass the matching check across augmentation
+   replicates (spm1d TOST for the curve).
+
+### Operating characteristics (simulation, `tools/simulate_conditional_equivalence.py`, 2026-10-29)
+P(EQUIVALENT) for the right elbow, 40–80 takes each, ±5° margin:
+
+| detector noise (1080p px) | true diff 0 | true RMS = margin (const) | true RMS = margin (sine) | 0, motion noise 1.5× rest |
+|---|---|---|---|---|
+| 1.5 | RMS 0.96 · mean 1.00 | RMS 0.00 · mean 0.03 | RMS 0.00 · mean 1.00 | RMS 0.29 |
+| 3.0 | RMS 0.00 · mean 0.94 | RMS 0.00 · mean 0.00 | RMS 0.00 · mean 0.95 | RMS 0.00 |
+
+The RMS claim never passed at the margin. The mean claim passes cancelling errors (sine row), so
+it is reported but not primary. The whole-curve band never passed (frame-level video error is
+2–5°). Mean-interval coverage falls to ~0.73–0.79 when detector noise in motion exceeds the
+noise at rest (1.5×), the method's main untestable assumption; a noise recording that includes
+slow movement mitigates it.
