@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from .angles3d import joint_angles
-from .fbx_motion import CASE_JOINTS, Motion
+from .fbx_motion import CASE_JOINTS, Motion, knuckle_centre
 from .conditional_equivalence import ar1_noise
 from .multiview import Camera, View, intrinsics, lowpass, trim_glitches
 
@@ -59,7 +59,7 @@ def padded(motion: Motion, hold_s: float) -> Motion:
 
     Export glitch frames at the ends are trimmed first, or the holds would trap them mid-take.
     """
-    motion, _ = trim_glitches(motion)
+    motion, _ = trim_glitches(knuckle_centre(motion))
     count = int(round(hold_s * motion.fps))
     joints = np.concatenate([
         np.repeat(motion.joints[:1], count, 0), motion.joints, np.repeat(motion.joints[-1:], count, 0)
@@ -77,7 +77,7 @@ def look_at(eye: np.ndarray, target: np.ndarray, K: np.ndarray) -> Camera:
 
 
 def inject_flexion(xyz: np.ndarray, side: str, delta_deg: np.ndarray) -> np.ndarray:
-    """Rotate the forearm (wrist and index) about the elbow so flexion grows by `delta_deg`."""
+    """Rotate the forearm (wrist and knuckle centre) about the elbow so flexion grows by `delta_deg`."""
     out = xyz.copy()
     shoulder, elbow, wrist = (CASE_JOINTS.index(f"{side}_{joint}") for joint in ("shoulder", "elbow", "wrist"))
     index = CASE_JOINTS.index(f"{side}_index")

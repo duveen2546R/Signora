@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 import os
 import subprocess
@@ -55,6 +55,31 @@ class Motion:
     times: np.ndarray
     joints: np.ndarray  # (frames, six joints, xyz), left-handed Y-up, metres
     extras: np.ndarray | None = None  # optional audited nodes; missing nodes are NaN
+    hand_point: str = "index_mcp"  # what the *_index columns hold; see knuckle_centre()
+
+
+KNUCKLE_FINGERS = ("Index", "Middle", "Ring", "Pinky")
+
+
+def knuckle_centre(motion: Motion) -> Motion:
+    """Replace each *_index column with the mean of the index-to-pinky MCP joints.
+
+    The single-take wrist angle needs a hand direction. One knuckle 3-4 cm from the wrist turns a
+    few pixels of keypoint error into degrees; the four-knuckle centroid averages that noise and
+    is defined identically on the video side (video_replicates.KNUCKLES). Needs include_extras.
+    """
+    if motion.hand_point == "knuckle_centre":
+        return motion
+    if motion.extras is None or motion.joints.shape[1] != len(CASE_JOINTS):
+        raise ValidationError(f"{motion.path.name}: load with include_extras=True for the knuckle centre.")
+    joints = motion.joints.copy()
+    for side in ("Left", "Right"):
+        columns = [EXTRA_BONES.index(f"{side}Hand{finger}1") for finger in KNUCKLE_FINGERS]
+        points = motion.extras[:, columns]
+        if not np.isfinite(points).all():
+            raise ValidationError(f"{motion.path.name}: {side.lower()} finger knuckle bones are missing.")
+        joints[:, CASE_JOINTS.index(f"{side.lower()}_index")] = points.mean(axis=1)
+    return replace(motion, joints=joints, hand_point="knuckle_centre")
 
 
 def _clean(name: str) -> str:

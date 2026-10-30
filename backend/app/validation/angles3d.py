@@ -4,7 +4,8 @@ Every angle is the unsigned angle between two body-segment vectors. That makes e
 independent of the coordinate frame, of scale, and of handedness: the FBX is left-handed and the
 two-view reconstruction has an arbitrary scale and orientation, with no gravity direction. Signed
 anatomical decompositions (e.g. flexion vs. abduction planes) would need a shared, correctly
-handed body frame and are deliberately avoided. Head, neck and fingers are not tracked.
+handed body frame and are deliberately avoided. Head, neck and individual fingers are not tracked;
+the `*_index` joint is the four-knuckle centre in the single-take pipeline.
 """
 
 from __future__ import annotations
@@ -27,7 +28,8 @@ ANGLES = {
     # straight out to the side. With elevation it fixes the arm direction up to a front/back mirror.
     "left_shoulder_abduction": (("right_shoulder", "left_shoulder"), ("left_shoulder", "left_elbow")),
     "right_shoulder_abduction": (("left_shoulder", "right_shoulder"), ("right_shoulder", "right_elbow")),
-    # Forearm vs. hand (wrist -> index knuckle): combined flexion and deviation.
+    # Forearm vs. hand (wrist -> centre of the four finger knuckles, see fbx_motion.knuckle_centre):
+    # combined flexion and deviation.
     "left_wrist_deviation": (("left_elbow", "left_wrist"), ("left_wrist", "left_index")),
     "right_wrist_deviation": (("right_elbow", "right_wrist"), ("right_wrist", "right_index")),
     # Shoulder line vs. hip line: axial trunk rotation.

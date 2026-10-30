@@ -33,10 +33,11 @@ from .equivalence_single_take import (
     INCONCLUSIVE,
     MARGINS_FILE,
     NOT_EQUIVALENT,
+    PARTIALLY_EQUIVALENT,
     load_margins,
     replicate_spm_tost,
 )
-from .fbx_motion import CASE_JOINTS, Motion
+from .fbx_motion import CASE_JOINTS, Motion, knuckle_centre
 from .mixed_effects import ValidationError
 from .multiview import (
     Calibration,
@@ -346,6 +347,52 @@ def primary_claim(path=MARGINS_FILE) -> str:
     return claim
 
 
+def testing_order(path=MARGINS_FILE) -> list[list[str]]:
+    """Pre-registered fixed-sequence groups; every margin angle exactly once."""
+    order = json.loads(path.read_text()).get("testing_order")
+    angles = list(load_margins(path))
+    if order is None:
+        return [angles]  # no order: all angles in one intersection-union group
+    flat = [name for group in order for name in group]
+    if sorted(flat) != sorted(angles) or not all(order):
+        raise ValidationError("testing_order must list every margin angle exactly once, in non-empty groups.")
+    return [list(group) for group in order]
+
+
+def sequential_decision(decisions: dict[str, str], order: list[list[str]]) -> dict:
+    """Fixed-sequence testing (Maurer, Hothorn & Lehmacher 1995) over groups of angles.
+
+    Each group is an intersection-union test at the full alpha; testing stops at the first group
+    that is not EQUIVALENT. Angles confirmed before the stop keep familywise error <= alpha, so a
+    hard-to-measure angle tested late cannot void the angles tested before it.
+    """
+    order = [[name for name in group if name in decisions] for group in order]
+    order = [group for group in order if group]
+    listed = {name for group in order for name in group}
+    order += [[name] for name in decisions if name not in listed]
+    confirmed, stopped_at, untested = [], None, []
+    for index, group in enumerate(order):
+        if all(decisions[name] == EQUIVALENT for name in group):
+            confirmed += group
+            continue
+        stopped_at = group
+        untested = [name for later in order[index + 1:] for name in later]
+        break
+    if stopped_at is None:
+        overall = EQUIVALENT
+    elif confirmed:
+        overall = PARTIALLY_EQUIVALENT
+    else:
+        overall = NOT_EQUIVALENT if any(decisions[name] == NOT_EQUIVALENT for name in stopped_at) else INCONCLUSIVE
+    return {
+        "decision": overall, "order": order, "confirmed": confirmed,
+        "stopped_at": stopped_at, "stopped_decision": (
+            None if stopped_at is None else {name: decisions[name] for name in stopped_at}
+        ),
+        "untested": untested,
+    }
+
+
 def replicate_scalar_tost(values: np.ndarray, margin: float, claim: str, *, alpha: float = 0.05) -> dict:
     """Method 2 for the scalar claims: one-sample t bounds over the replicate statistics."""
     values = np.asarray(values, dtype=float)
@@ -379,8 +426,8 @@ def evaluate_conditional(
 ) -> dict:
     """Full combined protocol for one sign take; see the module docstring."""
     if motion.joints.shape[1] != len(CASE_JOINTS):
-        raise ValidationError("Load the FBX with include_elbows=True.")
-    motion, trimmed = trim_glitches(motion)
+        raise ValidationError("Load the FBX with include_extras=True.")
+    motion, trimmed = trim_glitches(knuckle_centre(motion))
     margins = margins or load_margins()
     claim = claim or primary_claim()
     rng = np.random.default_rng(seed)
@@ -501,14 +548,12 @@ def evaluate_conditional(
         result["decision"] = primary
         angles[name] = result
 
-    decisions = {item["decision"] for item in angles.values()}
-    overall = (
-        EQUIVALENT if decisions == {EQUIVALENT}
-        else NOT_EQUIVALENT if NOT_EQUIVALENT in decisions
-        else INCONCLUSIVE
-    )
+    sequence = sequential_decision({name: item["decision"] for name, item in angles.items()}, testing_order())
+    for name, item in angles.items():
+        item["tested_in_sequence"] = name not in sequence["untested"]
     return {
-        "decision": overall,
+        "decision": sequence["decision"],
+        "sequence": sequence,
         "primary_claim": claim,
         "scope": SCOPE,
         "angles": angles,

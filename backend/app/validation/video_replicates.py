@@ -19,11 +19,14 @@ from .mixed_effects import ValidationError
 from .multiview import View
 from .trials import sha256
 
-# COCO-WholeBody indices; the left index MCP is 91 + 5 and the right 112 + 5.
+# COCO-WholeBody indices. The *_index joint is the centroid of the index, middle, ring and pinky
+# MCPs (left hand 91 + 5/9/13/17, right 112 + ...), matching fbx_motion.knuckle_centre: averaging
+# four knuckles steadies the short wrist-to-hand segment the wrist angle depends on.
+KNUCKLES = {"left_index": (96, 100, 104, 108), "right_index": (117, 121, 125, 129)}
 WHOLEBODY = {
-    "left_shoulder": 5, "right_shoulder": 6, "left_elbow": 7, "right_elbow": 8,
-    "left_wrist": 9, "right_wrist": 10, "left_hip": 11, "right_hip": 12,
-    "left_index": 96, "right_index": 117,
+    "left_shoulder": (5,), "right_shoulder": (6,), "left_elbow": (7,), "right_elbow": (8,),
+    "left_wrist": (9,), "right_wrist": (10,), "left_hip": (11,), "right_hip": (12,),
+    **KNUCKLES,
 }
 MIRROR = {name: name.replace("left", "@").replace("right", "left").replace("@", "right") for name in WHOLEBODY}
 # (mirror, box scale, horizontal shift as a fraction of box width). The first entry is the
@@ -36,7 +39,7 @@ AUGMENTATIONS = (
     (False, 1.00, -0.04),
     (False, 1.00, 0.04),
 )
-CACHE_VERSION = 1
+CACHE_VERSION = 2  # 2: knuckle centre instead of the index MCP
 
 
 def _box(box: np.ndarray, scale: float, shift: float, width: int, height: int) -> np.ndarray:
@@ -124,10 +127,12 @@ def extract_replicated_views(
                         kp = kp[0]
                         lookup = WHOLEBODY
                     for j, name in enumerate(names):
-                        x, y = kp[lookup[name]]
-                        if np.isfinite([x, y]).all() and 0 <= x <= width and 0 <= y <= height:
-                            points[a, j] = (x, y)
-                            scores[a, j] = float(np.clip(sc[0][lookup[name]], 0, 1))
+                        ids = list(lookup[name])
+                        xy = kp[ids]
+                        inside = (xy[:, 0] >= 0) & (xy[:, 0] <= width) & (xy[:, 1] >= 0) & (xy[:, 1] <= height)
+                        if np.isfinite(xy).all() and inside.all():
+                            points[a, j] = xy.mean(axis=0)
+                            scores[a, j] = float(np.clip(np.mean(sc[0][ids]), 0, 1))
             uv.append(points)
             confidence.append(scores)
             frame_index += 1
@@ -144,6 +149,7 @@ def extract_replicated_views(
         "video": video.name, "video_sha256": digest, "frame_rate": fps, "frames": int(len(times)),
         "width": width, "height": height, "pose_model": "rtmlib RTMW (performance)",
         "augmentations": [list(a) for a in augmentations], "joint_names": list(names),
+        "hand_point": "knuckle_centre",
     }
     if cache:
         cache.parent.mkdir(parents=True, exist_ok=True)

@@ -79,7 +79,7 @@ def run_single_take(
     focal = tuple(DEFAULT_FOCAL_35MM if value is None else float(value) for value in focal)
     K1 = intrinsics(*front.size, focal_from_35mm(focal[0], *front.size))
     K2 = intrinsics(*oblique.size, focal_from_35mm(focal[1], *oblique.size))
-    motion = load_motion(fbx, include_elbows=True)
+    motion = load_motion(fbx, include_extras=True)
 
     progress(f"Calibrating, propagating measurement error ({draws} draws) and testing...")
     report = evaluate_conditional(
@@ -110,9 +110,14 @@ def plot_report(report: dict, path: Path) -> None:
     import matplotlib.pyplot as plt
 
     angles = report["angles"]
+    sequence = report.get("sequence") or {}
+    # Rows follow the pre-registered testing order, so the stop point reads top to bottom.
+    ordered = [name for group in sequence.get("order", []) for name in group if name in angles]
+    ordered += [name for name in angles if name not in ordered]
     figure, axes = plt.subplots(len(angles), 2, figsize=(12, 2.6 * len(angles) + 1.2), squeeze=False)
     colours = {EQUIVALENT: "#1b7f3b", NOT_EQUIVALENT: "#b3261e", INCONCLUSIVE: "#8a6d00"}
-    for row, (name, result) in enumerate(angles.items()):
+    for row, name in enumerate(ordered):
+        result = angles[name]
         phase = np.array(result["curve_phase"]) * 100
         left, right = axes[row]
         fbx = np.array(result["fbx_curve_deg"])
@@ -130,14 +135,25 @@ def plot_report(report: dict, path: Path) -> None:
             right.axhline(bound, color="#b3261e", linestyle="--", linewidth=1)
         right.axhline(0, color="#999", linewidth=0.8)
         rms_low, rms_high = result["rms_ci_deg"]
+        untested = result.get("tested_in_sequence") is False
         right.set_title(
-            f"{result['decision']}  RMS {result['rms_deg']:.1f} deg (upper {rms_high:.1f}), raw {result.get('raw_rms_deg', result['rms_deg']):.1f}",
-            color=colours[result["decision"]], fontsize=8, fontweight="bold",
+            f"{result['decision']}{' (not tested in sequence)' if untested else ''}  RMS {result['rms_deg']:.1f} deg "
+            f"(upper {rms_high:.1f}), raw {result.get('raw_rms_deg', result['rms_deg']):.1f}",
+            color="#888" if untested else colours[result["decision"]], fontsize=8, fontweight="bold",
         )
+        if untested:
+            for axis in (left, right):
+                axis.set_facecolor("#f2f2f2")
     for column in range(2):
         axes[-1, column].set_xlabel("Sign phase (%)")
+    headline = f"Overall: {report['decision']}"
+    if sequence.get("stopped_at") and sequence.get("confirmed"):
+        headline += (
+            f" - {len(sequence['confirmed'])} of {len(angles)} angles confirmed, stopped at "
+            + ", ".join(name.replace("_", " ") for name in sequence["stopped_at"])
+        )
     figure.suptitle(
-        f"Overall: {report['decision']}  ({report['primary_claim'].replace('_', ' ')} claim, "
+        f"{headline}\n({report['primary_claim'].replace('_', ' ')} claim, fixed testing order, "
         f"offset rule: {report['diagnostics'].get('offset_rule') or 'none'})", fontweight="bold",
     )
     figure.text(0.5, 0.005, report["scope"], ha="center", fontsize=7, wrap=True)

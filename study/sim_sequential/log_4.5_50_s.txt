@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/duveen/Projects/SignSure/backend/tools/simulate_conditional_equivalence.py", line 117, in <module>
+    if __name__ == "__main__":
+            ^^^^^^^^^^^^^^^^^^^
+  File "/Users/duveen/Projects/SignSure/backend/tools/simulate_conditional_equivalence.py", line 62, in run
+    sim = simulate(motion, scenario, injected=injected, replicates=5, seed=10_000 + seed)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/duveen/Projects/SignSure/backend/app/validation/conditional_equivalence.py", line 468, in evaluate_conditional
+    raise ValidationError(f"{name}: both videos must cover the whole {label}.")
+app.validation.mixed_effects.ValidationError: left_shoulder_elevation: both videos must cover the whole pre-sign hold.

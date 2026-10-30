@@ -32,7 +32,7 @@ SLOW = bool(os.environ.get("SIGNSURE_SLOW"))
 
 @pytest.fixture(scope="module")
 def motion():
-    return load_motion(ROOT / "MotionCaptureFbx/action.fbx", include_elbows=True)
+    return load_motion(ROOT / "MotionCaptureFbx/action.fbx", include_extras=True)
 
 
 def ar1(n, phi, sd, rng):

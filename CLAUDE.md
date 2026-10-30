@@ -80,13 +80,17 @@ Pipeline (`app/validation/`):
 - `angles3d.py` — nine upper-body angles (elbow flexion, shoulder elevation, shoulder abduction
   proxy and wrist deviation per side, plus trunk twist), each an unsigned angle between two segment
   vectors so it is frame-, scale- and handedness-invariant; computed identically for FBX and video.
-  Head, neck and fingers are not tracked.
+  The hand point (`*_index` joint) is the centre of the index-to-pinky knuckles on both sides
+  (`fbx_motion.knuckle_centre`, `video_replicates.KNUCKLES`; pose cache version 2). Head, neck and
+  individual fingers are not tracked.
 - `conditional_equivalence.py` — noise model from still frames (95% upper bound, adaptive
   stillness threshold) and TTA spread; parametric-bootstrap Monte Carlo of the whole chain incl.
   calibration refits; TOST decisions for RMS (primary), mean and whole-curve; replicate spm1d check.
 - `single_take_job.py` — shared orchestration for CLI and worker (`single_take_report.json` + PNG).
 - `equivalence_margins.json` — **pre-registered** ±15° RMS margin for all nine angles, the RMS
-  primary claim, and the `pre_sign_hold` offset rule (per-angle definition offset measured in the
+  primary claim, the fixed-sequence `testing_order` (trunk → shoulders → elbows → left wrist →
+  right wrist; stop at the first group that fails; confirmed angles keep familywise error ≤ 5%;
+  overall EQUIVALENT / PARTIALLY EQUIVALENT / first group's decision), and the `pre_sign_hold` offset rule (per-angle definition offset measured in the
   still hold before the sign, re-estimated in every Monte Carlo draw; raw RMS always reported).
   Change it only in a commit made before analysing a take, never after seeing results.
 - `single_take_simulation.py` + `tools/simulate_conditional_equivalence.py` — synthetic two-view
@@ -95,7 +99,12 @@ Pipeline (`app/validation/`):
   3–4× slower).
 
 Real data: `validationDataset/After/` (front 480p 30 fps, side 1080p 60 fps, FBX 60 fps; not
-synchronised — the pipeline syncs them). Results go to `validationDataset/After/results/`.
+synchronised — the pipeline syncs them). Results go to `validationDataset/After/results*/`.
+`validationDataset/Action/` (front 1080p 60 fps, side 480p 30 fps) has no still hold before the
+sign, so the pre-registered protocol refuses it; its results (`results-exploratory-*`, script
+`exploratory_variant.py`: offsets from the post-sign hold, fixed focal) are exploratory only.
+The testing order and knuckle centre were chosen after both takes were seen, so applying them to
+After and Action is exploratory too; they are confirmatory for later takes.
 Without the offset rule its elbows failed purely on a ~11–13° rest offset (carrying angle vs. rigid
 suit skeleton); that elbow result is therefore exploratory.
 

@@ -17,7 +17,7 @@ from scipy.signal import butter, filtfilt
 from scipy.spatial.transform import Rotation
 
 from .angles3d import joint_angles
-from .fbx_motion import CASE_JOINTS, Motion
+from .fbx_motion import CASE_JOINTS, Motion, knuckle_centre
 from .mixed_effects import ValidationError
 
 MIN_CONFIDENCE = 0.6
@@ -36,7 +36,7 @@ BONES = (
     ("right_shoulder", "right_elbow"), ("right_elbow", "right_wrist"),
     ("left_shoulder", "right_shoulder"), ("left_hip", "right_hip"),
     ("left_shoulder", "left_hip"), ("right_shoulder", "right_hip"),
-    ("left_wrist", "left_index"), ("right_wrist", "right_index"),
+    ("left_wrist", "left_index"), ("right_wrist", "right_index"),  # wrist to knuckle centre
 )
 BONE_WEIGHT_PX = 100.0  # a 1% bone-length change costs as much as 1 px of reprojection
 PRIOR_PX = 2.0  # one prior standard deviation costs as much as typical detector noise
@@ -553,8 +553,8 @@ def evaluate_take(
     from .equivalence_single_take import load_margins, single_take_report
 
     if motion.joints.shape[1] != len(CASE_JOINTS):
-        raise ValidationError("Load the FBX with include_elbows=True.")
-    motion, _ = trim_glitches(motion)
+        raise ValidationError("Load the FBX with include_extras=True.")
+    motion, _ = trim_glitches(knuckle_centre(motion))
     margins = margins or load_margins()
     take = reconstruct(first, second, K1, K2, refine_focal=refine_focal)
     video_xyz = lowpass(take.xyz, 1.0 / np.median(np.diff(take.times)))

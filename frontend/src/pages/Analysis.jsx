@@ -15,8 +15,10 @@ const VERDICT_STYLE = {
   EQUIVALENT: { backgroundColor: '#e6ffe6', borderColor: '#4CAF50', color: '#1b5e20' },
   'NOT EQUIVALENT': { backgroundColor: '#ffebee', borderColor: '#e53935', color: '#b71c1c' },
   INCONCLUSIVE: { backgroundColor: '#fff8e1', borderColor: '#f9a825', color: '#7a5a00' },
+  'PARTIALLY EQUIVALENT': { backgroundColor: '#eef7ee', borderColor: '#7cb342', color: '#33691e' },
 }
 const CLAIM_LABEL = { rms: 'RMS difference', mean: 'Mean difference', whole_curve: 'Whole curve' }
+const angleList = (names) => (names ?? []).map((name) => name.replaceAll('_', ' ')).join(', ')
 const range = (pair) => Array.isArray(pair) ? `${format(pair[0])} to ${format(pair[1])}` : '—'
 
 export function SingleTakeResult({ job }) {
@@ -25,6 +27,7 @@ export function SingleTakeResult({ job }) {
   const figure = summary.artifacts?.single_take_plot
   const noise = take.noise_model ?? {}
   const diagnostics = take.diagnostics ?? {}
+  const sequence = take.sequence ?? {}
   return (
     <section className="analysis__results" aria-labelledby="results-heading">
       <div className="panel__head"><div><p className="analysis__eyebrow">Two-view single-take equivalence</p><h2 id="results-heading">Analysis Results</h2></div><span className="status">Report generated</span></div>
@@ -33,11 +36,13 @@ export function SingleTakeResult({ job }) {
         <strong style={{ fontSize: '1.05rem', display: 'block', marginBottom: '0.25rem' }}>{take.decision} — {summary.message}</strong>
         <p style={{ margin: 0 }}>{summary.message_detail}</p>
       </div>
+      {sequence.order && <p className="hint">Tested in the pre-registered order {sequence.order.map((group) => angleList(group)).join(' → ')}; testing stops at the first angle that does not pass, so earlier confirmations keep a 5% overall error rate.
+        {' '}Confirmed: {angleList(sequence.confirmed) || 'none'}.{sequence.stopped_at && <> Stopped at: {angleList(sequence.stopped_at)}.</>}{sequence.untested?.length > 0 && <> Not tested: {angleList(sequence.untested)}.</>}</p>}
       <div className="analysis__table-wrap"><table>
         <thead><tr><th>Angle</th><th>Decision</th><th>Mean diff (90% CI, °)</th><th>RMS diff (90% CI, °)</th><th>Whole curve</th><th>Replicate check</th></tr></thead>
-        <tbody>{Object.entries(take.angles).map(([name, angle]) => <tr key={name}>
+        <tbody>{Object.entries(take.angles).map(([name, angle]) => <tr key={name} style={angle.tested_in_sequence === false ? { opacity: 0.55 } : undefined}>
           <td>{name.replaceAll('_', ' ')}</td>
-          <td><strong>{angle.decision}</strong> <span className="hint">(margin ±{angle.margin_deg}°)</span></td>
+          <td><strong>{angle.decision}</strong> <span className="hint">(margin ±{angle.margin_deg}°{angle.tested_in_sequence === false ? '; not tested in sequence' : ''})</span></td>
           <td>{format(angle.mean_difference_deg)} ({range(angle.mean_ci_deg)}) · {angle.mean_decision}</td>
           <td>{format(angle.rms_deg)} ({range(angle.rms_ci_deg)}) · {angle.rms_decision}</td>
           <td>{angle.curve_decision} <span className="hint">(band max ±{format(angle.max_band_abs_deg)}°)</span></td>
@@ -47,8 +52,8 @@ export function SingleTakeResult({ job }) {
       <p className="hint">Primary claim: {CLAIM_LABEL[take.primary_claim] ?? take.primary_claim}, fixed in advance. Noise model: {noise.source} · calibration baseline {format(diagnostics.baseline_angle_deg)}° · reprojection {format(diagnostics.reprojection_rms_px)} px.</p>
       <p className="analysis__notice">{take.scope}</p>
       {figure && <figure className="analysis__figure" style={{ border: '1px solid var(--rule-on-light, #e2e8f0)', margin: '2rem 0', padding: '1.25rem', background: '#fff', borderRadius: '16px' }}>
-        <img src={api.analysisFile(job.jobId, figure)} alt="FBX and two-view video elbow flexion, and their difference with its simultaneous band against the equivalence margin" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
-        <figcaption style={{ marginTop: '0.85rem' }}>Top: elbow flexion from the FBX and from the two-view video. Bottom: their bias-corrected difference with a simultaneous band; dashed lines mark the margin.</figcaption>
+        <img src={api.analysisFile(job.jobId, figure)} alt="FBX and two-view video joint angles, and their difference with its simultaneous band against the equivalence margin" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+        <figcaption style={{ marginTop: '0.85rem' }}>Left: each joint angle from the FBX and from the two-view video. Right: their bias-corrected difference with a simultaneous band; dashed lines mark the margin.</figcaption>
       </figure>}
       <p><a className="button button--ghost" href={api.analysisFile(job.jobId, summary.artifacts.single_take_report, true)}>Download full report (JSON)</a></p>
     </section>

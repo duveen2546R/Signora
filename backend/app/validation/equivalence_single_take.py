@@ -26,6 +26,7 @@ MARGINS_FILE = Path(__file__).with_name("equivalence_margins.json")
 EQUIVALENT = "EQUIVALENT"
 NOT_EQUIVALENT = "NOT EQUIVALENT"
 INCONCLUSIVE = "INCONCLUSIVE"
+PARTIALLY_EQUIVALENT = "PARTIALLY EQUIVALENT"  # fixed-sequence testing confirmed some angles
 SCOPE = (
     "Single take: FBX and two-view video agree within the margin for this recording only; "
     "not evidence of equivalence across performers, signs or sessions."

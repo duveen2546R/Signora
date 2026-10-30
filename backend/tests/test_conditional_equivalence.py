@@ -20,10 +20,13 @@ from app.validation.conditional_equivalence import (
     primary_claim,
     replicate_keypoint_noise,
     replicate_scalar_tost,
+    sequential_decision,
     still_mask,
+    testing_order as prespecified_order,
 )
-from app.validation.equivalence_single_take import EQUIVALENT, INCONCLUSIVE, NOT_EQUIVALENT
-from app.validation.fbx_motion import load_motion
+from app.validation.angles3d import ANGLES
+from app.validation.equivalence_single_take import EQUIVALENT, INCONCLUSIVE, NOT_EQUIVALENT, PARTIALLY_EQUIVALENT
+from app.validation.fbx_motion import CASE_JOINTS, EXTRA_BONES, KNUCKLE_FINGERS, knuckle_centre, load_motion
 from app.validation.mixed_effects import ValidationError
 from app.validation.single_take_simulation import Scenario, simulate
 
@@ -33,7 +36,7 @@ QUIET = replace(Scenario(), noise_px=1.5, joint_offset_m=0.0, hold_s=1.0)
 
 @pytest.fixture(scope="module")
 def motion():
-    return load_motion(ROOT / "MotionCaptureFbx/action.fbx", include_elbows=True)
+    return load_motion(ROOT / "MotionCaptureFbx/action.fbx", include_extras=True)
 
 
 def test_stillness_is_found_in_the_holds_and_not_during_the_sign(motion):
@@ -120,8 +123,14 @@ def test_end_to_end_passes_agreement_and_rejects_gross_error(motion):
     sim = simulate(motion, QUIET, injected={"right": gross}, replicates=5, seed=22)
     report = evaluate_conditional((sim.first, sim.second), None, sim.replicates, sim.K1, sim.K2, sim.motion, **options)
     right = report["angles"]["right_elbow_flexion"]
-    assert report["decision"] == NOT_EQUIVALENT and right["decision"] == NOT_EQUIVALENT
-    assert right["mean_ci_deg"][0] > 10
+    assert right["decision"] == NOT_EQUIVALENT and right["mean_ci_deg"][0] > 10
+    # Fixed sequence: trunk and shoulders are tested first and stay confirmed; testing stops at
+    # the elbow pair and never reaches the wrists.
+    sequence = report["sequence"]
+    assert report["decision"] == PARTIALLY_EQUIVALENT
+    assert sequence["stopped_at"] == ["left_elbow_flexion", "right_elbow_flexion"]
+    assert "trunk_twist" in sequence["confirmed"] and "right_wrist_deviation" in sequence["untested"]
+    assert report["angles"]["right_wrist_deviation"]["tested_in_sequence"] is False
 
 
 def test_worker_summary_never_claims_more_than_the_report():
@@ -232,3 +241,95 @@ def test_sign_onset_ignores_a_single_frame_above_threshold(motion):
     twitch = held.joints.copy()
     twitch[1, 4:6] += 0.01  # one-frame wrist twitch in the hold
     assert sign_window(replace(held, joints=twitch))[0] == sign_window(held)[0] > 50
+
+
+ORDER = [["trunk"], ["left_a", "right_a"], ["left_b", "right_b"], ["wrist"]]
+
+
+def test_fixed_sequence_keeps_angles_confirmed_before_the_first_failure():
+    """Regression: one late, hard-to-measure angle used to make the whole take INCONCLUSIVE."""
+    decisions = dict.fromkeys(["trunk", "left_a", "right_a", "left_b", "right_b"], EQUIVALENT)
+    result = sequential_decision({**decisions, "wrist": INCONCLUSIVE}, ORDER)
+    assert result["decision"] == PARTIALLY_EQUIVALENT
+    assert result["confirmed"] == ["trunk", "left_a", "right_a", "left_b", "right_b"]
+    assert result["stopped_at"] == ["wrist"] and result["untested"] == []
+    assert sequential_decision({**decisions, "wrist": EQUIVALENT}, ORDER)["decision"] == EQUIVALENT
+
+
+def test_fixed_sequence_stops_at_a_pair_with_one_failing_side():
+    decisions = dict.fromkeys(["trunk", "left_a", "left_b", "right_b", "wrist"], EQUIVALENT)
+    result = sequential_decision({**decisions, "right_a": INCONCLUSIVE}, ORDER)
+    assert result["confirmed"] == ["trunk"] and result["stopped_at"] == ["left_a", "right_a"]
+    assert result["untested"] == ["left_b", "right_b", "wrist"]  # later passes cannot be claimed
+
+
+def test_fixed_sequence_without_any_confirmation_reports_the_first_group():
+    decisions = dict.fromkeys(["left_a", "right_a", "left_b", "right_b", "wrist"], EQUIVALENT)
+    assert sequential_decision({**decisions, "trunk": NOT_EQUIVALENT}, ORDER)["decision"] == NOT_EQUIVALENT
+    assert sequential_decision({**decisions, "trunk": INCONCLUSIVE}, ORDER)["decision"] == INCONCLUSIVE
+
+
+def test_fixed_sequence_ignores_order_entries_without_a_result():
+    result = sequential_decision({"left_b": EQUIVALENT, "right_b": EQUIVALENT, "wrist": INCONCLUSIVE}, ORDER)
+    assert result["order"] == [["left_b", "right_b"], ["wrist"]] and result["confirmed"] == ["left_b", "right_b"]
+
+
+def test_testing_order_is_prespecified_for_every_angle():
+    order = prespecified_order()
+    assert sorted(name for group in order for name in group) == sorted(ANGLES)
+    assert order[0] == ["trunk_twist"] and order[-1] == ["right_wrist_deviation"]
+    from app.validation.equivalence_single_take import MARGINS_FILE
+
+    assert json.loads(MARGINS_FILE.read_text())["hand_point"] == "knuckle_centre"  # what the code computes
+
+
+def test_fbx_hand_point_is_the_four_knuckle_centre(motion):
+    centred = knuckle_centre(motion)
+    for side in ("Left", "Right"):
+        columns = [EXTRA_BONES.index(f"{side}Hand{finger}1") for finger in KNUCKLE_FINGERS]
+        expected = motion.extras[:, columns].mean(axis=1)
+        assert np.allclose(centred.joints[:, CASE_JOINTS.index(f"{side.lower()}_index")], expected)
+    assert knuckle_centre(centred) is centred
+    with pytest.raises(ValidationError):
+        knuckle_centre(replace(motion, extras=None))
+
+
+def test_video_hand_point_uses_the_same_knuckles_on_both_hands():
+    from app.validation.video_replicates import KNUCKLES, MIRROR, WHOLEBODY
+
+    # COCO-WholeBody hands start at 91 (left) and 112 (right); MCPs are hand points 5, 9, 13, 17.
+    assert KNUCKLES == {"left_index": (96, 100, 104, 108), "right_index": (117, 121, 125, 129)}
+    assert WHOLEBODY[MIRROR["left_index"]] == KNUCKLES["right_index"]
+
+
+def test_worker_summary_lists_confirmed_angles_for_a_partial_result():
+    angle = {"decision": EQUIVALENT, "margin_deg": 15.0, "tested_in_sequence": True}
+    sequence = sequential_decision(
+        {"trunk_twist": EQUIVALENT, "right_wrist_deviation": INCONCLUSIVE},
+        [["trunk_twist"], ["right_wrist_deviation"]],
+    )
+    report = {"decision": PARTIALLY_EQUIVALENT, "primary_claim": "rms", "scope": "Conditional on this performance.",
+              "sequence": sequence, "noise_model": {}, "diagnostics": {},
+              "angles": {"trunk_twist": angle, "right_wrist_deviation": {**angle, "decision": INCONCLUSIVE}}}
+    summary = single_take_summary(report, "After")
+    assert summary["status"] == "partial" and "1 of 2 angles (trunk twist)" in summary["message"]
+    assert "stopped at right wrist deviation" in summary["message"]
+    assert summary["single_take"]["angles"]["trunk_twist"]["tested_in_sequence"] is True
+
+
+def test_simulation_summary_counts_refused_takes_as_not_equivalent(tmp_path, capsys):
+    """Regression: one refused simulated take crashed a whole simulation chunk."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("simtool", ROOT / "backend/tools/simulate_conditional_equivalence.py")
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    row = {"noise_px": 3.0, "scenario": "s", "seed": 0, "angle": "right_elbow_flexion", "margin": 15.0,
+           "true_mean": 0.0, "true_rms": 15.0, "true_max": 15.0, "mean_ci": [-1, 1], "rms_ci": [10, 16],
+           "decisions": {"mean": EQUIVALENT, "rms": EQUIVALENT, "whole_curve": INCONCLUSIVE}}
+    rows = [row, {"noise_px": 3.0, "scenario": "s", "seed": 1, "refused": "hold not covered"}]
+    path = tmp_path / "sims.jsonl"
+    path.write_text("".join(json.dumps(item) + "\n" for item in rows))
+    tool.summary(path)
+    output = capsys.readouterr().out
+    assert "1 refused" in output and "  2  " in output and "0.500" in output  # n = 2, P(EQ) = 1/2

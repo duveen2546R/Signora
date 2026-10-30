@@ -22,18 +22,28 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 def single_take_summary(report: dict, action_name: str) -> dict:
     """summary.json for the two-view single-take equivalence protocol."""
-    from app.validation.equivalence_single_take import EQUIVALENT, NOT_EQUIVALENT
+    from app.validation.equivalence_single_take import EQUIVALENT, NOT_EQUIVALENT, PARTIALLY_EQUIVALENT
     from app.validation.single_take_job import FIGURE, REPORT
 
     verdict = report["decision"]
     claim = {
-        "rms": "root-mean-square elbow-angle difference over the sign",
-        "mean": "sign-average elbow-angle difference",
-        "whole_curve": "elbow-angle difference at every phase of the sign",
+        "rms": "root-mean-square joint-angle difference over the sign",
+        "mean": "sign-average joint-angle difference",
+        "whole_curve": "joint-angle difference at every phase of the sign",
     }[report["primary_claim"]]
     margin = max(item["margin_deg"] for item in report["angles"].values())
+    sequence = report.get("sequence") or {}
+
+    def label(names):
+        return ", ".join(name.replace("_", " ") for name in names)
+
+    partial = (
+        f"EQUIVALENCE ESTABLISHED for {len(sequence.get('confirmed', []))} of {len(report['angles'])} angles "
+        f"({label(sequence.get('confirmed', []))}); testing stopped at {label(sequence.get('stopped_at') or [])}."
+    )
     message, status = {
         EQUIVALENT: ("STATISTICAL EQUIVALENCE ESTABLISHED for this take.", "success"),
+        PARTIALLY_EQUIVALENT: (partial, "partial"),
         NOT_EQUIVALENT: ("NOT EQUIVALENT: the FBX and the two-view video disagree beyond the margin.", "tolerance_exceeded"),
     }.get(verdict, ("INCONCLUSIVE: this take can establish neither equivalence nor a difference.", "inconclusive"))
     keep = (
@@ -41,6 +51,7 @@ def single_take_summary(report: dict, action_name: str) -> dict:
         "rms_ci_deg", "rms_decision", "curve_decision", "max_band_abs_deg", "measurement_sd_deg",
         "replicate_check", "pearson_r", "max_abs_deg", "fraction_outside_margin",
         "static_offset_deg", "static_offset_ci_deg", "raw_rms_deg", "raw_mean_difference_deg",
+        "tested_in_sequence",
     )
     return {
         "performance_id": action_name,
@@ -52,12 +63,15 @@ def single_take_summary(report: dict, action_name: str) -> dict:
         "message_detail": (
             f"Primary claim: the {claim} is within ±{margin:g}° (two one-sided tests, α = 0.05), "
             "after propagating the video's measured detector noise and calibration uncertainty, "
-            "and confirmed across pose-model replicates. " + report["scope"]
+            "and confirmed across pose-model replicates. Angles are tested in a pre-registered order "
+            "and testing stops at the first angle that does not pass, which keeps the chance of any "
+            "false equivalence at 5% without splitting it across angles. " + report["scope"]
         ),
         "single_take": {
             "decision": verdict,
             "primary_claim": report["primary_claim"],
             "scope": report["scope"],
+            "sequence": sequence,
             "angles": {name: {key: item[key] for key in keep if key in item} for name, item in report["angles"].items()},
             "noise_model": report["noise_model"],
             "diagnostics": report["diagnostics"],

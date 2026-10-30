@@ -32,7 +32,33 @@
       "margin_deg": 15.0
     }
   },
-  "angles_rationale": "Whole upper body as far as the tracked keypoints allow (shoulders, elbows, wrists, index knuckles, hips), all unsigned segment-to-segment angles so they are frame-, scale- and handedness-invariant (app/validation/angles3d.py). Head, neck and fingers are not tracked. The same 15 deg RMS margin and rationale apply to every angle; overall EQUIVALENT requires every angle to pass (intersection-union). Added 2026-10-30 before any of the new angles was compared with video.",
+  "angles_rationale": "Whole upper body as far as the tracked keypoints allow (shoulders, elbows, wrists, finger knuckles, hips), all unsigned segment-to-segment angles so they are frame-, scale- and handedness-invariant (app/validation/angles3d.py). Head, neck and fingers are not tracked. The same 15 deg RMS margin and rationale apply to every angle; the overall decision follows testing_order below (superseding the earlier all-angles intersection-union). Added 2026-10-30 before any of the new angles was compared with video.",
+  "testing_order": [
+    [
+      "trunk_twist"
+    ],
+    [
+      "left_shoulder_elevation",
+      "right_shoulder_elevation"
+    ],
+    [
+      "left_shoulder_abduction",
+      "right_shoulder_abduction"
+    ],
+    [
+      "left_elbow_flexion",
+      "right_elbow_flexion"
+    ],
+    [
+      "left_wrist_deviation"
+    ],
+    [
+      "right_wrist_deviation"
+    ]
+  ],
+  "testing_order_rationale": "Fixed-sequence (hierarchical) testing, Maurer, Hothorn & Lehmacher (1995): groups are tested in this order, each at the full alpha; testing stops at the first group that is not EQUIVALENT, and every angle confirmed before the stop is claimed with familywise error <= alpha (no alpha splitting). Within a group, left and right must both pass (intersection-union, no alpha splitting either). The order runs from the largest, most reliably detected segments to the smallest (trunk, upper arm, forearm, hand), so a hand keypoint cannot void the trunk, shoulder and elbow claims. Overall: EQUIVALENT if every group passes, PARTIALLY EQUIVALENT if some do (confirmed angles listed), otherwise the first group's own decision. Chosen 2026-10-30 after the After and Action takes were seen (both fail only at the right wrist), so applying it to those two takes is exploratory; it is confirmatory for every later take.",
+  "hand_point": "knuckle_centre",
+  "hand_point_rationale": "Wrist deviation uses the direction from the wrist to the centre of the index, middle, ring and pinky knuckles (MCPs): four RTMW hand keypoints on video, the Hand*1 bones on the FBX. A single index knuckle 3-4 cm from the wrist turned a few pixels of keypoint error into large angle errors (side-view TTA spread ~11 px in the After take). Chosen 2026-10-30 after the After and Action takes were seen, for measurement precision only; confirmatory for later takes.",
   "offset_rule": "pre_sign_hold",
   "offset_rule_rationale": "Suit and video define segments differently (suit bone origins vs. anatomical keypoints; e.g. the elbow carrying angle), giving a constant per-angle offset. For each angle the offset is the mean video-minus-FBX difference over the still hold before the sign (FBX frames from 0.15 s before onset back to at most 1.5 s, at least 0.4 s), subtracted from the sign window; it is re-estimated inside every Monte Carlo draw so its uncertainty is propagated, and raw (uncorrected) RMS is always reported. Pre-registered 2026-10-30. The After take's elbows had already been analysed without it, so their offset-corrected result is exploratory; all other angles and all later takes are confirmatory."
 }

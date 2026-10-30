@@ -359,14 +359,24 @@ Or choose *Statistical Equivalence — two views of one take* on the Analysis pa
    triangulation, 6 Hz filtering, elbow angles — for this exact sign.
 5. Angles: elbow flexion, shoulder elevation, shoulder abduction proxy and wrist deviation per
    side, plus trunk twist — unsigned segment-to-segment angles (`app/validation/angles3d.py`).
+   The hand direction for wrist deviation runs from the wrist to the centre of the index-to-pinky
+   knuckles (MCPs), on the video (four RTMW hand keypoints) and the FBX (`Hand*1` bones) alike;
+   one knuckle 3–4 cm from the wrist made the angle too noisy (pre-registered 2026-10-30).
    **Offset rule (pre-registered 2026-10-30):** each angle's constant definition offset is the
    mean video−FBX difference in the still hold before the sign, subtracted from the sign window and
    re-estimated in every Monte Carlo draw; raw RMS is always reported alongside.
 6. Claims, alpha = 0.05 per tail: **RMS difference < margin (primary; ±15° for every angle,
-   prespecified with its justification in `app/validation/equivalence_margins.json`)**; overall
-   EQUIVALENT requires every angle to pass. The RMS is formed after
+   prespecified with its justification in `app/validation/equivalence_margins.json`)**. The overall
+   decision uses **fixed-sequence testing** (Maurer, Hothorn & Lehmacher 1995) in the
+   pre-registered `testing_order`: trunk → shoulder elevation pair → shoulder abduction pair →
+   elbow pair → left wrist → right wrist, each at full alpha (a pair must pass on both sides);
+   testing stops at the first group that does not pass. Every angle confirmed before the stop is
+   claimed with familywise error ≤ 5%, so one hard-to-measure late angle no longer voids the
+   others. Overall: EQUIVALENT (all), PARTIALLY EQUIVALENT (confirmed angles listed), or the first
+   group's own decision. A near miss (upper bound a little over the margin) stays INCONCLUSIVE for
+   that angle; margins are never widened after seeing data. The RMS is formed after
    removing the Monte Carlo's systematic bias (noise makes flexion read high) but keeps the
-   noise-variance inflation, so its upper bound stays conservative in both error directions., mean difference within ±margin, and a
+   noise-variance inflation, so its upper bound stays conservative in both error directions. Secondary: mean difference within ±margin, and a
    simultaneous whole-curve band. Each must also pass the matching check across augmentation
    replicates (spm1d TOST for the curve).
 
