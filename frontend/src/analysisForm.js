@@ -6,7 +6,7 @@ export const SOURCES = [
 // Statistical equivalence: a second view of the same performance, and an optional noise recording
 // (both phones unmoved; the performer holds still ~10 s, then moves slowly).
 export const EQUIVALENCE_SOURCES = [
-  { key: 'oblique', title: 'Oblique video (30–45°)', accept: '.mp4,.mov,.m4v', required: true, hint: 'The same performance filmed by a second phone 30–45° to the side · up to 250 MB' },
+  { key: 'oblique', title: 'Side video (70–90°)', accept: '.mp4,.mov,.m4v', required: true, hint: 'The same performance filmed by a second phone 70–90° to the side (at least 30°) · up to 250 MB' },
   { key: 'noise_front', title: 'Noise recording — front (optional)', accept: '.mp4,.mov,.m4v', required: false, hint: 'Same front phone, not moved: hold still ~10 s, then move slowly' },
   { key: 'noise_oblique', title: 'Noise recording — oblique (optional)', accept: '.mp4,.mov,.m4v', required: false, hint: 'The same noise recording from the oblique phone' },
 ]

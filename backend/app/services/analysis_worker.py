@@ -39,7 +39,7 @@ def single_take_summary(report: dict, action_name: str) -> dict:
     keep = (
         "decision", "margin_deg", "mean_difference_deg", "mean_ci_deg", "mean_decision", "rms_deg",
         "rms_ci_deg", "rms_decision", "curve_decision", "max_band_abs_deg", "measurement_sd_deg",
-        "replicate_check", "pearson_r",
+        "replicate_check", "pearson_r", "max_abs_deg", "fraction_outside_margin",
     )
     return {
         "performance_id": action_name,
@@ -69,7 +69,7 @@ def process_single_take(directory: Path, options: dict, paths: dict, action_name
     from app.validation.single_take_job import run_single_take
 
     if "oblique_video" not in paths:
-        raise ValidationError("Statistical equivalence needs a second, 30-45 degree video of the same performance.")
+        raise ValidationError("Statistical equivalence needs a second video of the same performance, 70-90 degrees to the side (at least 30).")
     results_dir = directory / "results"
     if results_dir.exists():
         import shutil

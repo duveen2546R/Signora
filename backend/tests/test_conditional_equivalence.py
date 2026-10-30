@@ -45,6 +45,15 @@ def test_stillness_is_found_in_the_holds_and_not_during_the_sign(motion):
     assert not mask[middle - 10 : middle + 10].any()
 
 
+def test_stillness_survives_heavy_detector_jitter(motion):
+    """Regression: at 6 px the fixed 0.35 limit split real holds into fragments and the run failed."""
+    sim = simulate(motion, replace(Scenario(), hold_s=1.0, noise_px=6.0), seed=1)
+    masks = tuple(still_mask(view) for view in (sim.first, sim.second))
+    estimate_keypoint_noise((sim.first, sim.second), masks)  # raises when stillness is missing
+    middle = len(masks[0]) // 2
+    assert not masks[0][middle - 10 : middle + 10].any()
+
+
 def test_noise_model_bounds_detector_jitter_from_above(motion):
     sim = simulate(motion, replace(Scenario(), hold_s=1.0, noise_px=3.0), replicates=5, seed=4)
     rest = estimate_keypoint_noise((sim.first, sim.second), tuple(still_mask(v) for v in (sim.first, sim.second)))
@@ -114,6 +123,7 @@ def test_worker_summary_never_claims_more_than_the_report():
         "mean_decision": EQUIVALENT, "rms_deg": 4.0, "rms_ci_deg": [2, 6], "rms_decision": INCONCLUSIVE,
         "curve_decision": INCONCLUSIVE, "max_band_abs_deg": 20.0, "measurement_sd_deg": [2, 5],
         "replicate_check": {"pass": False}, "pearson_r": 0.99, "curve_phase": [0.0],
+        "max_abs_deg": 9.0, "fraction_outside_margin": 0.0,
     }
     report = {"decision": INCONCLUSIVE, "primary_claim": "rms", "scope": "Conditional on this performance.",
               "angles": {"left_elbow_flexion": angle}, "noise_model": {}, "diagnostics": {}}
@@ -140,7 +150,7 @@ def test_api_requires_two_views_of_the_same_performance(client):
                "tolerance_profile": "statistical_equivalence"}
     base = {"motioncapture_fbx": ("take.fbx", b"fbx"), "reference_video": ("front.mp4", b"video")}
     post = lambda opts, **extra: client.post("/analyses", files={**base, **extra}, data={"options": json.dumps(opts)})
-    assert "30–45°" in post(options).json()["detail"]
+    assert "70–90°" in post(options).json()["detail"]
     assert "same performance" in post({**options, "recording_relationship": "unknown"}).json()["detail"]
     assert "both the front and the oblique" in post(
         options, oblique_video=("side.mov", b"video"), noise_front_video=("n.mp4", b"video")
@@ -150,3 +160,16 @@ def test_api_requires_two_views_of_the_same_performance(client):
     stored = json.loads(next((service.settings.analysis_dir).glob("*/options.json")).read_text())
     assert stored["files"]["oblique_video"] == "oblique.mov" and "non_suit_fbx" not in stored["files"]
     assert stored["focal_35mm"] == 26
+
+
+def test_simulated_motion_noise_rises_only_while_moving(motion):
+    """Regression: the factor used to apply to the holds too, so still frames already saw it."""
+    calm = simulate(motion, replace(QUIET, noise_px=2.0), seed=5)
+    busy = simulate(motion, replace(QUIET, noise_px=2.0, motion_noise_factor=2.0), seed=5)
+    hold = calm.first.times < Scenario().video_lead_s + 0.8
+    still = lambda sim: estimate_keypoint_noise((sim.first, sim.second), tuple(still_mask(v) for v in (sim.first, sim.second)))
+    assert np.median(still(busy).sigma_px) == pytest.approx(np.median(still(calm).sigma_px), rel=0.2)
+    # Same seed, same unit noise draws: the two takes differ only where the factor applies.
+    extra = np.nanmax(np.abs(busy.first.uv - calm.first.uv), axis=(1, 2))
+    assert np.nanmax(extra[hold]) < 1e-9
+    assert np.nanmedian(extra[len(extra) // 2 - 10 : len(extra) // 2 + 10]) > 1.0

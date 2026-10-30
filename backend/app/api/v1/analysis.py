@@ -167,7 +167,7 @@ async def create_analysis(
             raise HTTPException(400, message) from exc
         if parsed.tolerance_profile == "statistical_equivalence":
             if oblique_video is None:
-                raise HTTPException(400, "Statistical equivalence needs a second, 30–45° video of the same performance.")
+                raise HTTPException(400, "Statistical equivalence needs a second video of the same performance, 70–90° to the side (at least 30°).")
             if old_fbx is not None:
                 raise HTTPException(400, "Statistical equivalence tests one FBX against its own videos; remove the second FBX.")
             if (noise_front_video is None) != (noise_oblique_video is None):

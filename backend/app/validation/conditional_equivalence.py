@@ -111,6 +111,13 @@ def still_mask(view: View, *, speed_limit: float = STILL_SPEED, min_run_s: float
     filled = np.stack([_interpolate(view.times, view.uv[:, :, axis], view.times) for axis in range(2)], -1)
     smooth = lowpass(filled, rate, 1.5)
     speed = np.nanmax(np.linalg.norm(np.gradient(smooth, view.times, axis=0), axis=-1), axis=1) / width
+    # Heavy detector jitter makes a genuine hold look like slow movement, so the limit rises with
+    # the take's own noise floor (twice its 10th-percentile speed), but never to a quarter of the
+    # signing speed, which keeps real movement out.
+    finite = speed[np.isfinite(speed)]
+    if finite.size:
+        floor = 2.0 * np.percentile(finite, 10)
+        speed_limit = max(speed_limit, min(floor, 0.25 * np.percentile(finite, 95)))
     still = np.nan_to_num(speed, nan=np.inf) < speed_limit
     edges = np.flatnonzero(np.diff(np.concatenate([[0], still.astype(int), [0]])))
     mask = np.zeros(len(still), dtype=bool)
@@ -257,12 +264,14 @@ def conditional_tost(observed: np.ndarray, draws: np.ndarray, margin: float, *, 
     mean_error = error.mean(axis=1)
     mean = float(observed.mean())
     mean_ci = (mean - float(np.quantile(mean_error, 1 - alpha)), mean - float(np.quantile(mean_error, alpha)))
-    square = float(np.mean(observed**2))
-    draw_square = np.mean(draws**2, axis=1)
-    # Upper bound (the equivalence side) keeps the measurement noise in: noise only inflates a mean
-    # square, so this is conservative even though the noise model is itself an upper bound.
-    # Subtracting that overstated noise would bias the RMS down and make passing too easy.
-    # The lower bound (only used to declare a difference) removes it, conservative that way round.
+    # Noise affects a squared difference in two ways. Its systematic part (flexion reads high under
+    # noise, worst near a straight arm) shifts the curve and can shrink a negative error, so it is
+    # removed first using the Monte Carlo bias. Its random part only inflates a mean square, so the
+    # upper bound (the equivalence side) keeps it in: conservative even though the noise model is
+    # itself an upper bound. The lower bound (only used to declare a difference) removes it too,
+    # which is conservative in that direction.
+    square = float(np.mean(corrected**2))
+    draw_square = np.mean((draws - bias) ** 2, axis=1)
     fluctuation = draw_square - draw_square.mean()
     rms_upper = float(np.sqrt(max(square - np.quantile(fluctuation, alpha), 0.0)))
     rms_lower = float(np.sqrt(max(2 * square - np.quantile(draw_square, 1 - alpha), 0.0)))
@@ -290,6 +299,7 @@ def conditional_tost(observed: np.ndarray, draws: np.ndarray, margin: float, *, 
         "measurement_sd_deg": [float(spread.min()), float(spread.max())],
         "rmse_deg": float(np.sqrt(np.mean(observed**2))),
         "max_abs_deg": float(np.max(np.abs(observed))),
+        "fraction_outside_margin": float(np.mean(np.abs(corrected) > margin)),
         "pearson_r": None,
     }
 

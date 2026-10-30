@@ -151,7 +151,12 @@ def simulate(
     for side, delta in (injected or {}).items():
         truth = inject_flexion(truth, side, np.broadcast_to(delta, len(truth)).astype(float))
     cameras, K = phones(motion, scenario)
-    moving = lambda source: np.full(len(source), scenario.motion_noise_factor)[:, None, None]
+    # Detector noise rises only while the signer moves; the rest-pose holds keep the base level,
+    # which is exactly the case a still-frame noise estimate cannot see.
+    start, stop = scenario.hold_s, motion.times[-1] - scenario.hold_s
+    moving = lambda source: np.where(
+        (source > start) & (source < stop), scenario.motion_noise_factor, 1.0
+    )[:, None, None]
     (first, second), extra = _film(
         truth, motion.times, cameras, scenario, rng,
         lead_s=scenario.video_lead_s, noise_scale=moving, replicates=replicates,

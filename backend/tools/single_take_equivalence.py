@@ -1,4 +1,4 @@
-"""Single-take equivalence: front video + oblique (30-45 deg) video + FBX of the same performance.
+"""Single-take equivalence: front video + side (70-90 deg) video + FBX of the same performance.
 
 Example:
     python tools/single_take_equivalence.py --front front.mp4 --oblique side.mp4 \\
@@ -20,7 +20,7 @@ from app.validation.single_take_job import DEFAULT_FOCAL_35MM, run_single_take  
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--front", required=True, type=Path, help="frontal sign video")
-    parser.add_argument("--oblique", required=True, type=Path, help="30-45 deg sign video")
+    parser.add_argument("--oblique", required=True, type=Path, help="side sign video, 70-90 deg from the front phone")
     parser.add_argument("--fbx", required=True, type=Path, help="suit FBX of the same performance")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--noise-front", type=Path, help="optional noise recording, front phone")

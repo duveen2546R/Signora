@@ -332,8 +332,11 @@ beyond what the video's own measured error explains. It says nothing about other
 signs or sessions.
 
 ### Recording
-- Front phone facing the signer; second phone 30–45° to one side, same height, ~2.5–3 m away.
-  Neither phone moves between recordings. Whole upper body and both hands in frame.
+- Front phone facing the signer; second phone **70–90°** to the signing-hand side (at least 30°),
+  same height, 2–4 m away, both arms visible in both views. Neither phone moves between
+  recordings. 60 fps, shutter 1/500 s or faster, focus/exposure/lens locked, stabilisation off.
+- Compute the suit angle from the raw suit skeleton where possible, and record a static pose plus
+  a slow elbow bend before and after the take (definition offset and suit drift).
 - Start both phones before the suit; **hold still ~1 s before and after the sign** (these frames
   measure detector noise). Optional, recommended: a separate noise recording with the same
   unmoved phones — hold still 10 s, then move the arms slowly for ~10 s.
@@ -348,18 +351,29 @@ Or choose *Statistical Equivalence — two views of one take* on the Analysis pa
 
 ### Method
 1. RTMW keypoints per view with five test-time augmentations (mirror, box scale, box shift).
-2. Board-free self-calibration from body keypoints: multi-start from the 30–45° setup plus
+2. Board-free self-calibration from body keypoints: multi-start from 20–90° yaw plus
    bone-length constancy; focal length with a 15% log-normal prior. The FBX is never used.
 3. Detector noise (px, AR(1)) from still frames, at its 95% upper confidence bound, and never
    below the augmentation spread during the sign.
 4. Monte Carlo (parametric bootstrap) of the whole chain — noise, re-fitted calibration,
    triangulation, 6 Hz filtering, elbow angles — for this exact sign.
-5. Claims, alpha = 0.05 per tail: **RMS difference < margin (primary, prespecified in
-   `app/validation/equivalence_margins.json`)**, mean difference within ±margin, and a
+5. Claims, alpha = 0.05 per tail: **RMS difference < margin (primary; ±15°, prespecified with
+   its justification in `app/validation/equivalence_margins.json`)**. The RMS is formed after
+   removing the Monte Carlo's systematic bias (noise makes flexion read high) but keeps the
+   noise-variance inflation, so its upper bound stays conservative in both error directions., mean difference within ±margin, and a
    simultaneous whole-curve band. Each must also pass the matching check across augmentation
    replicates (spm1d TOST for the curve).
 
-### Operating characteristics (simulation, `tools/simulate_conditional_equivalence.py`, 2026-10-29)
+### Operating characteristics at the prespecified ±15° margin (simulation, 2026-10-29, after fixes)
+Right elbow, 20 takes per row: no error at 3 px → RMS passes 1.00; true +15° → 0.00; true RMS
+16.1° from a negative error at 3 and 4.5 px → 0.00, with the RMS upper bound covering the truth in
+every take (before the bias fix it covered only 0.64–0.72 for negative errors). At 3 px a true
+difference of +8° passes 0.93 and +11° 0.05, so a pass needs a true suit–video RMS of about 9° or
+less. The whole-curve band needs about 1 px; the mean claim passes cancelling errors and its
+interval under-covers (0.75–0.85 of nominal 0.90). Full analysis:
+`reports/Single take equivalence at 15 degrees.md`.
+
+### Earlier operating characteristics at a ±5° margin (before the bias fix)
 P(EQUIVALENT) for the right elbow, 40–80 takes each, ±5° margin:
 
 | detector noise (1080p px) | true diff 0 | true RMS = margin (const) | true RMS = margin (sine) | 0, motion noise 1.5× rest |

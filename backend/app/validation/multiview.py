@@ -222,7 +222,7 @@ def calibrate_pairs(
     joints: tuple[str, ...] = CASE_JOINTS,
     min_confidence: float = MIN_CONFIDENCE,
     refine_focal: bool = True,
-    yaw_prior_deg: tuple[float, ...] = (20.0, 30.0, 40.0, 50.0),
+    yaw_prior_deg: tuple[float, ...] = (20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0),
     outlier_px: float = 10.0,
     frame_step: int = 2,
     max_frames: int = 150,
@@ -235,7 +235,7 @@ def calibrate_pairs(
     recordings made without moving the phones. A single signer fills little of the frame, so
     two-view geometry is close to affine and reprojection error alone barely constrains depth
     (bas-relief / focal-depth ambiguity). Two FBX-free constraints resolve it: multi-start from the
-    protocol's 30-45 deg oblique setup, and bone-length constancy, since a depth-distorted
+    protocol's 30-90 deg oblique setups, and bone-length constancy, since a depth-distorted
     reconstruction stretches limbs as they turn. Gauge: camera 1 at the origin, unit baseline.
     Focal lengths, when refined, carry a log-normal prior around K1/K2 of `focal_prior_sd`, so
     their remaining uncertainty enters the covariance instead of being assumed away.

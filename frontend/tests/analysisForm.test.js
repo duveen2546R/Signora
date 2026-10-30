@@ -75,7 +75,7 @@ test('tolerance standard is passed to backend and invalid standards are rejected
 
 test('statistical equivalence needs the oblique view, same performance and paired noise videos', () => {
   const values = { ...input(), toleranceProfile: 'statistical_equivalence' }
-  assert.throws(() => buildAnalysisOptions(values), /oblique video/)
+  assert.throws(() => buildAnalysisOptions(values), /side video/)
   values.files = { ...values.files, oblique: { name: 'side.MOV', size: 300 } }
   assert.equal(buildAnalysisOptions(values).tolerance_profile, 'statistical_equivalence')
   assert.equal('focal_35mm' in buildAnalysisOptions(values), false)

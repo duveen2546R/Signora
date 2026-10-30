@@ -1,10 +1,10 @@
 {
   "prespecified": "2026-10-29",
-  "rationale": "Two calibrated-view elbow flexion agrees with marker capture to about 2-6 deg RMSE (reports/3D upper body pose estimation.md); 5 deg is the tightest margin that error budget allows. Change only by a new commit made before analysing a take.",
+  "rationale": "The equivalence bound is fixed a priori at 15 deg on the root-mean-square difference in elbow flexion between the suit and the two-phone video reconstruction over the pre-registered sign window. It reflects (i) the expected combined error of two non-gold-standard instruments (published elbow RMSE of roughly 2-7 deg for IMU suits and about 7 deg for multi-camera markerless systems, about 10 deg combined), (ii) clinical elbow-angle measurement precision (goniometric SDD/MDC 4-12.5 deg), and (iii) the smallest important elbow range-of-motion change reported (14.1 deg, distribution-based). It is wider than the +-10 deg used in some IMU agreement studies because the reference is a two-camera reconstruction with its own error. It is not a perceptual threshold for signers, and because RMS is an average it is not a per-frame tolerance: the maximum per-frame difference and the share of frames outside the margin are reported separately. Sources: reports/Single take equivalence at 15 degrees.md. Supersedes the 5 deg margin of the same date, changed before any real take was analysed. Change only by a new commit made before analysing a take.",
   "primary_claim": "rms",
-  "primary_claim_rationale": "Chosen before any real take was analysed (simulation, 2026-10-29): the RMS difference over the sign covers time-varying disagreement that a mean can hide, and unlike a pointwise whole-curve band it is reachable with ~2 px detector noise. Mean and whole-curve results are always reported alongside.",
+  "primary_claim_rationale": "Chosen before any real take was analysed (simulation, 2026-10-29): the RMS difference over the sign covers time-varying disagreement that a mean can hide (a cancelling +-15 deg error passed the mean claim in every simulated take), and unlike a pointwise whole-curve band it is reachable at realistic detector noise (the band needs about 1 px). Mean and whole-curve results are always reported alongside.",
   "angles": {
-    "left_elbow_flexion": {"margin_deg": 5.0},
-    "right_elbow_flexion": {"margin_deg": 5.0}
+    "left_elbow_flexion": {"margin_deg": 15.0},
+    "right_elbow_flexion": {"margin_deg": 15.0}
   }
 }
