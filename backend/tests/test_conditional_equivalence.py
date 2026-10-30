@@ -110,7 +110,14 @@ def test_end_to_end_passes_agreement_and_rejects_gross_error(motion):
     assert report["primary_claim"] == "rms"
     assert "Conditional on this performance" in report["scope"]
     assert report["noise_model"]["source"].startswith("max(still frames")
-    sim = simulate(motion, QUIET, injected={"right": 20.0}, replicates=5, seed=22)
+    # The error starts at sign onset; one already present in the hold is a definition offset.
+    from app.validation.multiview import sign_window
+    from app.validation.single_take_simulation import padded
+
+    start, _ = sign_window(padded(motion, QUIET.hold_s))
+    gross = np.zeros(len(padded(motion, QUIET.hold_s).times))
+    gross[start:] = 20.0
+    sim = simulate(motion, QUIET, injected={"right": gross}, replicates=5, seed=22)
     report = evaluate_conditional((sim.first, sim.second), None, sim.replicates, sim.K1, sim.K2, sim.motion, **options)
     right = report["angles"]["right_elbow_flexion"]
     assert report["decision"] == NOT_EQUIVALENT and right["decision"] == NOT_EQUIVALENT
@@ -168,8 +175,60 @@ def test_simulated_motion_noise_rises_only_while_moving(motion):
     busy = simulate(motion, replace(QUIET, noise_px=2.0, motion_noise_factor=2.0), seed=5)
     hold = calm.first.times < Scenario().video_lead_s + 0.8
     still = lambda sim: estimate_keypoint_noise((sim.first, sim.second), tuple(still_mask(v) for v in (sim.first, sim.second)))
-    assert np.median(still(busy).sigma_px) == pytest.approx(np.median(still(calm).sigma_px), rel=0.2)
+    # Still runs reach the onset of movement, so a little motion noise leaks in (conservative).
+    assert np.median(still(busy).sigma_px) == pytest.approx(np.median(still(calm).sigma_px), rel=0.3)
     # Same seed, same unit noise draws: the two takes differ only where the factor applies.
     extra = np.nanmax(np.abs(busy.first.uv - calm.first.uv), axis=(1, 2))
     assert np.nanmax(extra[hold]) < 1e-9
     assert np.nanmedian(extra[len(extra) // 2 - 10 : len(extra) // 2 + 10]) > 1.0
+
+
+def test_fbx_edge_glitch_is_trimmed_and_interior_glitch_refused(motion):
+    """Regression: a Rokoko export ended on a frame snapping 240 mm back to a reference pose,
+    which became the peak speed and stretched the sign window to the end of the file."""
+    from app.validation.multiview import sign_window, trim_glitches
+
+    base, dropped = trim_glitches(motion)
+    assert dropped == [0]  # the bundled action.fbx itself starts on a snapped reference frame
+    clean = replace(base, joints=np.concatenate([np.repeat(base.joints[:1], 30, 0), base.joints,
+                                                 np.repeat(base.joints[-1:], 30, 0)]))
+    clean = replace(clean, times=np.arange(len(clean.joints)) / clean.fps)
+    glitched = clean.joints.copy()
+    glitched[-1] += 0.24
+    broken = replace(clean, joints=glitched)
+    trimmed, dropped = trim_glitches(broken)
+    assert dropped == [len(glitched) - 1]
+    assert sign_window(trimmed) == sign_window(clean)
+    assert trim_glitches(clean)[1] == []
+    inside = clean.joints.copy()
+    inside[len(inside) // 2] += 0.24
+    with pytest.raises(ValidationError, match="inside the take"):
+        trim_glitches(replace(clean, joints=inside))
+
+
+def test_static_offset_is_measured_in_the_hold_and_removed(motion):
+    """A definition offset present from the first frame (e.g. elbow carrying angle) must not count
+    as disagreement, while the raw RMS still reports it."""
+    from app.validation.multiview import rest_window, sign_window
+
+    sim = simulate(motion, QUIET, injected={"right": 12.0}, replicates=5, seed=31)
+    start, _ = sign_window(sim.motion)
+    rest = rest_window(sim.motion, start)
+    assert rest.stop <= start and (rest.stop - rest.start) / sim.motion.fps >= 0.4
+    report = evaluate_conditional((sim.first, sim.second), None, sim.replicates, sim.K1, sim.K2, sim.motion,
+                                  draws=60, calibration_refits=10)
+    right = report["angles"]["right_elbow_flexion"]
+    assert right["static_offset_deg"] == pytest.approx(12.0, abs=3.0)
+    assert right["raw_rms_deg"] > 9.0 and right["rms_deg"] < 6.0
+    assert report["diagnostics"]["offset_rule"] == "pre_sign_hold"
+
+
+def test_sign_onset_ignores_a_single_frame_above_threshold(motion):
+    from app.validation.multiview import sign_window, trim_glitches
+
+    base, _ = trim_glitches(motion)
+    held = replace(base, joints=np.concatenate([np.repeat(base.joints[:1], 60, 0), base.joints]))
+    held = replace(held, times=np.arange(len(held.joints)) / held.fps)
+    twitch = held.joints.copy()
+    twitch[1, 4:6] += 0.01  # one-frame wrist twitch in the hold
+    assert sign_window(replace(held, joints=twitch))[0] == sign_window(held)[0] > 50

@@ -40,6 +40,7 @@ def single_take_summary(report: dict, action_name: str) -> dict:
         "decision", "margin_deg", "mean_difference_deg", "mean_ci_deg", "mean_decision", "rms_deg",
         "rms_ci_deg", "rms_decision", "curve_decision", "max_band_abs_deg", "measurement_sd_deg",
         "replicate_check", "pearson_r", "max_abs_deg", "fraction_outside_margin",
+        "static_offset_deg", "static_offset_ci_deg", "raw_rms_deg", "raw_mean_difference_deg",
     )
     return {
         "performance_id": action_name,
@@ -57,7 +58,7 @@ def single_take_summary(report: dict, action_name: str) -> dict:
             "decision": verdict,
             "primary_claim": report["primary_claim"],
             "scope": report["scope"],
-            "angles": {name: {key: item[key] for key in keep} for name, item in report["angles"].items()},
+            "angles": {name: {key: item[key] for key in keep if key in item} for name, item in report["angles"].items()},
             "noise_model": report["noise_model"],
             "diagnostics": report["diagnostics"],
         },

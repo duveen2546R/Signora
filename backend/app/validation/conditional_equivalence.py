@@ -46,7 +46,10 @@ from .multiview import (
     estimate_lag,
     lowpass,
     sign_window,
+    refine_lag,
+    rest_window,
     synchronise,
+    trim_glitches,
     triangulate_take,
     wrist_speed,
 )
@@ -199,26 +202,55 @@ def replicate_keypoint_noise(replicates: tuple[tuple[View, View], ...]) -> Keypo
 
 def session_calibration(
     recordings: list[tuple[View, View]], K1: np.ndarray, K2: np.ndarray, *, refine_focal: bool = True
-) -> tuple[Calibration, np.ndarray, np.ndarray]:
+) -> tuple[Calibration, np.ndarray, np.ndarray, list[float]]:
     """Calibrate once from every recording made without moving the phones.
 
-    Also returns the stacked, synced (2, frames, joints, 2) keypoints and confidences it used,
-    in recording order, so the calibration can be re-estimated under simulated noise.
+    View offsets start from wrist-speed cross-correlation, are refined geometrically against a
+    first calibration, and the calibration is then re-fitted on the refined sync. Also returns
+    the stacked, synced (2, frames, joints, 2) keypoints and confidences in recording order (so
+    the calibration can be re-estimated under simulated noise) and each recording's view lag.
     """
-    uv, confidence = [], []
-    for first, second in recordings:
-        _, uv2, conf2 = synchronise(first, second)
-        uv.append(np.stack([first.uv, uv2]))
-        confidence.append(np.stack([first.confidence, conf2]))
-    uv, confidence = np.concatenate(uv, axis=1), np.concatenate(confidence, axis=1)
-    return calibrate_pairs(uv, confidence, K1, K2, refine_focal=refine_focal), uv, confidence
+    def stacked(lags):
+        uv, confidence = [], []
+        for (first, second), lag in zip(recordings, lags):
+            _, uv2, conf2 = synchronise(first, second, lag=lag)
+            uv.append(np.stack([first.uv, uv2]))
+            confidence.append(np.stack([first.confidence, conf2]))
+        return np.concatenate(uv, axis=1), np.concatenate(confidence, axis=1)
+
+    lags = [synchronise(first, second)[0] for first, second in recordings]
+    uv, confidence = stacked(lags)
+    calibration = calibrate_pairs(uv, confidence, K1, K2, refine_focal=refine_focal)
+    lags = [refine_lag(calibration.cameras, first, second, lag) for (first, second), lag in zip(recordings, lags)]
+    uv, confidence = stacked(lags)
+    calibration = calibrate_pairs(
+        uv, confidence, K1, K2, refine_focal=refine_focal, initial=calibration.parameters
+    )
+    return calibration, uv, confidence, lags
 
 
-def _differences(cameras, times, uv, confidence, motion, lag, window, fbx_angles):
+def _differences(cameras, times, uv, confidence, motion, lag, fbx_angles):
+    """Video minus FBX for every angle, over the whole FBX clock."""
     rate = 1.0 / np.median(np.diff(times))
     video = lowpass(triangulate_take(cameras, times, uv, confidence), rate)
-    angles = joint_angles(_interpolate(times + lag, video, motion.times))
-    return {name: angles[name][window] - fbx_angles[name] for name in fbx_angles}
+    angles = joint_angles(_interpolate(times + lag, video, motion.times), names=tuple(fbx_angles))
+    return {name: angles[name] - fbx_angles[name] for name in fbx_angles}
+
+
+def _apply_offset(differences: dict, window: slice, rest: slice | None) -> tuple[dict, dict]:
+    """Sign-window differences minus each angle's pre-sign-hold offset (zero without a rule)."""
+    offsets = {
+        name: float(np.nanmean(values[rest])) if rest is not None else 0.0
+        for name, values in differences.items()
+    }
+    return {name: values[window] - offsets[name] for name, values in differences.items()}, offsets
+
+
+def offset_rule(path=MARGINS_FILE) -> str | None:
+    rule = json.loads(path.read_text()).get("offset_rule")
+    if rule not in (None, "pre_sign_hold"):
+        raise ValidationError(f"Unknown offset rule {rule!r}.")
+    return rule
 
 
 def _fill(values: np.ndarray) -> np.ndarray:
@@ -348,6 +380,7 @@ def evaluate_conditional(
     """Full combined protocol for one sign take; see the module docstring."""
     if motion.joints.shape[1] != len(CASE_JOINTS):
         raise ValidationError("Load the FBX with include_elbows=True.")
+    motion, trimmed = trim_glitches(motion)
     margins = margins or load_margins()
     claim = claim or primary_claim()
     rng = np.random.default_rng(seed)
@@ -360,11 +393,13 @@ def evaluate_conditional(
     moving = replicate_keypoint_noise(replicates)
     noise = rest.combine(moving)
     recordings = [sign] + ([noise_recording] if noise_recording is not None else [])
-    calibration, session_uv, session_confidence = session_calibration(recordings, K1, K2, refine_focal=refine_focal)
+    calibration, session_uv, session_confidence, view_lags = session_calibration(
+        recordings, K1, K2, refine_focal=refine_focal
+    )
 
     # Observed estimate on the FBX clock, inside the FBX-defined sign window.
     first, second = sign
-    view_lag, uv2, conf2 = synchronise(first, second)
+    view_lag, uv2, conf2 = synchronise(first, second, lag=view_lags[0])
     uv = np.stack([first.uv, uv2])
     confidence = np.stack([first.confidence, conf2])
     rate = 1.0 / np.median(np.diff(first.times))
@@ -377,18 +412,23 @@ def evaluate_conditional(
     )
     start, stop = sign_window(motion)
     window = slice(start, stop)
-    fbx_angles = {name: values[window] for name, values in joint_angles(fbx_xyz).items() if name in margins}
-    observed = _differences(calibration.cameras, first.times, uv, confidence, motion, lag, window, fbx_angles)
-    for name, values in observed.items():
-        if np.isfinite(values).mean() < 0.95:
-            raise ValidationError(f"{name}: both videos must cover the whole sign window.")
+    hold = rest_window(motion, start) if offset_rule() == "pre_sign_hold" else None
+    fbx_angles = joint_angles(fbx_xyz, names=tuple(margins))
+    raw = _differences(calibration.cameras, first.times, uv, confidence, motion, lag, fbx_angles)
+    for name, values in raw.items():
+        for label, frames in (("sign window", window), ("pre-sign hold", hold)):
+            if frames is not None and np.isfinite(values[frames]).mean() < 0.95:
+                raise ValidationError(f"{name}: both videos must cover the whole {label}.")
+    observed, offsets = _apply_offset(raw, window, hold)
     observed = {name: _fill(values) for name, values in observed.items()}
+    fbx_angles = {name: values[window] for name, values in fbx_angles.items()}
 
     # Method 1: Monte Carlo of pixel noise through this exact sign. Calibration uncertainty is a
     # parametric bootstrap: the cameras are re-fitted on the same noisy keypoints a draw then
     # triangulates. (A linearised covariance understated the yaw error ~5x in simulation, because
     # depth is nearly ambiguous for one distant signer.) Later draws reuse the re-fitted pool.
     simulated = {name: [] for name in observed}
+    simulated_offsets = {name: [] for name in observed}
     pool = []
     frames = uv.shape[1]  # the sign is the first recording in the session stack
     for index in range(draws):
@@ -405,17 +445,26 @@ def evaluate_conditional(
             cameras = refit.cameras
         else:
             cameras = pool[index % len(pool)]
-        draw = _differences(cameras, first.times, uv + jitter[:, :frames], confidence, motion, lag, window, fbx_angles)
+        draw, draw_offsets = _apply_offset(
+            _differences(cameras, first.times, uv + jitter[:, :frames], confidence, motion, lag,
+                         joint_angles(fbx_xyz, names=tuple(margins))),
+            window, hold,
+        )
         for name, values in draw.items():
             simulated[name].append(values)
+            simulated_offsets[name].append(draw_offsets[name])
 
     # Method 2: replicate curves through the same cameras, then spm1d TOST.
     replicate_curves = {name: [] for name in observed}
     for rep_first, rep_second in replicates:
-        _, rep_uv2, rep_conf2 = synchronise(rep_first, rep_second)
-        curves = _differences(
-            calibration.cameras, rep_first.times, np.stack([rep_first.uv, rep_uv2]),
-            np.stack([rep_first.confidence, rep_conf2]), motion, lag, window, fbx_angles,
+        _, rep_uv2, rep_conf2 = synchronise(rep_first, rep_second, lag=view_lags[0])
+        curves, _ = _apply_offset(
+            _differences(
+                calibration.cameras, rep_first.times, np.stack([rep_first.uv, rep_uv2]),
+                np.stack([rep_first.confidence, rep_conf2]), motion, lag,
+                joint_angles(fbx_xyz, names=tuple(margins)),
+            ),
+            window, hold,
         )
         for name, values in curves.items():
             replicate_curves[name].append(_fill(values))
@@ -424,9 +473,19 @@ def evaluate_conditional(
     for name, margin in margins.items():
         result = conditional_tost(observed[name], _fill(np.array(simulated[name])), margin, alpha=alpha)
         result["pearson_r"] = float(np.corrcoef(observed[name] + fbx_angles[name], fbx_angles[name])[0, 1])
+        # Offset: basic-bootstrap 90% interval from its Monte Carlo re-estimates.
+        shift = np.array(simulated_offsets[name]) - offsets[name]
+        result["static_offset_deg"] = offsets[name]
+        result["static_offset_ci_deg"] = [
+            offsets[name] - float(np.nanquantile(shift, 1 - alpha)), offsets[name] - float(np.nanquantile(shift, alpha))
+        ]
+        uncorrected = _fill(raw[name][window])
+        result["raw_rms_deg"] = float(np.sqrt(np.mean(uncorrected**2)))
+        result["raw_mean_difference_deg"] = float(uncorrected.mean())
         native = np.linspace(0.0, 1.0, len(observed[name]))
         result["fbx_curve_deg"] = np.interp(PHASE, native, fbx_angles[name]).tolist()
         result["observed_deg"] = np.interp(PHASE, native, observed[name]).tolist()
+        result["video_curve_deg"] = np.interp(PHASE, native, fbx_angles[name] + uncorrected).tolist()
         curves = np.array(replicate_curves[name])
         result["replicate_spm1d"] = replicate_spm_tost(curves, margin, alpha=alpha)
         result["replicate_check"] = (
@@ -466,6 +525,9 @@ def evaluate_conditional(
             "view_lag_s": float(view_lag),
             "fbx_lag_s": float(lag),
             "window_frames": [start, stop],
+            "fbx_glitch_frames_trimmed": trimmed,
             "window_s": [float(motion.times[start]), float(motion.times[stop - 1])],
+            "offset_rule": offset_rule(),
+            "rest_window_s": None if hold is None else [float(motion.times[hold.start]), float(motion.times[hold.stop - 1])],
         },
     }

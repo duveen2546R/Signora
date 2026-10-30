@@ -9,7 +9,7 @@ angles are scale and frame invariant, so the unknown baseline length needs no re
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 from scipy.optimize import least_squares
@@ -25,6 +25,11 @@ MAX_REPROJECTION_PX = 15.0
 MAX_GAP_S = 0.15
 CUTOFF_HZ = 6.0
 ONSET_FRACTION = 0.05
+MIN_MOVEMENT_S = 0.2  # sign movements last far longer than a filtered twitch
+REST_GAP_S = 0.15  # keep the hold clear of movement onset
+REST_MAX_S = 1.5
+REST_MIN_S = 0.4
+MAX_JOINT_SPEED = 8.0  # m/s; faster than any human limb, so only an export glitch
 WRISTS = ("left_wrist", "right_wrist")
 BONES = (
     ("left_shoulder", "left_elbow"), ("left_elbow", "left_wrist"),
@@ -359,20 +364,53 @@ def lowpass(values: np.ndarray, rate: float, cutoff_hz: float = CUTOFF_HZ) -> np
     return out.reshape(values.shape)
 
 
-def synchronise(first: View, second: View, joints: tuple[str, ...] = CASE_JOINTS) -> tuple[float, np.ndarray, np.ndarray]:
-    """Lag of the second view and its keypoints/confidence resampled onto `first.times`."""
-    rate = 1.0 / np.median(np.diff(first.times))
-    lag = estimate_lag(
-        wrist_speed(first.times, first.uv, joints),
-        wrist_speed(first.times, _interpolate(second.times, second.uv, first.times), joints),
-        rate,
-    )
+def synchronise(
+    first: View, second: View, joints: tuple[str, ...] = CASE_JOINTS, *, lag: float | None = None
+) -> tuple[float, np.ndarray, np.ndarray]:
+    """Lag of the second view and its keypoints/confidence resampled onto `first.times`.
+
+    Without a given `lag` this is a coarse estimate from 2D wrist speed, which foreshortening
+    biases by a frame or two; `refine_lag` corrects it once cameras are known.
+    """
+    if lag is None:
+        rate = 1.0 / np.median(np.diff(first.times))
+        lag = estimate_lag(
+            wrist_speed(first.times, first.uv, joints),
+            wrist_speed(first.times, _interpolate(second.times, second.uv, first.times), joints),
+            rate,
+        )
     shifted = second.times + lag
     return (
         lag,
         _interpolate(shifted, second.uv, first.times),
         np.nan_to_num(_interpolate(shifted, second.confidence, first.times)),
     )
+
+
+def refine_lag(
+    cameras: tuple[Camera, Camera], first: View, second: View, lag: float, *, search_s: float = 0.12
+) -> float:
+    """Sub-frame view offset that makes moving keypoints triangulate most consistently.
+
+    Only correctly synchronised views agree geometrically while the hands move, so the median
+    reprojection error of moving-frame keypoints is minimised over offsets around `lag`.
+    """
+    rate = 1.0 / np.median(np.diff(first.times))
+    speed = wrist_speed(first.times, first.uv)
+    moving = np.nan_to_num(speed) > np.nanpercentile(speed, 60)
+    best, best_error = lag, np.inf
+    for candidate in lag + np.arange(-search_s, search_s + 1e-9, 1.0 / (4 * rate)):
+        _, uv2, conf2 = synchronise(first, second, lag=candidate)
+        uv = np.stack([first.uv[moving], uv2[moving]]).reshape(2, -1, 2)
+        weights = np.stack([first.confidence[moving], conf2[moving]]).reshape(2, -1)
+        usable = (weights >= MIN_CONFIDENCE).all(0) & np.isfinite(uv).all(-1).all(0)
+        if usable.sum() < 30:
+            continue
+        xyz = triangulate(cameras, uv[:, usable], np.ones((2, usable.sum())))
+        error = np.median(np.max([np.linalg.norm(c.project(xyz) - p, axis=-1) for c, p in zip(cameras, uv[:, usable])], axis=0))
+        if error < best_error:
+            best, best_error = float(candidate), error
+    return best
 
 
 def triangulate_take(
@@ -412,6 +450,13 @@ def reconstruct(
     confidence = np.stack([first.confidence, conf2])
     if calibration is None:
         calibration = calibrate_pairs(uv, confidence, K1, K2, joints=joints, refine_focal=refine_focal)
+        lag = refine_lag(calibration.cameras, first, second, lag)
+        lag, uv2, conf2 = synchronise(first, second, joints, lag=lag)
+        uv = np.stack([first.uv, uv2])
+        confidence = np.stack([first.confidence, conf2])
+        calibration = calibrate_pairs(
+            uv, confidence, K1, K2, joints=joints, refine_focal=refine_focal, initial=calibration.parameters
+        )
     xyz = triangulate_take(
         calibration.cameras, first.times, uv, confidence, max_reprojection_px=max_reprojection_px
     )
@@ -423,6 +468,36 @@ def reconstruct(
     return TwoViewTake(first.times, xyz, calibration.cameras, diagnostics)
 
 
+def trim_glitches(motion: Motion, max_speed: float = MAX_JOINT_SPEED) -> tuple[Motion, list[int]]:
+    """Drop leading/trailing FBX frames whose joints jump impossibly fast.
+
+    Rokoko exports can end (or start) on a frame that snaps back to a reference pose; a single
+    such frame dominates peak speed, stretches the sign window and corrupts filtering. Glitches
+    inside the take are not repaired silently: the take is refused.
+    Returns the trimmed motion and the dropped frame indices.
+    """
+    step = np.linalg.norm(np.diff(motion.joints, axis=0), axis=-1)
+    jumps = np.nanmax(step, axis=1) * motion.fps > max_speed  # jump between frame i and i + 1
+    if not jumps.any():
+        return motion, []
+    start, stop = 0, len(motion.joints)
+    while start < stop - 1 and jumps[start]:
+        start += 1
+    while stop - 1 > start and jumps[stop - 2]:
+        stop -= 1
+    if jumps[start : stop - 1].any():
+        bad = motion.times[start + int(np.flatnonzero(jumps[start : stop - 1])[0])]
+        raise ValidationError(f"The FBX jumps impossibly fast at {bad:.2f} s, inside the take; re-export it.")
+    dropped = list(range(0, start)) + list(range(stop, len(motion.joints)))
+    trimmed = replace(
+        motion,
+        joints=motion.joints[start:stop],
+        times=motion.times[start:stop],
+        extras=None if motion.extras is None else motion.extras[start:stop],
+    )
+    return trimmed, dropped
+
+
 def sign_window(motion: Motion, fraction: float = ONSET_FRACTION) -> tuple[int, int]:
     """FBX frames from onset to offset, where filtered wrist speed crosses `fraction` of peak.
 
@@ -430,10 +505,26 @@ def sign_window(motion: Motion, fraction: float = ONSET_FRACTION) -> tuple[int, 
     """
     xyz = lowpass(motion.joints, motion.fps)
     speed = wrist_speed(motion.times, xyz, CASE_JOINTS)
-    active = np.flatnonzero(speed >= fraction * speed.max())
-    if len(active) < 10:
+    above = np.nan_to_num(speed) >= fraction * np.nanmax(speed)
+    # Only sustained movement counts: a filter edge or a twitch can touch the threshold for a frame.
+    shortest = max(2, int(round(MIN_MOVEMENT_S * motion.fps)))
+    edges = np.flatnonzero(np.diff(np.concatenate([[0], above.astype(int), [0]])))
+    runs = [(start, stop) for start, stop in zip(edges[::2], edges[1::2]) if stop - start >= shortest]
+    if not runs or sum(stop - start for start, stop in runs) < 10:
         raise ValidationError("The FBX contains no clear movement window.")
-    return int(active[0]), int(active[-1]) + 1
+    return int(runs[0][0]), int(runs[-1][1])
+
+
+def rest_window(motion: Motion, onset: int) -> slice:
+    """The still hold just before the sign, used to measure per-angle definition offsets."""
+    stop = onset - int(round(REST_GAP_S * motion.fps))
+    start = max(0, stop - int(round(REST_MAX_S * motion.fps)))
+    if stop - start < int(round(REST_MIN_S * motion.fps)):
+        raise ValidationError(
+            f"The offset rule needs at least {REST_MIN_S:g} s of stillness before the sign in the FBX "
+            "(and both videos); hold the rest pose longer before signing."
+        )
+    return slice(start, stop)
 
 
 def similarity_alignment(source: np.ndarray, target: np.ndarray) -> tuple[float, np.ndarray, np.ndarray]:
@@ -463,6 +554,7 @@ def evaluate_take(
 
     if motion.joints.shape[1] != len(CASE_JOINTS):
         raise ValidationError("Load the FBX with include_elbows=True.")
+    motion, _ = trim_glitches(motion)
     margins = margins or load_margins()
     take = reconstruct(first, second, K1, K2, refine_focal=refine_focal)
     video_xyz = lowpass(take.xyz, 1.0 / np.median(np.diff(take.times)))

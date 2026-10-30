@@ -63,17 +63,17 @@ def test_lag_estimate_is_subframe():
 
 
 def test_board_free_calibration_recovers_oblique_view(motion):
-    for oblique in (30.0, 45.0):
-        scenario = replace(Scenario(), oblique_deg=oblique)
-        take = simulate(motion, scenario, seed=1)
-        first, second, K1, K2 = take.first, take.second, take.K1, take.K2
-        uv2 = _interpolate(second.times + scenario.second_view_delay_s, second.uv, first.times)
-        conf2 = np.nan_to_num(
-            _interpolate(second.times + scenario.second_view_delay_s, second.confidence, first.times)
-        )
-        _, _, diagnostics = self_calibrate(first, uv2, conf2, K1, K2, refine_focal=False)
-        assert diagnostics["baseline_angle_deg"] == pytest.approx(oblique, abs=4.0)
-        assert diagnostics["reprojection_rms_px"] < 4.0
+    """Through the real path (coarse sync, calibration, geometric sync refinement, re-fit)."""
+    from app.validation.conditional_equivalence import session_calibration
+
+    for oblique in (30.0, 45.0, 80.0):
+        take = simulate(motion, replace(Scenario(), oblique_deg=oblique), seed=1)
+        calibration, _, _, lags = session_calibration([(take.first, take.second)], take.K1, take.K2, refine_focal=False)
+        # Narrow baselines leave depth less constrained, hence the 70-90 deg protocol.
+        tolerance = 5.0 if oblique < 40 else 3.5
+        assert calibration.diagnostics["baseline_angle_deg"] == pytest.approx(oblique, abs=tolerance)
+        assert calibration.diagnostics["reprojection_rms_px"] < 4.0
+        assert lags[0] == pytest.approx(Scenario().second_view_delay_s, abs=1 / 60)
 
 
 def test_reconstruction_syncs_views_and_rejects_uncovered_window(motion):
@@ -149,7 +149,9 @@ def test_replicate_spm_tost_is_measurement_only_sensitivity():
 
 def test_margins_are_prespecified_and_positive():
     margins = load_margins()
-    assert set(margins) == {"left_elbow_flexion", "right_elbow_flexion"}
+    from app.validation.angles3d import ANGLES
+
+    assert set(margins) == set(ANGLES)  # the whole tracked upper body
     assert all(value > 0 for value in margins.values())
 
 

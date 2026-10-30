@@ -103,35 +103,44 @@ def run_single_take(
 
 
 def plot_report(report: dict, path: Path) -> None:
+    """One row per angle: curves on the left, offset-corrected difference and band on the right."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     angles = report["angles"]
-    figure, axes = plt.subplots(2, len(angles), figsize=(6 * len(angles), 7), squeeze=False)
+    figure, axes = plt.subplots(len(angles), 2, figsize=(12, 2.6 * len(angles) + 1.2), squeeze=False)
     colours = {EQUIVALENT: "#1b7f3b", NOT_EQUIVALENT: "#b3261e", INCONCLUSIVE: "#8a6d00"}
-    for column, (name, result) in enumerate(angles.items()):
+    for row, (name, result) in enumerate(angles.items()):
         phase = np.array(result["curve_phase"]) * 100
-        top, bottom = axes[0, column], axes[1, column]
-        top.plot(phase, result["fbx_curve_deg"], color="#333", label="FBX")
-        top.plot(phase, np.array(result["fbx_curve_deg"]) + np.array(result["observed_deg"]), color="#1565c0", label="Two-view video")
-        top.set_title(name.replace("_", " "))
-        top.set_ylabel("Flexion (deg)")
-        top.legend(frameon=False)
+        left, right = axes[row]
+        fbx = np.array(result["fbx_curve_deg"])
+        left.plot(phase, fbx, color="#333", label="FBX")
+        left.plot(phase, result.get("video_curve_deg", fbx + np.array(result["observed_deg"])), color="#1565c0", label="Video")
+        if result.get("static_offset_deg"):
+            left.plot(phase, fbx + np.array(result["observed_deg"]), color="#1565c0", linestyle="--",
+                      label=f"Video - offset ({result['static_offset_deg']:+.1f} deg)")
+        left.set_ylabel(name.replace("_", " ") + " (deg)", fontsize=8)
+        left.legend(frameon=False, fontsize=7)
         margin = result["margin_deg"]
-        bottom.fill_between(phase, result["band_lower_deg"], result["band_upper_deg"], color="#90caf9", alpha=0.6,
-                            label=f"{100 * (1 - 2 * result['alpha']):.0f}% simultaneous band")
-        bottom.plot(phase, result["curve_deg"], color="#1565c0", label="Video - FBX (bias-corrected)")
+        right.fill_between(phase, result["band_lower_deg"], result["band_upper_deg"], color="#90caf9", alpha=0.6)
+        right.plot(phase, result["curve_deg"], color="#1565c0")
         for bound in (-margin, margin):
-            bottom.axhline(bound, color="#b3261e", linestyle="--", linewidth=1)
-        bottom.axhline(0, color="#999", linewidth=0.8)
-        bottom.set_xlabel("Sign phase (%)")
-        bottom.set_ylabel("Difference (deg)")
-        bottom.set_title(result["decision"], color=colours[result["decision"]], fontweight="bold")
-        bottom.legend(frameon=False, fontsize=8)
-    figure.suptitle(f"Overall: {report['decision']}  ({report['primary_claim'].replace('_', ' ')} claim)", fontweight="bold")
+            right.axhline(bound, color="#b3261e", linestyle="--", linewidth=1)
+        right.axhline(0, color="#999", linewidth=0.8)
+        rms_low, rms_high = result["rms_ci_deg"]
+        right.set_title(
+            f"{result['decision']}  RMS {result['rms_deg']:.1f} deg (upper {rms_high:.1f}), raw {result.get('raw_rms_deg', result['rms_deg']):.1f}",
+            color=colours[result["decision"]], fontsize=8, fontweight="bold",
+        )
+    for column in range(2):
+        axes[-1, column].set_xlabel("Sign phase (%)")
+    figure.suptitle(
+        f"Overall: {report['decision']}  ({report['primary_claim'].replace('_', ' ')} claim, "
+        f"offset rule: {report['diagnostics'].get('offset_rule') or 'none'})", fontweight="bold",
+    )
     figure.text(0.5, 0.005, report["scope"], ha="center", fontsize=7, wrap=True)
-    figure.tight_layout(rect=(0, 0.03, 1, 0.96))
-    figure.savefig(path, dpi=130)
+    figure.tight_layout(rect=(0, 0.02, 1, 0.98))
+    figure.savefig(path, dpi=110)
     plt.close(figure)

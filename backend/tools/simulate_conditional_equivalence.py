@@ -29,15 +29,20 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def scenarios(motion, base: Scenario, margin: float):
     start, stop = sign_window(padded(motion, base.hold_s))
-    sine = np.zeros(len(padded(motion, base.hold_s).times))
+    frames = len(padded(motion, base.hold_s).times)
+    sine = np.zeros(frames)
     sine[start:stop] = margin * np.sqrt(2) * np.sin(2 * np.pi * np.arange(stop - start) / (stop - start))
+    # Errors start at sign onset: a constant error that also covers the pre-sign hold is, correctly,
+    # absorbed by the pre-registered static-offset rule and would test nothing.
+    const = np.zeros(frames)
+    const[start:] = margin
     noisy = replace(base, motion_noise_factor=1.5)
     return {
         "null": (base, None),
-        "const+margin": (base, {"right": margin}),
+        "const+margin": (base, {"right": const}),
         "sine rms=margin": (base, {"right": sine}),
         "null, motion noise 1.5x": (noisy, None),
-        "const+margin, motion noise 1.5x": (noisy, {"right": margin}),
+        "const+margin, motion noise 1.5x": (noisy, {"right": const}),
     }
 
 

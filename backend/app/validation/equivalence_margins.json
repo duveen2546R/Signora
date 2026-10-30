@@ -1,10 +1,38 @@
 {
-  "prespecified": "2026-10-29",
+  "prespecified": "2026-10-30",
   "rationale": "The equivalence bound is fixed a priori at 15 deg on the root-mean-square difference in elbow flexion between the suit and the two-phone video reconstruction over the pre-registered sign window. It reflects (i) the expected combined error of two non-gold-standard instruments (published elbow RMSE of roughly 2-7 deg for IMU suits and about 7 deg for multi-camera markerless systems, about 10 deg combined), (ii) clinical elbow-angle measurement precision (goniometric SDD/MDC 4-12.5 deg), and (iii) the smallest important elbow range-of-motion change reported (14.1 deg, distribution-based). It is wider than the +-10 deg used in some IMU agreement studies because the reference is a two-camera reconstruction with its own error. It is not a perceptual threshold for signers, and because RMS is an average it is not a per-frame tolerance: the maximum per-frame difference and the share of frames outside the margin are reported separately. Sources: reports/Single take equivalence at 15 degrees.md. Supersedes the 5 deg margin of the same date, changed before any real take was analysed. Change only by a new commit made before analysing a take.",
   "primary_claim": "rms",
   "primary_claim_rationale": "Chosen before any real take was analysed (simulation, 2026-10-29): the RMS difference over the sign covers time-varying disagreement that a mean can hide (a cancelling +-15 deg error passed the mean claim in every simulated take), and unlike a pointwise whole-curve band it is reachable at realistic detector noise (the band needs about 1 px). Mean and whole-curve results are always reported alongside.",
   "angles": {
-    "left_elbow_flexion": {"margin_deg": 15.0},
-    "right_elbow_flexion": {"margin_deg": 15.0}
-  }
+    "left_elbow_flexion": {
+      "margin_deg": 15.0
+    },
+    "right_elbow_flexion": {
+      "margin_deg": 15.0
+    },
+    "left_shoulder_elevation": {
+      "margin_deg": 15.0
+    },
+    "right_shoulder_elevation": {
+      "margin_deg": 15.0
+    },
+    "left_shoulder_abduction": {
+      "margin_deg": 15.0
+    },
+    "right_shoulder_abduction": {
+      "margin_deg": 15.0
+    },
+    "left_wrist_deviation": {
+      "margin_deg": 15.0
+    },
+    "right_wrist_deviation": {
+      "margin_deg": 15.0
+    },
+    "trunk_twist": {
+      "margin_deg": 15.0
+    }
+  },
+  "angles_rationale": "Whole upper body as far as the tracked keypoints allow (shoulders, elbows, wrists, index knuckles, hips), all unsigned segment-to-segment angles so they are frame-, scale- and handedness-invariant (app/validation/angles3d.py). Head, neck and fingers are not tracked. The same 15 deg RMS margin and rationale apply to every angle; overall EQUIVALENT requires every angle to pass (intersection-union). Added 2026-10-30 before any of the new angles was compared with video.",
+  "offset_rule": "pre_sign_hold",
+  "offset_rule_rationale": "Suit and video define segments differently (suit bone origins vs. anatomical keypoints; e.g. the elbow carrying angle), giving a constant per-angle offset. For each angle the offset is the mean video-minus-FBX difference over the still hold before the sign (FBX frames from 0.15 s before onset back to at most 1.5 s, at least 0.4 s), subtracted from the sign window; it is re-estimated inside every Monte Carlo draw so its uncertainty is propagated, and raw (uncorrected) RMS is always reported. Pre-registered 2026-10-30. The After take's elbows had already been analysed without it, so their offset-corrected result is exploratory; all other angles and all later takes are confirmatory."
 }

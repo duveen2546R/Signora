@@ -357,8 +357,14 @@ Or choose *Statistical Equivalence — two views of one take* on the Analysis pa
    below the augmentation spread during the sign.
 4. Monte Carlo (parametric bootstrap) of the whole chain — noise, re-fitted calibration,
    triangulation, 6 Hz filtering, elbow angles — for this exact sign.
-5. Claims, alpha = 0.05 per tail: **RMS difference < margin (primary; ±15°, prespecified with
-   its justification in `app/validation/equivalence_margins.json`)**. The RMS is formed after
+5. Angles: elbow flexion, shoulder elevation, shoulder abduction proxy and wrist deviation per
+   side, plus trunk twist — unsigned segment-to-segment angles (`app/validation/angles3d.py`).
+   **Offset rule (pre-registered 2026-10-30):** each angle's constant definition offset is the
+   mean video−FBX difference in the still hold before the sign, subtracted from the sign window and
+   re-estimated in every Monte Carlo draw; raw RMS is always reported alongside.
+6. Claims, alpha = 0.05 per tail: **RMS difference < margin (primary; ±15° for every angle,
+   prespecified with its justification in `app/validation/equivalence_margins.json`)**; overall
+   EQUIVALENT requires every angle to pass. The RMS is formed after
    removing the Monte Carlo's systematic bias (noise makes flexion read high) but keeps the
    noise-variance inflation, so its upper bound stays conservative in both error directions., mean difference within ±margin, and a
    simultaneous whole-curve band. Each must also pass the matching check across augmentation

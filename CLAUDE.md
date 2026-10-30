@@ -70,21 +70,34 @@ Entry points: Analysis page → *Statistical Equivalence — two views of one ta
 Pipeline (`app/validation/`):
 - `video_replicates.py` — RTMW whole-body keypoints (rtmlib, the DWPose-family model
   `rtmw-dw-x-l`) with 5 test-time augmentations; results cached per video hash.
-- `multiview.py` — sync by wrist-speed cross-correlation, board-free self-calibration from body
+- `multiview.py` — coarse sync by wrist-speed cross-correlation then geometric refinement
+  (`refine_lag`, minimises moving-frame reprojection error), board-free self-calibration from body
   keypoints (multi-start over 20–90° yaw, bone-length constancy, 15% focal prior), DLT
-  triangulation, 6 Hz zero-lag Butterworth, FBX-defined sign window.
-- `angles3d.py` — elbow flexion from shoulder→elbow→wrist positions, identical for FBX and video.
+  triangulation, 6 Hz zero-lag Butterworth, FBX-defined sign window (sustained ≥0.2 s above 5% of
+  peak wrist speed), `rest_window` for the pre-sign hold, and `trim_glitches` (Rokoko exports can
+  start/end on a frame snapping to a reference pose; impossible >8 m/s jumps at the ends are
+  trimmed, inside the take they are refused).
+- `angles3d.py` — nine upper-body angles (elbow flexion, shoulder elevation, shoulder abduction
+  proxy and wrist deviation per side, plus trunk twist), each an unsigned angle between two segment
+  vectors so it is frame-, scale- and handedness-invariant; computed identically for FBX and video.
+  Head, neck and fingers are not tracked.
 - `conditional_equivalence.py` — noise model from still frames (95% upper bound, adaptive
   stillness threshold) and TTA spread; parametric-bootstrap Monte Carlo of the whole chain incl.
   calibration refits; TOST decisions for RMS (primary), mean and whole-curve; replicate spm1d check.
 - `single_take_job.py` — shared orchestration for CLI and worker (`single_take_report.json` + PNG).
-- `equivalence_margins.json` — **pre-registered** margin (currently ±15° on RMS elbow difference)
-  with its justification. Change it only in a commit made before analysing a take, never after
-  seeing results.
+- `equivalence_margins.json` — **pre-registered** ±15° RMS margin for all nine angles, the RMS
+  primary claim, and the `pre_sign_hold` offset rule (per-angle definition offset measured in the
+  still hold before the sign, re-estimated in every Monte Carlo draw; raw RMS always reported).
+  Change it only in a commit made before analysing a take, never after seeing results.
 - `single_take_simulation.py` + `tools/simulate_conditional_equivalence.py` — synthetic two-view
   takes with known truth for type I error / power checks. Run long simulations as background jobs
   with at most ~5 parallel processes and `OMP_NUM_THREADS=1` (8 cores; oversubscription made runs
   3–4× slower).
+
+Real data: `validationDataset/After/` (front 480p 30 fps, side 1080p 60 fps, FBX 60 fps; not
+synchronised — the pipeline syncs them). Results go to `validationDataset/After/results/`.
+Without the offset rule its elbows failed purely on a ~11–13° rest offset (carrying angle vs. rigid
+suit skeleton); that elbow result is therefore exploratory.
 
 Findings to respect (details in `reports/Single take equivalence at 15 degrees.md` and
 `reports/Single take equivalence method validity.md`):

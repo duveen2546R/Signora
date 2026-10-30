@@ -12,10 +12,10 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
-from .angles3d import ANGLES, joint_angles
+from .angles3d import joint_angles
 from .fbx_motion import CASE_JOINTS, Motion
 from .conditional_equivalence import ar1_noise
-from .multiview import Camera, View, intrinsics, lowpass
+from .multiview import Camera, View, intrinsics, lowpass, trim_glitches
 
 
 @dataclass(frozen=True)
@@ -55,7 +55,11 @@ class SimulatedTake:
 
 
 def padded(motion: Motion, hold_s: float) -> Motion:
-    """Rest-pose holds around the take, as a real recording would have."""
+    """Rest-pose holds around the take, as a real recording would have.
+
+    Export glitch frames at the ends are trimmed first, or the holds would trap them mid-take.
+    """
+    motion, _ = trim_glitches(motion)
     count = int(round(hold_s * motion.fps))
     joints = np.concatenate([
         np.repeat(motion.joints[:1], count, 0), motion.joints, np.repeat(motion.joints[-1:], count, 0)
@@ -75,7 +79,7 @@ def look_at(eye: np.ndarray, target: np.ndarray, K: np.ndarray) -> Camera:
 def inject_flexion(xyz: np.ndarray, side: str, delta_deg: np.ndarray) -> np.ndarray:
     """Rotate the forearm (wrist and index) about the elbow so flexion grows by `delta_deg`."""
     out = xyz.copy()
-    shoulder, elbow, wrist = (CASE_JOINTS.index(name) for name in ANGLES[f"{side}_elbow_flexion"])
+    shoulder, elbow, wrist = (CASE_JOINTS.index(f"{side}_{joint}") for joint in ("shoulder", "elbow", "wrist"))
     index = CASE_JOINTS.index(f"{side}_index")
     previous = np.array([1.0, 0.0, 0.0])
     for frame, angle in enumerate(np.broadcast_to(np.radians(delta_deg), len(xyz))):
