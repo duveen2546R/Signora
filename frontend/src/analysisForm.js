@@ -11,6 +11,44 @@ export const EQUIVALENCE_SOURCES = [
   { key: 'noise_oblique', title: 'Noise recording — oblique (optional)', accept: '.mp4,.mov,.m4v', required: false, hint: 'The same noise recording from the oblique phone' },
 ]
 
+// The statistical-equivalence upload: one take filmed by two phones while the suit records it.
+// Keys match createAnalysis: suit -> FBX, video -> front (reference) video, oblique -> side video.
+export const TAKE_SOURCES = [
+  { key: 'suit', title: 'Suit FBX', label: 'suit FBX', accept: '.fbx', limit: 100, hint: 'The Rokoko recording of this take · up to 100 MB' },
+  { key: 'video', title: 'Front video', label: 'front video', accept: '.mp4,.mov,.m4v', limit: 250, hint: 'Phone facing the signer · up to 250 MB' },
+  { key: 'oblique', title: 'Side video', label: 'side video', accept: '.mp4,.mov,.m4v', limit: 250, hint: 'Second phone, 70–90° to the side (at least 30°) · up to 250 MB' },
+]
+
+function checkFile(source, file) {
+  const extension = `.${file.name.split('.').pop().toLowerCase()}`
+  if (!source.accept.split(',').includes(extension)) throw new Error(`${source.title}: select a ${source.accept} file.`)
+  if (!file.size || file.size > source.limit * 1024 * 1024) throw new Error(`${source.title}: use a nonempty file under ${source.limit} MB.`)
+}
+
+export function buildEquivalenceOptions({ files, action, confirmed, focal35mm = '' }) {
+  for (const source of TAKE_SOURCES) {
+    if (!files[source.key]) throw new Error(`Select the ${source.label} to continue.`)
+    checkFile(source, files[source.key])
+  }
+  for (const key of ['noise_front', 'noise_oblique']) {
+    if (files[key]) checkFile({ title: 'Noise recording', accept: '.mp4,.mov,.m4v', limit: 250 }, files[key])
+  }
+  if (!files.noise_front !== !files.noise_oblique) throw new Error('A noise recording needs both the front and the side video.')
+  if (!confirmed) throw new Error('Confirm that both videos and the FBX are the same performance, recorded at the same time.')
+  let focal = null
+  if (focal35mm !== '') {
+    focal = Number(focal35mm)
+    if (!Number.isFinite(focal) || focal <= 8 || focal >= 300) throw new Error('Enter a 35 mm-equivalent focal length between 8 and 300 mm, or leave it blank.')
+  }
+  // The single-take pipeline finds the sign window and synchronises all three clocks itself, so
+  // the legacy windows, calibration interval and manual timing stay at their neutral defaults.
+  return {
+    action: action.trim() || 'Statistical equivalence', pairing_confirmed: true, recording_relationship: 'same_performance',
+    reference_view: 'front', tolerance_profile: 'statistical_equivalence', windows: {}, calibration_phase: [0, 0.15],
+    synchronization: {}, ...(focal !== null ? { focal_35mm: focal } : {}),
+  }
+}
+
 export function buildAnalysisOptions({ files, action, pairing, relationship = 'unknown', referenceView = 'automatic', toleranceProfile = 'replication', windows, calibration, verifiedTiming, timing, focal35mm = '' }) {
   for (const source of SOURCES) {
     const file = files[source.key]

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildAnalysisOptions } from '../src/analysisForm.js'
+import { buildAnalysisOptions, buildEquivalenceOptions } from '../src/analysisForm.js'
 
 function input() {
   return {
@@ -83,4 +83,35 @@ test('statistical equivalence needs the oblique view, same performance and paire
   assert.throws(() => buildAnalysisOptions({ ...values, focal35mm: '4' }), /focal length/)
   assert.throws(() => buildAnalysisOptions({ ...values, files: { ...values.files, noise_front: { name: 'n.mp4', size: 5 } } }), /both the front and the oblique/)
   assert.throws(() => buildAnalysisOptions({ ...values, relationship: 'separate_repetitions' }), /exact same performance/)
+})
+
+function take() {
+  return {
+    files: { suit: { name: 'After_mixamo.fbx', size: 200 }, video: { name: 'After-Front.mp4', size: 300 }, oblique: { name: 'After-Side.MOV', size: 300 } },
+    action: ' After ', confirmed: true,
+  }
+}
+
+test('two videos and one FBX build a same-performance statistical equivalence request', () => {
+  assert.deepEqual(buildEquivalenceOptions(take()), {
+    action: 'After', pairing_confirmed: true, recording_relationship: 'same_performance', reference_view: 'front',
+    tolerance_profile: 'statistical_equivalence', windows: {}, calibration_phase: [0, 0.15], synchronization: {},
+  })
+  assert.equal(buildEquivalenceOptions({ ...take(), focal35mm: '26' }).focal_35mm, 26)
+})
+
+test('the equivalence upload needs all three files, the confirmation and paired noise videos', () => {
+  for (const [change, message] of [
+    [(t) => { delete t.files.suit }, /suit FBX/],
+    [(t) => { delete t.files.video }, /front video/],
+    [(t) => { delete t.files.oblique }, /side video/],
+    [(t) => { t.files.oblique = { name: 'side.csv', size: 3 } }, /Side video/],
+    [(t) => { t.files.video.size = 251 * 1024 * 1024 }, /Front video/],
+    [(t) => { t.confirmed = false }, /same performance/],
+    [(t) => { t.files.noise_front = { name: 'n.mp4', size: 5 } }, /both the front and the side/],
+    [(t) => { t.focal35mm = '4' }, /focal length/],
+  ]) {
+    const values = take(); change(values)
+    assert.throws(() => buildEquivalenceOptions(values), message)
+  }
 })

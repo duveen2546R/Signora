@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
-import { EQUIVALENCE_SOURCES, SOURCES, buildAnalysisOptions } from '../analysisForm'
+import { EQUIVALENCE_SOURCES, SOURCES, TAKE_SOURCES, buildAnalysisOptions, buildEquivalenceOptions } from '../analysisForm'
 
 
 const STAGES = { queued: 'Waiting for the comparison to start…', inspecting: 'Checking files and recording clocks…', extracting: 'Tracking the joints in your video…', scoring: 'Comparing motion and preparing the report…' }
@@ -258,6 +258,8 @@ export default function Analysis() {
   const [relationship, setRelationship] = useState('unknown')
   const [referenceView, setReferenceView] = useState('automatic')
   const [toleranceProfile, setToleranceProfile] = useState('replication')
+  const [mode, setMode] = useState('equivalence')
+  const [confirmed, setConfirmed] = useState(false)
   const [focal35mm, setFocal35mm] = useState('')
   const [verifiedTiming, setVerifiedTiming] = useState(false)
   const [timing, setTiming] = useState(INITIAL_TIMING)
@@ -305,6 +307,8 @@ export default function Analysis() {
     setFiles((current) => ({ ...current, [key]: file }))
     if (key === 'video') {
       setVideoUrl(file ? URL.createObjectURL(file) : null)
+    }
+    if (key === (mode === 'equivalence' ? 'suit' : 'video')) {
       if (file && (!action || action === 'Action comparison' || action === 'After')) {
         const base = file.name.replace(/\.[^/.]+$/, '').replace(/[_.-]/g, ' ').trim()
         if (base) setAction(base.charAt(0).toUpperCase() + base.slice(1))
@@ -319,9 +323,16 @@ export default function Analysis() {
     event.preventDefault()
     setError(null)
     try {
-      const options = buildAnalysisOptions({ files, action, pairing, relationship, referenceView, toleranceProfile, windows, calibration, verifiedTiming, timing, focal35mm })
+      let options, upload
+      if (mode === 'equivalence') {
+        options = buildEquivalenceOptions({ files, action, confirmed, focal35mm })
+        upload = Object.fromEntries(['suit', 'video', 'oblique', 'noise_front', 'noise_oblique'].filter((key) => files[key]).map((key) => [key, files[key]]))
+      } else {
+        options = buildAnalysisOptions({ files, action, pairing, relationship, referenceView, toleranceProfile, windows, calibration, verifiedTiming, timing, focal35mm })
+        upload = { suit: files.suit, video: files.video }
+      }
       setUploading(true)
-      const created = await api.createAnalysis(files, options)
+      const created = await api.createAnalysis(upload, options)
       setJob(created)
       setSearchParams({ job: created.jobId })
     } catch (e) { setError(e.message) } finally { setUploading(false) }
@@ -331,14 +342,41 @@ export default function Analysis() {
     <section className="analysis">
       <header className="page-masthead"><p>04 / Analysis</p><h1>Compare the<br />movement.</h1><span>Understand the motion.<br />Check the evidence.</span></header>
       <div className="analysis__body">
-        <div className="analysis__intro"><h2>From recording to evidence.</h2><p>Upload a real-person video and a motion capture FBX recording. Matching performances support agreement checks; separate repetitions support movement similarity. Compare wrist and elbow paths, joint angles, and recording quality.</p></div>
+        <div className="analysis__intro"><h2>From recording to evidence.</h2><p>Test whether the suit agrees with a two-phone video of the same take, joint by joint, or compare one video with an FBX for movement similarity.</p></div>
         {readiness && !readiness.ready && <p className="error" role="alert">{readiness.message}</p>}
+        <div className="analysis__modes" role="radiogroup" aria-label="Analysis type">
+          {[['equivalence', 'Statistical equivalence', 'Two videos + one FBX of the same take'], ['comparison', 'Movement comparison', 'One video + one FBX']].map(([value, title, detail]) => <label key={value} className={`analysis__mode${mode === value ? ' analysis__mode--active' : ''}`}>
+            <input type="radio" name="analysis-mode" value={value} checked={mode === value} disabled={!!busy} onChange={() => { setMode(value); setError(null) }} />
+            <strong>{title}</strong><span>{detail}</span>
+          </label>)}
+        </div>
         <form onSubmit={submit}>
-          <fieldset disabled={!!busy} className="analysis__form"><legend className="analysis__eyebrow">01 · Select the sources</legend>
+          {mode === 'equivalence' ? <fieldset disabled={!!busy} className="analysis__form"><legend className="analysis__eyebrow">01 · Upload one take</legend>
+            <p className="hint">Upload the suit FBX and the two phone videos of the same performance. The videos and the FBX do not need to start together; they are synchronised automatically. Hold still for about a second before and after the sign: those frames measure the video’s own noise.</p>
+            <label className="field">Sign name<input value={action} onChange={(e) => setAction(e.target.value)} maxLength={120} placeholder="For example: After — take 01" /></label>
+            <div className="analysis__uploads">{TAKE_SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>
+              <span className="analysis__number">0{index + 1}</span><h3>{source.title}</h3><p className="hint">{source.hint}</p>
+              <label className="field">Select the {source.label}<input type="file" accept={source.accept} onChange={(e) => selectFile(source.key, e.target.files?.[0] ?? null)} /></label>
+              {files[source.key] && <p className="analysis__filename">{files[source.key].name} · {(files[source.key].size / 1024 / 1024).toFixed(1)} MB</p>}
+            </div>)}</div>
+            <details className="analysis__advanced"><summary>Optional: focal length and noise recording</summary>
+              <label className="field">Phone focal length, 35 mm-equivalent<input type="number" min="8" max="300" step="0.1" value={focal35mm} onChange={(e) => setFocal35mm(e.target.value)} placeholder="Default 28 mm (typical phone video); refined from the videos" /></label>
+              <p className="hint">A noise recording uses the same two unmoved phones: hold still about 10 s, then move slowly. Upload both or neither.</p>
+              <div className="analysis__uploads">{EQUIVALENCE_SOURCES.filter((source) => !source.required).map((source) => <div className="analysis__upload" key={source.key}>
+                <h3>{source.title}</h3><p className="hint">{source.hint}</p>
+                <label className="field">Select {source.title.toLowerCase()}<input type="file" accept={source.accept} onChange={(e) => selectFile(source.key, e.target.files?.[0] ?? null)} /></label>
+                {files[source.key] && <p className="analysis__filename">{files[source.key].name} · {(files[source.key].size / 1024 / 1024).toFixed(1)} MB</p>}
+              </div>)}</div>
+            </details>
+            <label className="analysis__check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /><span>Both videos and the FBX are the same performance, recorded at the same time, and the videos show the real person.</span></label>
+            <p className="hint">The result applies to this recording only: agreement with the two-phone video for this take, not general suit accuracy.</p>
+            {error && <p className="error" role="alert">{error}</p>}
+            <div className="analysis__submit"><button className="button" type="submit" disabled={readiness && !readiness.ready}>{uploading ? 'Uploading recordings…' : 'Run equivalence analysis'}</button><p className="hint">Processing takes several minutes: the videos are tracked six times each before testing.</p></div>
+          </fieldset> : <fieldset disabled={!!busy} className="analysis__form"><legend className="analysis__eyebrow">01 · Select the sources</legend>
             <label className="field">Comparison name<input value={action} onChange={(e) => setAction(e.target.value)} maxLength={120} placeholder="For example: ACTION — take 01" /></label>
             <label className="field">How were these recordings made?<select value={relationship} onChange={(e) => { setRelationship(e.target.value); setPairing(false); setVerifiedTiming(false) }}><option value="unknown">I’m not sure — movement similarity only</option><option value="separate_repetitions">Separate repetitions of the same action — movement similarity</option><option value="same_performance">One simultaneous performance — agreement comparison</option></select></label>
             <label className="field">Reference video camera view<select value={referenceView} onChange={(e) => setReferenceView(e.target.value)}><option value="automatic">Automatic — estimate camera orientation</option><option value="front">Front view — performer faces the camera</option></select></label>
-            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option><option value="statistical_equivalence">Statistical Equivalence — two views of one take (TOST)</option></select></label>
+            <label className="field">Tolerance standard<select value={toleranceProfile} onChange={(e) => setToleranceProfile(e.target.value)}><option value="intelligibility">Wider legacy profile — exploratory P95</option><option value="replication">Replication profile — exploratory maximum</option></select></label>
             <p className="hint">For a front-facing video, choose Front view. The FBX may face any direction in its viewer; comparison uses the anatomical shoulders to align its projection.</p>
             {relationship !== 'same_performance' && <p className="analysis__notice">Separate repetitions can differ in hand paths, speed, and body position even with perfect capture. These uploads cannot establish which capture method is more accurate. For that, each FBX needs a video of its exact performance.</p>}
             <div className="analysis__uploads">{SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>
@@ -347,15 +385,6 @@ export default function Analysis() {
               {files[source.key] && <p className="analysis__filename">{files[source.key].name} · {(files[source.key].size / 1024 / 1024).toFixed(1)} MB</p>}
               <div className="analysis__times"><label className="field">Action start (s)<input type="number" min="0" step="0.001" value={windows[source.key].start} onChange={(e) => updateWindow(source.key, 'start', e.target.value)} placeholder="Full clip" /></label><label className="field">Action end (s)<input type="number" min="0" step="0.001" value={windows[source.key].end} onChange={(e) => updateWindow(source.key, 'end', e.target.value)} placeholder="Full clip" /></label></div>
             </div>)}</div>
-            {toleranceProfile === 'statistical_equivalence' && <div className="analysis__equivalence">
-              <p className="analysis__notice">Statistical equivalence needs the reference video filmed from the front and a second video of the same performance from 70–90° to the side, recorded at the same time as the FBX. Hold still for about a second before and after the sign: those frames measure the video’s own noise. The result applies to this recording only.</p>
-              <div className="analysis__uploads">{EQUIVALENCE_SOURCES.map((source, index) => <div className="analysis__upload" key={source.key}>
-                <span className="analysis__number">0{SOURCES.length + index + 1}</span><h3>{source.title}</h3><p className="hint">{source.hint}</p>
-                <label className="field">Select {source.title.toLowerCase()}<input type="file" accept={source.accept} onChange={(e) => selectFile(source.key, e.target.files?.[0] ?? null)} /></label>
-                {files[source.key] && <p className="analysis__filename">{files[source.key].name} · {(files[source.key].size / 1024 / 1024).toFixed(1)} MB</p>}
-              </div>)}</div>
-              <label className="field">Phone focal length, 35 mm-equivalent (optional)<input type="number" min="8" max="300" step="0.1" value={focal35mm} onChange={(e) => setFocal35mm(e.target.value)} placeholder="Default 28 mm (typical phone video); refined from the videos" /></label>
-            </div>}
             <p className="hint">Leave both timestamps blank to compare the full clip, or trim each source to the same action. The video may be at most two minutes long.</p>
             {videoUrl && <div className="analysis__preview"><video controls src={videoUrl} preload="metadata" aria-label="Reference video preview" /><p className="hint">Preview the video to choose its action boundaries and a stable neutral calibration interval.</p></div>}
             <details className="analysis__advanced"><summary>Calibration and verified timing</summary>
@@ -374,7 +403,7 @@ export default function Analysis() {
             <label className="analysis__check"><input type="checkbox" checked={pairing} onChange={(e) => setPairing(e.target.checked)} /><span>I confirm the recording relationship selected above. The video shows the real person performing the action and is not rendered from either FBX.</span></label>
             {error && <p className="error" role="alert">{error}</p>}
             <div className="analysis__submit"><button className="button" type="submit" disabled={readiness && !readiness.ready}>{uploading ? 'Uploading recordings…' : 'Run comparison'}</button><p className="hint">Files and results are stored on this backend. Processing may take a few minutes.</p></div>
-          </fieldset>
+          </fieldset>}
         </form>
         {jobId && <div className="analysis__progress" role="status" aria-live="polite">
           {pollError ? <><p className="error">Could not refresh the analysis: {pollError}</p><button className="button button--ghost" onClick={() => setRetry((r) => r + 1)}>Retry status</button></> : !job ? <p>Loading your comparison…</p> : job.status === 'failed' ? <p className="error">{job.error}</p> : job.status !== 'done' ? <><progress aria-label="Analysis in progress" /><p>{STAGES[job.status] ?? 'Processing your comparison…'}</p><p className="hint">You can return to this page using its current URL.</p></> : null}
