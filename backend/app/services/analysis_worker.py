@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import sys
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +19,9 @@ from app.validation.trials import sha256
 from app.validation.video_pose import extract_video_pose, read_pose_csv
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+# The service marks a job interrupted after 15 min without a status update; pose extraction of
+# two videos can take longer than that on a busy machine, so a running job refreshes its stage.
+HEARTBEAT_S = 60.0
 
 
 def single_take_summary(report: dict, action_name: str) -> dict:
@@ -89,18 +93,37 @@ def process_single_take(directory: Path, options: dict, paths: dict, action_name
     if results_dir.exists():
         import shutil
         shutil.rmtree(results_dir)
-    write_status(directory, "extracting")
+    stage = {"name": "extracting"}
+    lock = threading.Lock()
+    stopped = threading.Event()
+    write_status(directory, stage["name"])
+
+    def heartbeat() -> None:
+        while not stopped.wait(HEARTBEAT_S):
+            with lock:
+                if not stopped.is_set():
+                    write_status(directory, stage["name"])
 
     def progress(message: str) -> None:
         print(message, flush=True)
         if message.startswith("Calibrating"):
-            write_status(directory, "scoring")
+            with lock:
+                stage["name"] = "scoring"
+                write_status(directory, "scoring")
 
-    report = run_single_take(
-        paths["reference_video"], paths["oblique_video"], paths["suit_fbx"], results_dir,
-        noise_front=paths.get("noise_front_video"), noise_oblique=paths.get("noise_oblique_video"),
-        focal_35mm=options.get("focal_35mm"), progress=progress,
-    )
+    beat = threading.Thread(target=heartbeat, daemon=True)
+    beat.start()
+    try:
+        report = run_single_take(
+            paths["reference_video"], paths["oblique_video"], paths["suit_fbx"], results_dir,
+            noise_front=paths.get("noise_front_video"), noise_oblique=paths.get("noise_oblique_video"),
+            focal_35mm=options.get("focal_35mm"), progress=progress,
+        )
+    finally:
+        # Stop before the final status, or a late beat could overwrite "done" or "failed".
+        with lock:
+            stopped.set()
+        beat.join()
     (results_dir / "summary.json").write_text(json.dumps(single_take_summary(report, action_name), indent=2))
     write_status(directory, "done")
 

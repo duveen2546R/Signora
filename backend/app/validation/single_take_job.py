@@ -102,6 +102,15 @@ def run_single_take(
     return report
 
 
+def _series(values) -> np.ndarray:
+    """Report curves as floats; JSON stores NaN as null."""
+    return np.array([np.nan if value is None else value for value in values], dtype=float)
+
+
+def _number(value) -> str:
+    return "n/a" if value is None or not np.isfinite(value) else f"{value:.1f}"
+
+
 def plot_report(report: dict, path: Path) -> None:
     """One row per angle: curves on the left, offset-corrected difference and band on the right."""
     import matplotlib
@@ -120,25 +129,26 @@ def plot_report(report: dict, path: Path) -> None:
         result = angles[name]
         phase = np.array(result["curve_phase"]) * 100
         left, right = axes[row]
-        fbx = np.array(result["fbx_curve_deg"])
+        fbx = _series(result["fbx_curve_deg"])
         left.plot(phase, fbx, color="#333", label="FBX")
-        left.plot(phase, result.get("video_curve_deg", fbx + np.array(result["observed_deg"])), color="#1565c0", label="Video")
-        if result.get("static_offset_deg"):
-            left.plot(phase, fbx + np.array(result["observed_deg"]), color="#1565c0", linestyle="--",
+        observed = _series(result["observed_deg"])
+        left.plot(phase, _series(result.get("video_curve_deg", fbx + observed)), color="#1565c0", label="Video")
+        if result.get("static_offset_deg") is not None and result.get("static_offset_deg"):
+            left.plot(phase, fbx + observed, color="#1565c0", linestyle="--",
                       label=f"Video - offset ({result['static_offset_deg']:+.1f} deg)")
         left.set_ylabel(name.replace("_", " ") + " (deg)", fontsize=8)
         left.legend(frameon=False, fontsize=7)
         margin = result["margin_deg"]
-        right.fill_between(phase, result["band_lower_deg"], result["band_upper_deg"], color="#90caf9", alpha=0.6)
-        right.plot(phase, result["curve_deg"], color="#1565c0")
+        right.fill_between(phase, _series(result["band_lower_deg"]), _series(result["band_upper_deg"]), color="#90caf9", alpha=0.6)
+        right.plot(phase, _series(result["curve_deg"]), color="#1565c0")
         for bound in (-margin, margin):
             right.axhline(bound, color="#b3261e", linestyle="--", linewidth=1)
         right.axhline(0, color="#999", linewidth=0.8)
-        rms_low, rms_high = result["rms_ci_deg"]
+        rms_low, rms_high = _series(result["rms_ci_deg"])
         untested = result.get("tested_in_sequence") is False
         right.set_title(
-            f"{result['decision']}{' (not tested in sequence)' if untested else ''}  RMS {result['rms_deg']:.1f} deg "
-            f"(upper {rms_high:.1f}), raw {result.get('raw_rms_deg', result['rms_deg']):.1f}",
+            f"{result['decision']}{' (not tested in sequence)' if untested else ''}  RMS {_number(result['rms_deg'])} deg "
+            f"(upper {_number(rms_high)}), raw {_number(result.get('raw_rms_deg', result['rms_deg']))}",
             color="#888" if untested else colours[result["decision"]], fontsize=8, fontweight="bold",
         )
         if untested:

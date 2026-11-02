@@ -66,6 +66,7 @@ MIN_STILL_TOTAL_S = 1.0  # stillness inside the sign videos, before and after th
 MIN_STILL_RUN_S = 0.4
 STILL_SPEED = 0.35  # shoulder widths per second; holds measure ~0.1, signing 2-5
 MIN_REPLICATES = 5
+MAX_FAILED_DRAWS = 0.02  # above this share of failed Monte Carlo draws an angle is INCONCLUSIVE
 TREND_HZ = 0.3  # postural sway is removed before measuring detector jitter
 
 
@@ -285,6 +286,14 @@ def conditional_tost(observed: np.ndarray, draws: np.ndarray, margin: float, *, 
     - whole_curve: a band simultaneous over time (studentised maximum, alpha per tail) lies
       within +-margin at every phase. Strongest, and needs sub-degree frame noise to pass.
     """
+    # A draw can fail outright (e.g. a re-fitted calibration rejects every frame of the hold), and a
+    # single NaN draw used to turn every statistic into NaN. Rare failures are dropped and counted;
+    # if they are not rare the angle cannot be judged and is reported INCONCLUSIVE.
+    usable = np.isfinite(draws).all(axis=1)
+    failed = float(1.0 - usable.mean())
+    if usable.sum() < 20:
+        raise ValidationError("Too few Monte Carlo draws produced this angle; the measurement is unusable.")
+    draws = draws[usable]
     error = draws - observed
     bias = error.mean(axis=0)
     spread = np.maximum(error.std(axis=0, ddof=1), 1e-6)
@@ -311,12 +320,19 @@ def conditional_tost(observed: np.ndarray, draws: np.ndarray, margin: float, *, 
     rms_corrected = float(np.sqrt(max(square, 0.0)))
     rms_decision = EQUIVALENT if rms_upper < margin else NOT_EQUIVALENT if rms_lower > margin else INCONCLUSIVE
 
-    native = np.linspace(0.0, 1.0, len(observed))
-    phase = lambda values: np.interp(PHASE, native, values).tolist()
-    return {
+    decisions = {
         "curve_decision": _decide(lower, upper, margin),
         "mean_decision": _decide(np.array([mean_ci[0]]), np.array([mean_ci[1]]), margin),
         "rms_decision": rms_decision,
+    }
+    if failed > MAX_FAILED_DRAWS:
+        decisions = dict.fromkeys(decisions, INCONCLUSIVE)
+
+    native = np.linspace(0.0, 1.0, len(observed))
+    phase = lambda values: np.interp(PHASE, native, values).tolist()
+    return {
+        **decisions,
+        "failed_draw_fraction": failed,
         "rms_deg": rms_corrected,
         "rms_ci_deg": [rms_lower, rms_upper],
         "margin_deg": margin,

@@ -24,7 +24,9 @@ MIN_CONFIDENCE = 0.6
 MAX_REPROJECTION_PX = 15.0
 MAX_GAP_S = 0.15
 CUTOFF_HZ = 6.0
-ONSET_FRACTION = 0.05
+# 10% of peak wrist speed: at 5% the slow sway of a real pre-sign hold (2-8% of peak in the
+# Action and Good Morning FBX) counted as signing and left no hold for the offset rule.
+ONSET_FRACTION = 0.10
 MIN_MOVEMENT_S = 0.2  # sign movements last far longer than a filtered twitch
 REST_GAP_S = 0.15  # keep the hold clear of movement onset
 REST_MAX_S = 1.5

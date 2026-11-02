@@ -73,8 +73,8 @@ Pipeline (`app/validation/`):
 - `multiview.py` — coarse sync by wrist-speed cross-correlation then geometric refinement
   (`refine_lag`, minimises moving-frame reprojection error), board-free self-calibration from body
   keypoints (multi-start over 20–90° yaw, bone-length constancy, 15% focal prior), DLT
-  triangulation, 6 Hz zero-lag Butterworth, FBX-defined sign window (sustained ≥0.2 s above 5% of
-  peak wrist speed), `rest_window` for the pre-sign hold, and `trim_glitches` (Rokoko exports can
+  triangulation, 6 Hz zero-lag Butterworth, FBX-defined sign window (sustained ≥0.2 s above 10% of
+  peak wrist speed; 5% mistook pre-sign sway for signing), `rest_window` for the pre-sign hold, and `trim_glitches` (Rokoko exports can
   start/end on a frame snapping to a reference pose; impossible >8 m/s jumps at the ends are
   trimmed, inside the take they are refused).
 - `angles3d.py` — nine upper-body angles (elbow flexion, shoulder elevation, shoulder abduction

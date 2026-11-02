@@ -119,7 +119,7 @@ def test_end_to_end_passes_agreement_and_rejects_gross_error(motion):
 
     start, _ = sign_window(padded(motion, QUIET.hold_s))
     gross = np.zeros(len(padded(motion, QUIET.hold_s).times))
-    gross[start:] = 20.0
+    gross[start:] = 25.0  # well beyond the 15 deg margin, so a difference is declared, not just missed
     sim = simulate(motion, QUIET, injected={"right": gross}, replicates=5, seed=22)
     report = evaluate_conditional((sim.first, sim.second), None, sim.replicates, sim.K1, sim.K2, sim.motion, **options)
     right = report["angles"]["right_elbow_flexion"]
@@ -131,6 +131,33 @@ def test_end_to_end_passes_agreement_and_rejects_gross_error(motion):
     assert sequence["stopped_at"] == ["left_elbow_flexion", "right_elbow_flexion"]
     assert "trunk_twist" in sequence["confirmed"] and "right_wrist_deviation" in sequence["untested"]
     assert report["angles"]["right_wrist_deviation"]["tested_in_sequence"] is False
+
+
+def test_running_single_take_job_is_not_marked_interrupted(tmp_path, monkeypatch):
+    """Regression: a job still extracting after 15 min was reported as interrupted."""
+    import time
+
+    from app.services import analysis_service, analysis_worker
+    from app.validation import single_take_job
+
+    seen = []
+
+    def slow_run(*args, progress, **kwargs):
+        time.sleep(0.3)
+        seen.append(json.loads((tmp_path / "status.json").read_text())["updatedAt"])
+        raise ValidationError("stop here")
+
+    monkeypatch.setattr(analysis_worker, "HEARTBEAT_S", 0.05)
+    monkeypatch.setattr(single_take_job, "run_single_take", slow_run)
+    started = time.time()
+    with pytest.raises(ValidationError):
+        analysis_worker.process_single_take(tmp_path, {}, {"oblique_video": "s.mp4", "reference_video": "f.mp4", "suit_fbx": "x.fbx"}, "After")
+    assert seen[0] > started + 0.15  # refreshed while the work was running
+    stamp = json.loads((tmp_path / "status.json").read_text())["updatedAt"]
+    time.sleep(0.15)
+    assert json.loads((tmp_path / "status.json").read_text())["updatedAt"] == stamp  # stopped afterwards
+    monkeypatch.setattr(time, "time", lambda: stamp + 600)
+    assert analysis_service.read_status(tmp_path)["status"] == "extracting"
 
 
 def test_worker_summary_never_claims_more_than_the_report():
@@ -243,6 +270,26 @@ def test_sign_onset_ignores_a_single_frame_above_threshold(motion):
     assert sign_window(replace(held, joints=twitch))[0] == sign_window(held)[0] > 50
 
 
+def test_sign_onset_treats_slow_postural_sway_as_part_of_the_hold(motion):
+    """Regression: sway at 2-8% of peak wrist speed (Action, Good Morning) started the sign window
+    inside the pre-sign hold, so the offset rule refused the take."""
+    from app.validation.multiview import CASE_JOINTS, lowpass, rest_window, sign_window, trim_glitches, wrist_speed
+
+    base, _ = trim_glitches(knuckle_centre(motion))
+    peak = np.nanmax(wrist_speed(base.times, lowpass(base.joints, base.fps), CASE_JOINTS))
+    hold = 60
+    joints = np.concatenate([np.repeat(base.joints[:1], hold, 0), base.joints])
+    t = np.arange(hold) / base.fps
+    # 1 Hz whole-body sway at 7% of peak on the summed two-wrist speed the window is defined on.
+    amplitude = 0.07 * peak / (2 * 2 * np.pi * np.linalg.norm([1.0, 0.0, 0.3]))
+    joints[:hold] += (amplitude * np.sin(2 * np.pi * t))[:, None, None] * np.array([1.0, 0.0, 0.3])
+    swaying = replace(base, joints=joints, times=np.arange(len(joints)) / base.fps)
+    onset, _ = sign_window(swaying)
+    assert onset >= hold - 5
+    hold_frames = rest_window(swaying, onset)  # raises when no stillness is left
+    assert hold_frames.stop - hold_frames.start >= 0.4 * base.fps
+
+
 ORDER = [["trunk"], ["left_a", "right_a"], ["left_b", "right_b"], ["wrist"]]
 
 
@@ -333,3 +380,30 @@ def test_simulation_summary_counts_refused_takes_as_not_equivalent(tmp_path, cap
     tool.summary(path)
     output = capsys.readouterr().out
     assert "1 refused" in output and "  2  " in output and "0.500" in output  # n = 2, P(EQ) = 1/2
+
+
+def test_failed_monte_carlo_draws_no_longer_turn_an_angle_into_nan():
+    """Regression: one failed draw out of 1000 made every statistic NaN and crashed the figure."""
+    rng = np.random.default_rng(0)
+    observed = np.full(80, 3.0)
+    draws = observed + rng.normal(0, 1.0, (200, 80))
+    draws[0] = np.nan
+    result = conditional_tost(observed, draws, 15.0)
+    assert np.isfinite(result["rms_ci_deg"]).all() and result["rms_decision"] == EQUIVALENT
+    assert result["failed_draw_fraction"] == pytest.approx(0.005)
+    draws[:10] = np.nan  # 5% failed: the angle cannot be judged
+    assert conditional_tost(observed, draws, 15.0)["rms_decision"] == INCONCLUSIVE
+
+
+def test_report_figure_draws_angles_with_missing_values(tmp_path):
+    from app.validation.single_take_job import plot_report
+
+    gap = [None] * 101
+    angle = {"decision": INCONCLUSIVE, "curve_phase": [i / 100 for i in range(101)], "fbx_curve_deg": [10.0] * 101,
+             "observed_deg": gap, "video_curve_deg": gap, "band_lower_deg": gap, "band_upper_deg": gap,
+             "curve_deg": gap, "margin_deg": 15.0, "rms_ci_deg": [None, None], "rms_deg": None,
+             "static_offset_deg": None, "raw_rms_deg": None}
+    report = {"decision": INCONCLUSIVE, "primary_claim": "rms", "scope": "Conditional on this performance.",
+              "angles": {"left_wrist_deviation": angle}, "diagnostics": {"offset_rule": "pre_sign_hold"}}
+    plot_report(report, tmp_path / "figure.png")
+    assert (tmp_path / "figure.png").stat().st_size > 0
