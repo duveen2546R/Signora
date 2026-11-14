@@ -85,6 +85,19 @@ export function describeReadiness(mediaMs, units, readyIds, planStatus, lookahea
 }
 
 /**
+ * Plan units as the scheduler consumes them: every unit, with `motionPending` marking one the
+ * backend is still composing (so 'sync-pause' waits for it instead of skipping it). Once the plan
+ * is terminal, or the backend is unreachable (`settled`), nothing is pending any more.
+ */
+export function toScheduleUnits(units, planStatus, { settled = false } = {}) {
+  const final = settled || isPlanTerminal(planStatus)
+  return (units ?? []).map((unit) => ({
+    ...unit,
+    motionPending: !unit.motionAvailable && !final && !isSettled(unit),
+  }))
+}
+
+/**
  * What the overlay should report as not signed, and how many units played through a labelled
  * transition fallback, from the backend's own per-unit issue reports.
  *

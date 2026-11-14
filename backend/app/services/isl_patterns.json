@@ -1,6 +1,6 @@
 {
   "language": "ISL",
-  "version": 2,
+  "version": 3,
   "patterns": [
     {
       "id": "hello",
@@ -235,6 +235,912 @@
       "id": "away",
       "forms": ["away"],
       "glosses": ["AWAY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "hi",
+      "forms": ["hi"],
+      "glosses": ["HI"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "go",
+      "forms": ["go"],
+      "glosses": ["GO"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "everybody",
+      "forms": ["everybody"],
+      "glosses": ["EVERYBODY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "school",
+      "forms": ["school"],
+      "glosses": ["SCHOOL"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "front",
+      "forms": ["front"],
+      "glosses": ["FRONT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "this",
+      "forms": ["this"],
+      "glosses": ["THIS"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "learn",
+      "forms": ["learn"],
+      "glosses": ["LEARN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "they_re",
+      "forms": ["they're"],
+      "glosses": ["THEY_RE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "video",
+      "forms": ["video"],
+      "glosses": ["VIDEO"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "teacher",
+      "forms": ["teacher"],
+      "glosses": ["TEACHER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "same",
+      "forms": ["same"],
+      "glosses": ["SAME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "we",
+      "forms": ["we"],
+      "glosses": ["WE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "some",
+      "forms": ["some"],
+      "glosses": ["SOME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "talk",
+      "forms": ["talk"],
+      "glosses": ["TALK"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "more",
+      "forms": ["more"],
+      "glosses": ["MORE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "about",
+      "forms": ["about"],
+      "glosses": ["ABOUT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "have",
+      "forms": ["have"],
+      "glosses": ["HAVE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "example",
+      "forms": ["example"],
+      "glosses": ["EXAMPLE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "want",
+      "forms": ["want"],
+      "glosses": ["WANT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "repeat",
+      "forms": ["repeat"],
+      "glosses": ["REPEAT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "start",
+      "forms": ["start"],
+      "glosses": ["START"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "verbs",
+      "forms": ["verbs"],
+      "glosses": ["VERBS"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "then",
+      "forms": ["then"],
+      "glosses": ["THEN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "boy",
+      "forms": ["boy"],
+      "glosses": ["BOY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "put",
+      "forms": ["put"],
+      "glosses": ["PUT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "girl",
+      "forms": ["girl"],
+      "glosses": ["GIRL"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "how",
+      "forms": ["how"],
+      "glosses": ["HOW"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "come",
+      "forms": ["come"],
+      "glosses": ["COME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "man",
+      "forms": ["man"],
+      "glosses": ["MAN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "use",
+      "forms": ["use"],
+      "glosses": ["USE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "chair",
+      "forms": ["chair"],
+      "glosses": ["CHAIR"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "with",
+      "forms": ["with"],
+      "glosses": ["WITH"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "listen",
+      "forms": ["listen"],
+      "glosses": ["LISTEN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "cat",
+      "forms": ["cat"],
+      "glosses": ["CAT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "word",
+      "forms": ["word"],
+      "glosses": ["WORD"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "carefully",
+      "forms": ["carefully"],
+      "glosses": ["CAREFULLY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "singer",
+      "forms": ["singer"],
+      "glosses": ["SINGER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "not",
+      "forms": ["not"],
+      "glosses": ["NOT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "sound",
+      "forms": ["sound"],
+      "glosses": ["SOUND"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "friend",
+      "forms": ["friend"],
+      "glosses": ["FRIEND"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "okay",
+      "forms": ["okay"],
+      "glosses": ["OKAY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "like",
+      "forms": ["like"],
+      "glosses": ["LIKE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "look",
+      "forms": ["look"],
+      "glosses": ["LOOK"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "board",
+      "forms": ["board"],
+      "glosses": ["BOARD"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "next",
+      "forms": ["next"],
+      "glosses": ["NEXT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "people",
+      "forms": ["people"],
+      "glosses": ["PEOPLE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "help",
+      "forms": ["help"],
+      "glosses": ["HELP"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "he_s",
+      "forms": ["he's"],
+      "glosses": ["HE_S"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "us",
+      "forms": ["us"],
+      "glosses": ["US"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "she_s",
+      "forms": ["she's"],
+      "glosses": ["SHE_S"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "write",
+      "forms": ["write"],
+      "glosses": ["WRITE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "now",
+      "forms": ["now"],
+      "glosses": ["NOW"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "first",
+      "forms": ["first"],
+      "glosses": ["FIRST"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "dog",
+      "forms": ["dog"],
+      "glosses": ["DOG"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "myself",
+      "forms": ["myself"],
+      "glosses": ["MYSELF"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "sentence",
+      "forms": ["sentence"],
+      "glosses": ["SENTENCE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "what",
+      "forms": ["what"],
+      "glosses": ["WHAT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "say",
+      "forms": ["say"],
+      "glosses": ["SAY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "place",
+      "forms": ["place"],
+      "glosses": ["PLACE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "i_m",
+      "forms": ["i'm"],
+      "glosses": ["I_M"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "thing",
+      "forms": ["thing"],
+      "glosses": ["THING"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "last",
+      "forms": ["last"],
+      "glosses": ["LAST"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "animal",
+      "forms": ["animal"],
+      "glosses": ["ANIMAL"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "failure",
+      "forms": ["failure"],
+      "glosses": ["FAILURE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "student",
+      "forms": ["student"],
+      "glosses": ["STUDENT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "you_re",
+      "forms": ["you're"],
+      "glosses": ["YOU_RE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "me",
+      "forms": ["me"],
+      "glosses": ["ME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "mean",
+      "forms": ["mean"],
+      "glosses": ["MEAN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "little",
+      "forms": ["little"],
+      "glosses": ["LITTLE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "thank",
+      "forms": ["thank"],
+      "glosses": ["THANK"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "true",
+      "forms": ["true"],
+      "glosses": ["TRUE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "watch",
+      "forms": ["watch"],
+      "glosses": ["WATCH"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "different",
+      "forms": ["different"],
+      "glosses": ["DIFFERENT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "time",
+      "forms": ["time"],
+      "glosses": ["TIME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "remember",
+      "forms": ["remember"],
+      "glosses": ["REMEMBER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "bye",
+      "forms": ["bye"],
+      "glosses": ["BYE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "yes",
+      "forms": ["yes"],
+      "glosses": ["YES"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "many",
+      "forms": ["many"],
+      "glosses": ["MANY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "welcome",
+      "forms": ["welcome"],
+      "glosses": ["WELCOME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "maybe",
+      "forms": ["maybe"],
+      "glosses": ["MAYBE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "difference",
+      "forms": ["difference"],
+      "glosses": ["DIFFERENCE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "these",
+      "forms": ["these"],
+      "glosses": ["THESE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "between",
+      "forms": ["between"],
+      "glosses": ["BETWEEN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "egg",
+      "forms": ["egg"],
+      "glosses": ["EGG"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "hit",
+      "forms": ["hit"],
+      "glosses": ["HIT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "vowels",
+      "forms": ["vowels"],
+      "glosses": ["VOWELS"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "top",
+      "forms": ["top"],
+      "glosses": ["TOP"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "in",
+      "forms": ["in"],
+      "glosses": ["IN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "cut",
+      "forms": ["cut"],
+      "glosses": ["CUT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "english",
+      "forms": ["english"],
+      "glosses": ["ENGLISH"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "because",
+      "forms": ["because"],
+      "glosses": ["BECAUSE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "there",
+      "forms": ["there"],
+      "glosses": ["THERE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "sometime",
+      "forms": ["sometime"],
+      "glosses": ["SOMETIME"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "why",
+      "forms": ["why"],
+      "glosses": ["WHY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "bicycle",
+      "forms": ["bicycle"],
+      "glosses": ["BICYCLE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "right",
+      "forms": ["right"],
+      "glosses": ["RIGHT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "also",
+      "forms": ["also"],
+      "glosses": ["ALSO"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "main",
+      "forms": ["main"],
+      "glosses": ["MAIN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "pretty",
+      "forms": ["pretty"],
+      "glosses": ["PRETTY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "special",
+      "forms": ["special"],
+      "glosses": ["SPECIAL"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "you",
+      "forms": ["you"],
+      "glosses": ["YOU"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "balance",
+      "forms": ["balance"],
+      "glosses": ["BALANCE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "usually",
+      "forms": ["usually"],
+      "glosses": ["USUALLY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "here",
+      "forms": ["here"],
+      "glosses": ["HERE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "beginning",
+      "forms": ["beginning"],
+      "glosses": ["BEGINNING"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "make",
+      "forms": ["make"],
+      "glosses": ["MAKE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "later",
+      "forms": ["later"],
+      "glosses": ["LATER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "fast",
+      "forms": ["fast"],
+      "glosses": ["FAST"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "move",
+      "forms": ["move"],
+      "glosses": ["MOVE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "end",
+      "forms": ["end"],
+      "glosses": ["END"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "when",
+      "forms": ["when"],
+      "glosses": ["WHEN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "doctor",
+      "forms": ["doctor"],
+      "glosses": ["DOCTOR"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "question",
+      "forms": ["question"],
+      "glosses": ["QUESTION"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "do",
+      "forms": ["do"],
+      "glosses": ["DO"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "orange",
+      "forms": ["orange"],
+      "glosses": ["ORANGE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "person",
+      "forms": ["person"],
+      "glosses": ["PERSON"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "practice",
+      "forms": ["practice"],
+      "glosses": ["PRACTICE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "eat",
+      "forms": ["eat"],
+      "glosses": ["EAT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "banana",
+      "forms": ["banana"],
+      "glosses": ["BANANA"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "book",
+      "forms": ["book"],
+      "glosses": ["BOOK"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "hear",
+      "forms": ["hear"],
+      "glosses": ["HEAR"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "apple",
+      "forms": ["apple"],
+      "glosses": ["APPLE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "park",
+      "forms": ["park"],
+      "glosses": ["PARK"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "begin",
+      "forms": ["begin"],
+      "glosses": ["BEGIN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "umbrella",
+      "forms": ["umbrella"],
+      "glosses": ["UMBRELLA"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "each",
+      "forms": ["each"],
+      "glosses": ["EACH"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "if",
+      "forms": ["if"],
+      "glosses": ["IF"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "correct",
+      "forms": ["correct"],
+      "glosses": ["CORRECT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "notice",
+      "forms": ["notice"],
+      "glosses": ["NOTICE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "read",
+      "forms": ["read"],
+      "glosses": ["READ"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "rain",
+      "forms": ["rain"],
+      "glosses": ["RAIN"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "hope",
+      "forms": ["hope"],
+      "glosses": ["HOPE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "ant",
+      "forms": ["ant"],
+      "glosses": ["ANT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "elephant",
+      "forms": ["elephant"],
+      "glosses": ["ELEPHANT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "wrong",
+      "forms": ["wrong"],
+      "glosses": ["WRONG"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "am",
+      "forms": ["am"],
+      "glosses": ["AM"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "before",
+      "forms": ["before"],
+      "glosses": ["BEFORE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "share",
+      "forms": ["share"],
+      "glosses": ["SHARE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "common",
+      "forms": ["common"],
+      "glosses": ["COMMON"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "those",
+      "forms": ["those"],
+      "glosses": ["THOSE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "america",
+      "forms": ["america"],
+      "glosses": ["AMERICA"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "way",
+      "forms": ["way"],
+      "glosses": ["WAY"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "remove",
+      "forms": ["remove"],
+      "glosses": ["REMOVE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "lover",
+      "forms": ["lover"],
+      "glosses": ["LOVER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "short",
+      "forms": ["short"],
+      "glosses": ["SHORT"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "sister",
+      "forms": ["sister"],
+      "glosses": ["SISTER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "bottom",
+      "forms": ["bottom"],
+      "glosses": ["BOTTOM"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "brother",
+      "forms": ["brother"],
+      "glosses": ["BROTHER"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "who",
+      "forms": ["who"],
+      "glosses": ["WHO"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "mistake",
+      "forms": ["mistake"],
+      "glosses": ["MISTAKE"],
+      "reviewStatus": "candidate"
+    },
+    {
+      "id": "car",
+      "forms": ["car"],
+      "glosses": ["CAR"],
       "reviewStatus": "candidate"
     }
   ]

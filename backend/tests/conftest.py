@@ -8,6 +8,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def _keep_live_video_plans(monkeypatch):
+    """Tests that start the real app must not fail plans a running dev server is preparing."""
+    from app.services import video_plan_service
+    monkeypatch.setattr(video_plan_service, "recover_interrupted_plans", lambda: 0)
+
+
 @pytest.fixture(scope="session")
 def hello_take():
     from app.ingest.rokoko import parse_csv

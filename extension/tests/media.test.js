@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { WATCHED_EVENTS, createYouTubeMedia, videoEventToPlayerState } from '../src/media/youtube-media.js'
+import { WATCHED_EVENTS, createYouTubeMedia, isYouTubeAdvertisement, videoEventToPlayerState } from '../src/media/youtube-media.js'
 import { YT_STATE } from '../vendor/YouTubeSignScheduler.js'
 
 function fakeVideo(overrides = {}) {
@@ -30,6 +30,17 @@ test('play and seeked carry no state transition', () => {
   assert.equal(videoEventToPlayerState('seeked'), null)
   assert.equal(videoEventToPlayerState('ratechange'), null)
   assert.equal(videoEventToPlayerState('timeupdate'), null)
+})
+
+test('recognises YouTube\'s ad-showing player marker', () => {
+  const advertisingVideo = {
+    closest: () => ({ classList: { contains: (name) => name === 'ad-showing' } }),
+  }
+  const lessonVideo = {
+    closest: () => ({ classList: { contains: () => false } }),
+  }
+  assert.equal(isYouTubeAdvertisement(advertisingVideo), true)
+  assert.equal(isYouTubeAdvertisement(lessonVideo), false)
 })
 
 test('watched events cover every behaviour the task requires', () => {

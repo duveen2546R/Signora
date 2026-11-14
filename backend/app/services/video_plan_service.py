@@ -4,6 +4,7 @@ import datetime as dt
 import gzip
 import hashlib
 import json
+import threading
 import uuid
 from pathlib import Path
 
@@ -14,18 +15,86 @@ from app.core.config import settings
 from app.core.db import SessionLocal
 from app.ingest.compose import ALGORITHM_VERSION
 from app.models import Gloss, SignClip, VideoPlan, VideoPlanUnit
-from app.services.compose_service import PLAYABLE_STATUSES, ComposeError, compose_playable
+from app.services.compose_service import PLAYABLE_STATUSES, ComposeError, compose_caption_sequence
 from app.services.function_words import letter_gloss, match_phrases, may_fingerspell, plan_function_words
 from app.services.live_motion_service import library_version
-from app.services.live_translate_service import _aliases
+from app.services.live_translate_service import _aliases, alias_lookup
+from app.services.plurals import load_plural_rules, plural_issue, resolve_plural
 from app.services.subtitle_service import TranslationUnit
 from app.services.translate_service import Interpretation, PlaylistItem, interpret, load_registry
 
-# 2: reviewed recordings that cannot blend with rest directly play through labelled fallbacks
-#    (`compose_service.compose_playable`) instead of being rejected.
+# 2: YouTube captions use reviewed Sign spans plus bounded transitions, so one long subtitle plan
+#    never blocks on the authoring composer's exhaustive seam search.
 # 3: function words follow the shared `function_words` policy (contractions expanded, do-support
 #    omitted, letter references and "a hundred" kept as meaning).
-POLICY_VERSION = 3
+# 4: an ordinary plural with no stated quantity is signed BASE + MANY (`plurals`).
+# 5: video captions use timestamp-faithful bounded composition rather than the authoring search.
+# 6: legacy clips with an automatically detected usable Sign interval remain playable, with an
+#    explicit notice, instead of rejecting every caption containing one.
+POLICY_VERSION = 6
+PLAN_PREPARATION_STALE_AFTER = dt.timedelta(minutes=2)
+
+# Plan preparation runs in worker threads owned by this module, not in the request's background
+# task: uvicorn waits for a request's background task before it will shut down, so Ctrl+C on a
+# server composing a long video used to hang, and a second Ctrl+C cancelled the request while its
+# thread kept composing. Workers now stop at the next caption unit when the server shuts down.
+_stopping = threading.Event()
+_workers: set[threading.Thread] = set()
+_workers_lock = threading.Lock()
+INTERRUPTED_ERROR = "The backend stopped while preparing this plan; retry to start a new plan."
+
+
+class PreparationStopped(Exception):
+    pass
+
+
+def start_preparation(plan_id: str) -> threading.Thread:
+    """Prepare `plan_id` in a daemon worker thread; the caller polls the plan for progress."""
+    def run() -> None:
+        try:
+            prepare_plan(plan_id)
+        finally:
+            with _workers_lock:
+                _workers.discard(threading.current_thread())
+
+    worker = threading.Thread(target=run, name=f"video-plan-{plan_id[:8]}", daemon=True)
+    with _workers_lock:
+        _workers.add(worker)
+    worker.start()
+    return worker
+
+
+def stop_preparations(timeout: float = 5.0) -> None:
+    """Server shutdown: ask workers to stop after their current unit, and wait briefly for them
+    to record the plan as interrupted. A worker still composing after `timeout` is a daemon thread
+    and ends with the process; `recover_interrupted_plans` tidies its plan on the next start."""
+    _stopping.set()
+    with _workers_lock:
+        workers = list(_workers)
+    deadline = dt.datetime.now() + dt.timedelta(seconds=timeout)
+    for worker in workers:
+        worker.join(max(0.0, (deadline - dt.datetime.now()).total_seconds()))
+
+
+def recover_interrupted_plans() -> int:
+    """Server start: no worker survives a restart of this single-process server, so any plan
+    still pending or processing was interrupted. Mark it failed at once, instead of leaving retries
+    attached to it until it is two minutes old."""
+    _stopping.clear()
+    with SessionLocal() as session:
+        plans = session.scalars(select(VideoPlan).where(
+            VideoPlan.status.in_(("pending", "processing")))).all()
+        for plan in plans:
+            plan.status = "failed"
+            plan.error = INTERRUPTED_ERROR
+            plan.finished_at = dt.datetime.now(dt.UTC)
+        session.commit()
+        return len(plans)
+
+
+def policy_version() -> int:
+    """Caption policy identity for plan reuse; editing plural_rules.json makes old plans stale."""
+    return POLICY_VERSION * 1000 + load_plural_rules().version
 
 
 def resolve_caption(session: Session, text: str) -> Interpretation:
@@ -52,11 +121,22 @@ def resolve_caption(session: Session, text: str) -> Interpretation:
         }, *omitted])
 
     aliases = _aliases(registry, by_gloss)
+    lookup = alias_lookup(aliases)
     resolved: list[tuple[str, str, bool]] = []
     missing_words: list[str] = []
+    plural_words: list[str] = []
+    seen: list[str] = []
     for token, phrase, glosses in match_phrases(plan.tokens, aliases, accept=lambda g: len(g) == 1):
+        plural = None
+        if glosses is None and token.kind == "word":
+            plural = resolve_plural(token.text, seen, lookup, by_gloss.__contains__)
+        seen.extend(phrase or (token.text,))
         if glosses is not None:
             resolved.append((glosses[0], " ".join(phrase), False))
+        elif plural is not None:
+            resolved.extend((gloss, token.text, False) for gloss in plural.glosses)
+            if plural.marked and not plural.reviewed:
+                plural_words.append(token.text)
         elif token.kind == "letter":
             if letter_gloss(token) in by_gloss:
                 resolved.append((letter_gloss(token), token.source, True))
@@ -77,6 +157,8 @@ def resolve_caption(session: Session, text: str) -> Interpretation:
         }, *omitted])
     result = Interpretation("literal-preview", registry.version, pattern_id="caption-policy",
                             issues=omitted)
+    if plural_issue(plural_words):
+        result.issues.append(plural_issue(plural_words))
     for gloss, source, spelled in resolved:
         clip = by_gloss[gloss]
         result.items.append(PlaylistItem(
@@ -94,20 +176,33 @@ def create_plan(session: Session, video_id: str, subtitle_hash: str,
                 units: list[TranslationUnit]) -> tuple[VideoPlan, bool]:
     registry = load_registry()
     version = library_version(session)
-    existing = session.scalar(select(VideoPlan).where(
+    existing_plans = session.scalars(select(VideoPlan).where(
         VideoPlan.youtube_video_id == video_id,
         VideoPlan.subtitle_hash == subtitle_hash,
-        VideoPlan.policy_version == POLICY_VERSION,
+        VideoPlan.policy_version == policy_version(),
         VideoPlan.pattern_version == registry.version,
         VideoPlan.library_version == version,
         VideoPlan.motion_algorithm_version == ALGORITHM_VERSION,
-        VideoPlan.status == "ready",
-    ).order_by(VideoPlan.created_at.desc()))
-    if existing:
-        return existing, True
+        # Retry must attach to the active plan instead of launching another expensive
+        # composition job for the same video and subtitle bytes.
+        VideoPlan.status.in_(("pending", "processing", "ready")),
+    ).order_by(VideoPlan.created_at.desc())).all()
+    # SQLite returns DateTime columns without tzinfo. A plan that outlives its worker (for
+    # example after a development-server restart) otherwise remains "processing" forever and
+    # every retry attaches to it. Leave a live job alone, but retire one that is clearly orphaned.
+    stale_before = dt.datetime.now(dt.UTC).replace(tzinfo=None) - PLAN_PREPARATION_STALE_AFTER
+    for existing in existing_plans:
+        if existing.status == "ready":
+            return existing, True
+        if existing.created_at >= stale_before:
+            return existing, True
+        existing.status = "failed"
+        existing.error = "Preparation worker stopped before completing this plan; retry to start a new plan."
+        existing.finished_at = dt.datetime.now(dt.UTC)
+        session.commit()
     plan = VideoPlan(
         id=str(uuid.uuid4()), youtube_video_id=video_id, subtitle_hash=subtitle_hash,
-        status="pending", policy_version=POLICY_VERSION, pattern_version=registry.version,
+        status="pending", policy_version=policy_version(), pattern_version=registry.version,
         library_version=version, motion_algorithm_version=ALGORITHM_VERSION,
         total_units=len(units),
     )
@@ -146,6 +241,8 @@ def prepare_plan(plan_id: str) -> None:
         session.commit()
         try:
             for unit in plan.units:
+                if _stopping.is_set():
+                    raise PreparationStopped(INTERRUPTED_ERROR)
                 interpretation = resolve_caption(session, unit.source_text)
                 unit.status = interpretation.status
                 unit.glosses = [item.gloss for item in interpretation.items]
@@ -161,12 +258,15 @@ def prepare_plan(plan_id: str) -> None:
                 by_id = {clip.id: clip for clip in clips}
                 try:
                     ordered = []
+                    detected_phase_glosses = []
                     for item in interpretation.items:
                         clip = by_id.get(item.clip_id)
-                        if clip is None or not (clip.qc or {}).get("phases", {}).get("reviewed"):
-                            raise ComposeError(f"{item.gloss} needs reviewed phase timestamps.")
+                        if clip is None:
+                            raise ComposeError(f"{item.gloss} has no recording.")
+                        if not (clip.qc or {}).get("phases", {}).get("reviewed"):
+                            detected_phase_glosses.append(item.gloss)
                         ordered.append((item.gloss, clip))
-                    composition, warnings = compose_playable(ordered)
+                    composition, warnings = compose_caption_sequence(ordered)
                     status = composition.blend_quality.get("status")
                     if status not in PLAYABLE_STATUSES:
                         raise ComposeError("Sentence transitions did not pass validation.", composition.blend_quality)
@@ -174,11 +274,20 @@ def prepare_plan(plan_id: str) -> None:
                     unit.motion_path = str(_artifact_path(payload, [clip for _, clip in ordered], plan.library_version))
                     unit.motion_duration_ms = int(payload["frameCount"] / payload["fps"] * 1000)
                     if status != "direct":
-                        # Playable, but not a fully blended sentence - say which fallback it used.
+                        # Playable, but not a fully quality-optimised sentence blend - say how it
+                        # was joined rather than presenting it as a reviewed sentence translation.
                         unit.issues = [*unit.issues, {
                             "code": "motion-fallback", "blendStatus": status,
                             "message": "Played with a labelled transition fallback "
                                        f"({status}); see the seam details for what was waived.",
+                        }]
+                    if detected_phase_glosses:
+                        unit.issues = [*unit.issues, {
+                            "code": "detected-phase-playback",
+                            "glosses": list(dict.fromkeys(detected_phase_glosses)),
+                            "message": "Used an automatically detected Sign interval for: "
+                                       + ", ".join(dict.fromkeys(detected_phase_glosses))
+                                       + ". Review its Start, Sign and End timestamps to replace this fallback.",
                         }]
                     if warnings:
                         unit.issues = [*unit.issues, *({"code": "motion-warning", "message": w} for w in warnings)]
@@ -204,7 +313,7 @@ def prepare_plan(plan_id: str) -> None:
 
 def serialize_plan(plan: VideoPlan, session: Session) -> dict:
     stale = (
-        plan.policy_version != POLICY_VERSION
+        plan.policy_version != policy_version()
         or plan.pattern_version != load_registry().version
         or plan.motion_algorithm_version != ALGORITHM_VERSION
         or plan.library_version != library_version(session)

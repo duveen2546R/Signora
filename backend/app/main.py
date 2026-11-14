@@ -9,12 +9,17 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.api.v1 import analysis, captures, live, rigs, signs, speech, translate, video
 from app.core.config import settings
 from app.core.db import init_db
+from app.services import video_plan_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # A plan a previous run was preparing can never finish; fail it so a retry starts afresh.
+    video_plan_service.recover_interrupted_plans()
     yield
+    # Ctrl+C: stop composing at the next caption unit instead of holding the shutdown open.
+    video_plan_service.stop_preparations()
 
 
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)

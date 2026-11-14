@@ -231,14 +231,18 @@ The backend side is already env-configurable without a code edit:
 
 ## Load the unpacked extension
 
-0. **Build the content-script bundle** (required; see [Why there is a build step](#why-there-is-a-build-step)):
+0. **Build** the bundled lesson subtitles and the content-script bundle (required; see
+   [Why there is a build step](#why-there-is-a-build-step) and
+   [Bundled lesson subtitles](#bundled-lesson-subtitles-for-the-grammar-playlist)):
 
    ```bash
-   node extension/tools/build.mjs
+   cd extension
+   npm run build
    ```
 
-   The repository ships an up-to-date `dist/content.bundle.js`, so this is only strictly necessary
-   after you edit `src/` or `vendor/`. Running it is harmless and tells you if it was stale.
+   The repository ships up-to-date `subtitles/` and `dist/content.bundle.js`, so this is only
+   strictly necessary after you edit `src/` or `vendor/`, or add or change a file in `SRT Files/`.
+   Running it is harmless and tells you if anything was stale.
 
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode** (top-right).
@@ -252,7 +256,7 @@ The backend side is already env-configurable without a code edit:
 5. Confirm "Signora ISL Signing for YouTube" appears with no errors.
 6. Open a YouTube watch page. A **Signora** panel appears at the bottom-right.
 
-To pick up code changes: `node extension/tools/build.mjs`, then press **Reload** (↻) on the
+To pick up code or subtitle changes: `cd extension && npm run build`, then press **Reload** (↻) on the
 extension card, then reload the YouTube tab. Skipping the rebuild means Chrome keeps running the
 previous bundle.
 
@@ -299,7 +303,9 @@ This video (*"signora testing"*, 58 s) **does** expose an English caption track 
 | **Resume** | Avatar continues from exactly where it froze. |
 | **Seek / scrub** | Status `Resynced after seek`; stale motion is dropped; a part-elapsed unit is skipped rather than restarted; a backwards scrub replays that unit; polling keeps feeding newly-ready units in afterwards. |
 | **Speed change** (0.5×–2×) | Overlay's **Speed** updates and the avatar consumes motion at the new rate. |
-| **Sign longer than its cue** | Status `Video paused while the sign finishes`; YouTube pauses; when the sign ends YouTube resumes **only because the extension paused it**. |
+| **Sign longer than its cue** (Play together) | The video keeps playing; the motion is time-scaled to its cue window. |
+| **Any sign** (Sync and pause) | Status `Video paused while the avatar signs`; YouTube pauses when the sign starts (fingerspelled words included) and resumes when it ends — **only because the extension paused it**. |
+| **Switch mode while playing** | The header chip and the pressed button change immediately; `applies after the current sign` shows until the next unit boundary. A hold already taken is still released. |
 | **Mid-video, waiting on a slow unit** | Status `Buffering next signs…` with the actual upcoming caption text shown — never a frozen "0/10". |
 | **Unsupported word** | Listed under **Not signed: …**. No substitute sign is ever played. A rejected unit is listed as its caption, not by blaming each gloss in it. |
 | **Backend stopped** | Status `Signora backend unavailable` with the exact uvicorn command to start it. |
@@ -311,6 +317,48 @@ up is the normal case with this library, not an edge case. Composing is also slo
 hardware (one unit alone measured 31 s) that **buffering is the expected steady state** for at
 least the first viewing of a video — watch the coverage figures climb as the background polling
 keeps working.
+
+### Playback modes
+
+The overlay's **Playback mode** buttons (also shown as a chip in the header, visible when the panel
+is collapsed) choose between:
+
+- **Play together** (default, the previous behaviour) — video and avatar run simultaneously; each
+  unit's motion is fitted to its caption window and the video is never paused for the avatar.
+- **Sync and pause** — timestamp-accurate signing:
+  - The video plays normally until media time reaches a caption unit's start, then YouTube is
+    paused at exactly that timestamp. A timer fires on the boundary itself; if a pause still lands
+    late (more than 40 ms past it), the video is put back on the boundary.
+  - The avatar plays the unit's whole motion at its natural recorded speed (1×, never fitted to
+    the caption, whatever the video speed).
+  - YouTube resumes, at the viewer's chosen speed, only when the avatar reports it has finished
+    (the mock adapter when its motion ends, Unity on its `finished` event). The same happens at
+    every later unit.
+  - If a unit is still being composed when its timestamp arrives, the video waits there with
+    **Buffering next sign…** and the sign plays as soon as it is ready. A late unit is never
+    skipped, and the video never runs past a sign timestamp.
+  - At 1.5× or 2× the boundary is still decided on media time, so it is simply reached sooner.
+
+The choice is saved in `chrome.storage.sync` (`signora.playbackMode`). It is implemented in the
+shared scheduler as the `sync-pause` overrun policy (`setOverrunPolicy` switches at the next unit
+boundary). The extension hands the scheduler every plan unit at once, each still-composing unit
+marked `motionPending`, and updates them in place as the backend finishes them (`updateUnits`).
+
+Holds are attributed to Signora, and are released safely:
+- Pressing play during a hold (or while buffering) overrides it. That unit is not held again, and
+  is still signed if it arrives within its caption.
+- A seek releases the hold and waits at the next boundary instead.
+- Buffering of the video during a hold does not freeze the avatar.
+- A unit the backend settles without motion (unsupported, rejected) releases the hold.
+- Units still pending when the plan ends, or when the backend stops answering, stop being waited for.
+- Navigating away or reloading the extension stops the scheduler, which releases any hold.
+- A hold whose sign never reports finishing is released after `maxHoldMs` (60 s), so YouTube is
+  never left paused indefinitely.
+
+Play together is unchanged.
+
+When a unit is fingerspelled, the panel labels it **Fingerspelling (alphabet fallback, not a
+reviewed ISL sign)**; other literal units are labelled **Literal preview**.
 
 ### Fallback when YouTube will not release captions
 
@@ -328,6 +376,50 @@ speed, and overrun stay fully testable.
 A ready-made file for the acceptance video is not checked in, because fabricating captions for a
 real video is exactly what the task forbids. To make one from the real audio, use any local
 transcription tool and save it as `.srt`.
+
+### Bundled lesson subtitles for the grammar playlist
+
+The 24 lessons of the playlist
+[Basic English Grammar with Esther](https://www.youtube.com/playlist?list=PL2IkMHFHWdErCjwGKA3InTW6a0gfMPRRM)
+ship with their own subtitles, so opening one of those videos starts signing immediately: the
+extension does not wait for YouTube's captions and nobody has to click **Load subtitle file…**.
+
+- `extension/subtitles/lessons.json` is the explicit map, keyed by **YouTube video ID**: lesson
+  number, playlist position, title, display title, the source file in `SRT Files/`, and the
+  bundled file name. The filename's position is never used at runtime. (Playlist position 1, the
+  course introduction, has no lesson SRT and is not listed.)
+- `extension/subtitles/lesson-NN.srt` are **byte-identical copies** of `SRT Files/`, made by
+  `tools/bundle-subtitles.mjs`. That tool only reads `SRT Files/` and never edits subtitle text.
+- The content script asks the service worker (`getBundledSubtitle`), which reads the file through
+  the extension's own URL. A YouTube content script cannot read the user's filesystem.
+
+Caption source, in priority order:
+
+1. A file picked with **Load subtitle file…** for this video in this tab. It keeps winning on Retry
+   and when navigating back to the same video. Reloading the tab forgets it.
+2. The bundled lesson SRT for a known playlist video. Overlay: *Using bundled lesson subtitle:
+   Lesson N — title*.
+3. YouTube's own English captions. Overlay: *Using YouTube captions*. If those are unavailable too,
+   **Load subtitle file…** is still there. A picked file shows *Using manually selected subtitle file*.
+
+If a mapped SRT is missing, malformed (the message names the block to fix) or rejected by the
+backend, the overlay shows the error in red and continues with YouTube caption discovery. The
+picker stays available. The backend's SRT/VTT validation and video-plan behaviour are unchanged:
+it receives the original bytes as `lesson-NN.srt`.
+
+**After adding or changing an SRT file** (edit `subtitles/lessons.json` first if it is a new video):
+
+```bash
+cd extension
+npm run build        # copies SRT Files/ -> subtitles/, warns about malformed lessons, rebuilds the bundle
+```
+
+Then press **Reload** (↻) on the extension card and reload the YouTube tab.
+`npm run check-build` fails if a bundled copy or the bundle is stale.
+
+Known data issue: `17 - Learn Articles a an the….srt` ends with block 118
+(`00:00:00,000 --> 00:00:00,000`, "Bye."), which the backend rejects. Lesson 17 therefore reports
+that error and uses YouTube captions until the block is fixed in `SRT Files/` and rebuilt.
 
 ---
 
@@ -497,13 +589,13 @@ there either, the fault is in the Unity build/calibration path itself, not the e
 # Extension: caption conversion, media/event mapping, mock avatar, progressive plan logic,
 # progressive attachment proven against the real scheduler end-to-end through a fake <video>,
 # and the generated bundle evaluated as Chrome loads it.
-cd extension && node --test            # 78 tests
+cd extension && npm test               # rebuilds, then runs every extension test
 
 # Frontend: original component/scheduler suite (unchanged) plus the Unity host's message relay.
 cd frontend && node --test             # 75 tests
 
-# Generated bundle matches the sources; scheduler copy has not drifted from the frontend.
-node extension/tools/build.mjs --check
+# Bundled subtitles and the generated bundle match their sources; scheduler copy has not drifted.
+cd extension && npm run check-build
 node extension/tools/sync-vendor.mjs --check
 ```
 
@@ -515,6 +607,9 @@ node extension/tools/sync-vendor.mjs --check
 | `extension/tests/progressive.test.js` | the pure readiness/buffering/diff logic in `src/plan/progressive.js` |
 | `extension/tests/progressive-integration.test.js` | the real scheduler + mock adapter, fed units one at a time exactly as `main.js` does — first unit plays before the rest exist, a late unit is correctly skipped or correctly still played depending on timing, background composition never interrupts an active sign |
 | `extension/tests/integration.test.js` | the original full scheduler behaviour: pause/resume/seek/speed/overrun/skip/recovery |
+| `extension/tests/sync-pause.test.js` | Sync and pause end to end: exact pause at a caption boundary (snapped back, and timer-driven), waiting for a late-composing unit with buffering shown, full natural-speed sign, resume only on the avatar's finished event, 2× playback, no late unit ever skipped, unit failures, viewer play/pause, seek, video buffering, stop, and Play together unchanged |
+| `extension/tests/playback-mode.test.js` | both playback modes, switching mid-playback, viewer pause/seek/buffering/speed in each mode, `chrome.storage.sync` persistence, fallback labels |
+| `extension/tests/bundled-subtitles.test.js` | the video-ID lesson manifest, byte-identical bundled copies, known ID → bundled SRT, unknown ID → YouTube discovery, missing/malformed/backend-rejected lesson → visible error + fallback, a manual pick overriding automatic loading |
 | `extension/tests/bundle.test.js` | the **generated bundle**, evaluated in a `vm` context the way Chrome loads it — exists because the first loader passed every ES-module test and still did nothing in a real browser |
 | `extension/tests/vendor-sync.test.js` | the vendored scheduler has not drifted from the frontend original |
 | `frontend/tests/avatarHostBridge.test.js` | the Unity host page's message relay: command dispatch, no-op handling of unsupported commands, error containment, origin resolution and validation |
@@ -534,6 +629,9 @@ extension/
   background.js                      service worker; ALL backend I/O (this is what avoids CORS changes)
   dist/content.bundle.js             GENERATED by tools/build.mjs; what Chrome actually runs
   package.json                       build / test / sync-vendor scripts
+  subtitles/
+    lessons.json                     YouTube video ID -> bundled lesson SRT (hand-maintained)
+    lesson-01.srt … lesson-24.srt    byte-identical copies of SRT Files/ (tools/bundle-subtitles.mjs)
   src/
     config.js                        single config module (apiBase, avatarAdapter default 'unity', flags)
     main.js                          orchestrator: captions -> progressive plan -> scheduler -> overlay
@@ -541,6 +639,7 @@ extension/
     captions/
       convert.js                     JSON3 + srv3/XML -> WebVTT (pure, heavily tested)
       discover.js                    page bridge client + 3-strategy caption discovery
+      bundled.js                     lesson manifest lookup, SRT structure check, source priority
     page/bridge.js                   MAIN world: observes the player's own timedtext request
     media/youtube-media.js           <video> -> scheduler media contract; event -> YT_STATE
     avatar/
@@ -550,9 +649,10 @@ extension/
   vendor/YouTubeSignScheduler.js     byte-identical copy of the frontend scheduler
   tools/
     build.mjs                        ESM graph -> one classic IIFE (+ --check staleness guard)
+    bundle-subtitles.mjs             SRT Files/ -> subtitles/ copy (+ --check staleness guard)
     sync-vendor.mjs                  copy + --check drift guard
   tests/                             convert, media, avatar, progressive, progressive-integration,
-                                      integration, bundle, vendor-sync
+                                      integration, bundle, bundled-subtitles, sync-pause, vendor-sync
 
 frontend/src/
   pages/AvatarHost.jsx               Unity avatar host page, embedded as an iframe by the extension

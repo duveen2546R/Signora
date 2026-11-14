@@ -41,6 +41,15 @@ test('a fallback seam that failed its own checks still blocks playback', () => {
 test('an explicitly labelled candidate preview is playable', () => {
   assert.ok(playableTrack({ ...ready(), translationStatus: 'preview' }))
 })
+test('a timestamp-faithful caption sequence is playable when each short bridge is labelled', () => {
+  const result = ready()
+  const blendQuality = { status: 'caption-linear', seams: [
+    { mode: 'caption-linear', passed: true, fromGloss: 'HI', toGloss: 'WELCOME' },
+  ] }
+  result.blendQuality = blendQuality
+  result.track.blendQuality = blendQuality
+  assert.ok(playableTrack(result))
+})
 test('a corrupt later frame blocks playback before streaming', () => {
   const result = ready()
   result.track.pose[1][0][0] = NaN

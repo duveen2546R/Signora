@@ -1,0 +1,2649 @@
+{
+  "purpose": "Review-only import plan; no source has been validated, imported, or approved.",
+  "checklist": "E:\\Vocabulary_Checklists_New_Words_Per_Video.docx",
+  "trainerDirectory": "C:\\Users\\HP\\OneDrive - SSN-Institute\\Desktop\\Signora-main\\Signora-main\\trainer",
+  "videos": [
+    2,
+    3,
+    6,
+    7
+  ],
+  "summary": {
+    "2": {
+      "checklistWords": 70,
+      "singleCandidate": 54,
+      "duplicateTakeNeedsSelection": 3,
+      "missingSource": 13
+    },
+    "3": {
+      "checklistWords": 26,
+      "singleCandidate": 21,
+      "duplicateTakeNeedsSelection": 3,
+      "missingSource": 2
+    },
+    "6": {
+      "checklistWords": 20,
+      "singleCandidate": 17,
+      "duplicateTakeNeedsSelection": 0,
+      "missingSource": 3
+    },
+    "7": {
+      "checklistWords": 106,
+      "singleCandidate": 66,
+      "duplicateTakeNeedsSelection": 16,
+      "missingSource": 24
+    }
+  },
+  "entries": [
+    {
+      "video": 7,
+      "captionWord": "Hi",
+      "proposedGloss": "HI",
+      "sourceCandidates": [
+        "hi__mixamo.fbx",
+        "hi_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Go",
+      "proposedGloss": "GO",
+      "sourceCandidates": [
+        "Go_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Go_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "S",
+      "proposedGloss": "S",
+      "sourceCandidates": [
+        "s_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "s_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Everybody",
+      "proposedGloss": "EVERYBODY",
+      "sourceCandidates": [
+        "everybody_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "everybody_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "School",
+      "proposedGloss": "SCHOOL",
+      "sourceCandidates": [
+        "School_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "School_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Front",
+      "proposedGloss": "FRONT",
+      "sourceCandidates": [
+        "Front_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Front_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "This",
+      "proposedGloss": "THIS",
+      "sourceCandidates": [
+        "this_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "this_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Learn",
+      "proposedGloss": "LEARN",
+      "sourceCandidates": [
+        "Learn_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Learn_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "They\u2019re",
+      "proposedGloss": "THEY_RE",
+      "sourceCandidates": [
+        "They're_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "They're_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Video",
+      "proposedGloss": "VIDEO",
+      "sourceCandidates": [
+        "video_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "video_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Teacher",
+      "proposedGloss": "TEACHER",
+      "sourceCandidates": [
+        "Teacher_1_mixamo.fbx",
+        "Teacher_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Same",
+      "proposedGloss": "SAME",
+      "sourceCandidates": [
+        "Same_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Same_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "We",
+      "proposedGloss": "WE",
+      "sourceCandidates": [
+        "we_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "we_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Or",
+      "proposedGloss": "OR",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Some",
+      "proposedGloss": "SOME",
+      "sourceCandidates": [
+        "Some_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Some_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Talk",
+      "proposedGloss": "TALK",
+      "sourceCandidates": [
+        "_Talk_1_mixamo.fbx",
+        "_Talk_2_mixamo.fbx",
+        "talk_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "See",
+      "proposedGloss": "SEE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "More",
+      "proposedGloss": "MORE",
+      "sourceCandidates": [
+        "More_1_mixamo.fbx",
+        "More_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "About",
+      "proposedGloss": "ABOUT",
+      "sourceCandidates": [
+        "About_1_mixamo.fbx",
+        "About__mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Have",
+      "proposedGloss": "HAVE",
+      "sourceCandidates": [
+        "Have_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Have_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Example",
+      "proposedGloss": "EXAMPLE",
+      "sourceCandidates": [
+        "Example_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Example_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Subjective",
+      "proposedGloss": "SUBJECTIVE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Pronoun",
+      "proposedGloss": "PRONOUN",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Want",
+      "proposedGloss": "WANT",
+      "sourceCandidates": [
+        "Want_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Want_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Pronouns",
+      "proposedGloss": "PRONOUNS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "The",
+      "proposedGloss": "THE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Repeat",
+      "proposedGloss": "REPEAT",
+      "sourceCandidates": [
+        "Repeat_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Repeat_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Be",
+      "proposedGloss": "BE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Verb",
+      "proposedGloss": "VERB",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Start",
+      "proposedGloss": "START",
+      "sourceCandidates": [
+        "Start_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Start_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Verbs",
+      "proposedGloss": "VERBS",
+      "sourceCandidates": [
+        "verbs_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "verbs_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Then",
+      "proposedGloss": "THEN",
+      "sourceCandidates": [
+        "Then_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Then_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Boy",
+      "proposedGloss": "BOY",
+      "sourceCandidates": [
+        "Boy_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Boy_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "And",
+      "proposedGloss": "AND",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Put",
+      "proposedGloss": "PUT",
+      "sourceCandidates": [
+        "Put_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Put_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Girl",
+      "proposedGloss": "GIRL",
+      "sourceCandidates": [
+        "Girl_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Girl_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "How",
+      "proposedGloss": "HOW",
+      "sourceCandidates": [
+        "how_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "how_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Come",
+      "proposedGloss": "COME",
+      "sourceCandidates": [
+        "Come_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Come_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Man",
+      "proposedGloss": "MAN",
+      "sourceCandidates": [
+        "Man_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Man_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Use",
+      "proposedGloss": "USE",
+      "sourceCandidates": [
+        "Use_1_mixamo.fbx",
+        "Use_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "After",
+      "proposedGloss": "AFTER",
+      "sourceCandidates": [
+        "After_mixamo (1).fbx",
+        "After_mixamo (2).fbx",
+        "After_mixamo (3).fbx",
+        "After_mixamo (4).fbx",
+        "After_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Woman",
+      "proposedGloss": "WOMAN",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Them",
+      "proposedGloss": "THEM",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Noun",
+      "proposedGloss": "NOUN",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Chair",
+      "proposedGloss": "CHAIR",
+      "sourceCandidates": [
+        "Chair_mixamo (1).fbx",
+        "Chair_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "With",
+      "proposedGloss": "WITH",
+      "sourceCandidates": [
+        "With_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "With_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Listen",
+      "proposedGloss": "LISTEN",
+      "sourceCandidates": [
+        "Listen_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Listen_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Cat",
+      "proposedGloss": "CAT",
+      "sourceCandidates": [
+        "_Cat_1_mixamo.fbx",
+        "Cat_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Word",
+      "proposedGloss": "WORD",
+      "sourceCandidates": [
+        "_Word_2_mixamo.fbx",
+        "Word_1_mixamo.fbx",
+        "Word_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Carefully",
+      "proposedGloss": "CAREFULLY",
+      "sourceCandidates": [
+        "Carefully_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Carefully_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Singer",
+      "proposedGloss": "SINGER",
+      "sourceCandidates": [
+        "Singer_1_mixamo.fbx",
+        "Singer_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Not",
+      "proposedGloss": "NOT",
+      "sourceCandidates": [
+        "Not_1_mixamo.fbx",
+        "Not_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Sound",
+      "proposedGloss": "SOUND",
+      "sourceCandidates": [
+        "Sound_1_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Sound_1_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Friend",
+      "proposedGloss": "FRIEND",
+      "sourceCandidates": [
+        "Friend_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Friend_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Okay",
+      "proposedGloss": "OKAY",
+      "sourceCandidates": [
+        "Okay_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Okay_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Like",
+      "proposedGloss": "LIKE",
+      "sourceCandidates": [
+        "Like_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Like_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Sisters",
+      "proposedGloss": "SISTERS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Look",
+      "proposedGloss": "LOOK",
+      "sourceCandidates": [
+        "Look_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Look_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "One",
+      "proposedGloss": "ONE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Brothers",
+      "proposedGloss": "BROTHERS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Board",
+      "proposedGloss": "BOARD",
+      "sourceCandidates": [
+        "Board__mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Board__mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Next",
+      "proposedGloss": "NEXT",
+      "sourceCandidates": [
+        "Next_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Next_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "People",
+      "proposedGloss": "PEOPLE",
+      "sourceCandidates": [
+        "_People_2_mixamo (1).fbx",
+        "_People_2_mixamo.fbx",
+        "People_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Help",
+      "proposedGloss": "HELP",
+      "sourceCandidates": [
+        "Help_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Help_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "He\u2019s",
+      "proposedGloss": "HE_S",
+      "sourceCandidates": [
+        "He's_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "He's_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Cars",
+      "proposedGloss": "CARS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Us",
+      "proposedGloss": "US",
+      "sourceCandidates": [
+        "Us_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Us_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "She\u2019s",
+      "proposedGloss": "SHE_S",
+      "sourceCandidates": [
+        "She's_2_mixamo.fbx",
+        "She's_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Write",
+      "proposedGloss": "WRITE",
+      "sourceCandidates": [
+        "Write_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Write_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Now",
+      "proposedGloss": "NOW",
+      "sourceCandidates": [
+        "Now_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Now_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "It\u2019s",
+      "proposedGloss": "IT_S",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Sentences",
+      "proposedGloss": "SENTENCES",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "First",
+      "proposedGloss": "FIRST",
+      "sourceCandidates": [
+        "First__mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "First__mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Dog",
+      "proposedGloss": "DOG",
+      "sourceCandidates": [
+        "Dog_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Dog_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Myself",
+      "proposedGloss": "MYSELF",
+      "sourceCandidates": [
+        "Myself_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Myself_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Sentence",
+      "proposedGloss": "SENTENCE",
+      "sourceCandidates": [
+        "Sentence_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Sentence_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "It",
+      "proposedGloss": "IT",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "What",
+      "proposedGloss": "WHAT",
+      "sourceCandidates": [
+        "What_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "What_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Say",
+      "proposedGloss": "SAY",
+      "sourceCandidates": [
+        "Say_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Say_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Place",
+      "proposedGloss": "PLACE",
+      "sourceCandidates": [
+        "Place_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Place_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Canada",
+      "proposedGloss": "CANADA",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "I\u2019m",
+      "proposedGloss": "I_M",
+      "sourceCandidates": [
+        "I'm_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "I'm_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Thing",
+      "proposedGloss": "THING",
+      "sourceCandidates": [
+        "Thing_mixamo (1).fbx",
+        "Thing_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Last",
+      "proposedGloss": "LAST",
+      "sourceCandidates": [
+        "Last_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Last_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "A",
+      "proposedGloss": "A",
+      "sourceCandidates": [
+        "a_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "a_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Animal",
+      "proposedGloss": "ANIMAL",
+      "sourceCandidates": [
+        "Animal_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Animal_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Failure",
+      "proposedGloss": "FAILURE",
+      "sourceCandidates": [
+        "Failure_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Failure_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Student",
+      "proposedGloss": "STUDENT",
+      "sourceCandidates": [
+        "Student_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Student_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "You\u2019re",
+      "proposedGloss": "YOU_RE",
+      "sourceCandidates": [
+        "You're_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "You're_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Me",
+      "proposedGloss": "ME",
+      "sourceCandidates": [
+        "Me_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Me_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Mean",
+      "proposedGloss": "MEAN",
+      "sourceCandidates": [
+        "Mean_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Mean_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Little",
+      "proposedGloss": "LITTLE",
+      "sourceCandidates": [
+        "Little_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Little_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Thank",
+      "proposedGloss": "THANK",
+      "sourceCandidates": [
+        "Thank_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Thank_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "True",
+      "proposedGloss": "TRUE",
+      "sourceCandidates": [
+        "True_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "True_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Bit",
+      "proposedGloss": "BIT",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Watch",
+      "proposedGloss": "WATCH",
+      "sourceCandidates": [
+        "Watch_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Watch_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "No",
+      "proposedGloss": "NO",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Different",
+      "proposedGloss": "DIFFERENT",
+      "sourceCandidates": [
+        "Different_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Different_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Time",
+      "proposedGloss": "TIME",
+      "sourceCandidates": [
+        "Time_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Time_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Remember",
+      "proposedGloss": "REMEMBER",
+      "sourceCandidates": [
+        "Remember_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Remember_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Are",
+      "proposedGloss": "ARE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "Bye",
+      "proposedGloss": "BYE",
+      "sourceCandidates": [
+        "Bye_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Bye_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Yes",
+      "proposedGloss": "YES",
+      "sourceCandidates": [
+        "Yes_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Yes_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "We\u2019re",
+      "proposedGloss": "WE_RE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 7,
+      "captionWord": "I",
+      "proposedGloss": "I",
+      "sourceCandidates": [
+        "I_3_mixamo.fbx",
+        "I_mixamo (1).fbx",
+        "i_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 7,
+      "captionWord": "Many",
+      "proposedGloss": "MANY",
+      "sourceCandidates": [
+        "Many_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Many_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Welcome",
+      "proposedGloss": "WELCOME",
+      "sourceCandidates": [
+        "Welcome_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Welcome_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "F",
+      "proposedGloss": "F",
+      "sourceCandidates": [
+        "F_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "F_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Maybe",
+      "proposedGloss": "MAYBE",
+      "sourceCandidates": [
+        "Maybe_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Maybe_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Difference",
+      "proposedGloss": "DIFFERENCE",
+      "sourceCandidates": [
+        "Difference_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Difference_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "G",
+      "proposedGloss": "G",
+      "sourceCandidates": [
+        "G_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "G_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "These",
+      "proposedGloss": "THESE",
+      "sourceCandidates": [
+        "These_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "These_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Between",
+      "proposedGloss": "BETWEEN",
+      "sourceCandidates": [
+        "Between_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Between_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "H",
+      "proposedGloss": "H",
+      "sourceCandidates": [
+        "H_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "H_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Egg",
+      "proposedGloss": "EGG",
+      "sourceCandidates": [
+        "Egg_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Egg_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Consonants",
+      "proposedGloss": "CONSONANTS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "J",
+      "proposedGloss": "J",
+      "sourceCandidates": [
+        "J_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "J_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Hit",
+      "proposedGloss": "HIT",
+      "sourceCandidates": [
+        "Hit_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Hit_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Vowels",
+      "proposedGloss": "VOWELS",
+      "sourceCandidates": [
+        "Vowels_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Vowels_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "K",
+      "proposedGloss": "K",
+      "sourceCandidates": [
+        "K_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "K_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Top",
+      "proposedGloss": "TOP",
+      "sourceCandidates": [
+        "Top_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Top_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "In",
+      "proposedGloss": "IN",
+      "sourceCandidates": [
+        "In_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "In_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "L",
+      "proposedGloss": "L",
+      "sourceCandidates": [
+        "L_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "L_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Cut",
+      "proposedGloss": "CUT",
+      "sourceCandidates": [
+        "Cut_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Cut_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "English",
+      "proposedGloss": "ENGLISH",
+      "sourceCandidates": [
+        "English_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "English_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "M",
+      "proposedGloss": "M",
+      "sourceCandidates": [
+        "M_2_mixamo.fbx",
+        "m_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Because",
+      "proposedGloss": "BECAUSE",
+      "sourceCandidates": [
+        "Because_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Because_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Alphabet",
+      "proposedGloss": "ALPHABET",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "N",
+      "proposedGloss": "N",
+      "sourceCandidates": [
+        "N_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "N_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Sometimes",
+      "proposedGloss": "SOMETIMES",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "There",
+      "proposedGloss": "THERE",
+      "sourceCandidates": [
+        "There_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "There_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "O",
+      "proposedGloss": "O",
+      "sourceCandidates": [
+        "o_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "o_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Sometime",
+      "proposedGloss": "SOMETIME",
+      "sourceCandidates": [
+        "Sometime_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Sometime_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Twenty",
+      "proposedGloss": "TWENTY",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "P",
+      "proposedGloss": "P",
+      "sourceCandidates": [
+        "p_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "p_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Why",
+      "proposedGloss": "WHY",
+      "sourceCandidates": [
+        "Why_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Why_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Six",
+      "proposedGloss": "SIX",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "Q",
+      "proposedGloss": "Q",
+      "sourceCandidates": [
+        "q_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "q_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Bicycle",
+      "proposedGloss": "BICYCLE",
+      "sourceCandidates": [
+        "Bicycle_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Bicycle_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Letters",
+      "proposedGloss": "LETTERS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "R",
+      "proposedGloss": "R",
+      "sourceCandidates": [
+        "r_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "r_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Right",
+      "proposedGloss": "RIGHT",
+      "sourceCandidates": [
+        "Right_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Right_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Five",
+      "proposedGloss": "FIVE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "T",
+      "proposedGloss": "T",
+      "sourceCandidates": [
+        "t_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "t_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Also",
+      "proposedGloss": "ALSO",
+      "sourceCandidates": [
+        "Also_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Also_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Main",
+      "proposedGloss": "MAIN",
+      "sourceCandidates": [
+        "Main_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Main_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "All",
+      "proposedGloss": "ALL",
+      "sourceCandidates": [
+        "All_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "All_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Pretty",
+      "proposedGloss": "PRETTY",
+      "sourceCandidates": [
+        "Pretty_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Pretty_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Special",
+      "proposedGloss": "SPECIAL",
+      "sourceCandidates": [
+        "Special_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Special_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "U",
+      "proposedGloss": "U",
+      "sourceCandidates": [
+        "u_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "u_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Two",
+      "proposedGloss": "TWO",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "Vowel",
+      "proposedGloss": "VOWEL",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "V",
+      "proposedGloss": "V",
+      "sourceCandidates": [
+        "v_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "v_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "You",
+      "proposedGloss": "YOU",
+      "sourceCandidates": [
+        "You_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "You_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Balance",
+      "proposedGloss": "BALANCE",
+      "sourceCandidates": [
+        "Balance_1_mixamo.fbx",
+        "Balance_2_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "W",
+      "proposedGloss": "W",
+      "sourceCandidates": [
+        "w_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "w_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Usually",
+      "proposedGloss": "USUALLY",
+      "sourceCandidates": [
+        "Usually_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Usually_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Here",
+      "proposedGloss": "HERE",
+      "sourceCandidates": [
+        "Here_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Here_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "X",
+      "proposedGloss": "X",
+      "sourceCandidates": [
+        "x_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "x_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Beginning",
+      "proposedGloss": "BEGINNING",
+      "sourceCandidates": [
+        "Beginning_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Beginning_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Letter",
+      "proposedGloss": "LETTER",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "Y",
+      "proposedGloss": "Y",
+      "sourceCandidates": [
+        "y_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "y_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Make",
+      "proposedGloss": "MAKE",
+      "sourceCandidates": [
+        "Make_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Make_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "B",
+      "proposedGloss": "B",
+      "sourceCandidates": [
+        "B_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "B_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Later",
+      "proposedGloss": "LATER",
+      "sourceCandidates": [
+        "Later_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Later_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Again",
+      "proposedGloss": "AGAIN",
+      "sourceCandidates": [
+        "Again_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Again_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Consonant",
+      "proposedGloss": "CONSONANT",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "Z",
+      "proposedGloss": "Z",
+      "sourceCandidates": [
+        "z_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "z_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Fast",
+      "proposedGloss": "FAST",
+      "sourceCandidates": [
+        "Fast_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Fast_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "C",
+      "proposedGloss": "C",
+      "sourceCandidates": [
+        "C_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "C_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Move",
+      "proposedGloss": "MOVE",
+      "sourceCandidates": [
+        "Move_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Move_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "End",
+      "proposedGloss": "END",
+      "sourceCandidates": [
+        "End_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "End_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "D",
+      "proposedGloss": "D",
+      "sourceCandidates": [
+        "D_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "D_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Part",
+      "proposedGloss": "PART",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 2,
+      "captionWord": "E",
+      "proposedGloss": "E",
+      "sourceCandidates": [
+        "E_2_mixamo.fbx",
+        "e_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 2,
+      "captionWord": "Words",
+      "proposedGloss": "WORDS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 3,
+      "captionWord": "An",
+      "proposedGloss": "AN",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 3,
+      "captionWord": "When",
+      "proposedGloss": "WHEN",
+      "sourceCandidates": [
+        "When_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "When_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Doctor",
+      "proposedGloss": "DOCTOR",
+      "sourceCandidates": [
+        "Doctor_1_mixamo.fbx",
+        "Doctor_2_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Question",
+      "proposedGloss": "QUESTION",
+      "sourceCandidates": [
+        "Question_1_mixamo.fbx",
+        "Question_2_mixamo.fbx",
+        "Question_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Do",
+      "proposedGloss": "DO",
+      "sourceCandidates": [
+        "Do_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Do_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Orange",
+      "proposedGloss": "ORANGE",
+      "sourceCandidates": [
+        "Orange_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Orange_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Person",
+      "proposedGloss": "PERSON",
+      "sourceCandidates": [
+        "Person_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Person_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Practice",
+      "proposedGloss": "PRACTICE",
+      "sourceCandidates": [
+        "Practice_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Practice_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Eat",
+      "proposedGloss": "EAT",
+      "sourceCandidates": [
+        "Eat_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Eat_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Banana",
+      "proposedGloss": "BANANA",
+      "sourceCandidates": [
+        "Banana_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Banana_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Book",
+      "proposedGloss": "BOOK",
+      "sourceCandidates": [
+        "Book_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Book_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Hear",
+      "proposedGloss": "HEAR",
+      "sourceCandidates": [
+        "Hear_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Hear_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Apple",
+      "proposedGloss": "APPLE",
+      "sourceCandidates": [
+        "Apple_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Apple_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Park",
+      "proposedGloss": "PARK",
+      "sourceCandidates": [
+        "Park_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Park_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Begin",
+      "proposedGloss": "BEGIN",
+      "sourceCandidates": [
+        "Begin_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Begin_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Should",
+      "proposedGloss": "SHOULD",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 3,
+      "captionWord": "Umbrella",
+      "proposedGloss": "UMBRELLA",
+      "sourceCandidates": [
+        "Umbrella_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Umbrella_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Each",
+      "proposedGloss": "EACH",
+      "sourceCandidates": [
+        "Each_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Each_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "If",
+      "proposedGloss": "IF",
+      "sourceCandidates": [
+        "If_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "If_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Correct",
+      "proposedGloss": "CORRECT",
+      "sourceCandidates": [
+        "Correct_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Correct_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Notice",
+      "proposedGloss": "NOTICE",
+      "sourceCandidates": [
+        "Notice_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Notice_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Read",
+      "proposedGloss": "READ",
+      "sourceCandidates": [
+        "Read_2_mixamo.fbx",
+        "Read_mixamo.fbx"
+      ],
+      "status": "choose-canonical-take",
+      "selectedSource": null,
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Rain",
+      "proposedGloss": "RAIN",
+      "sourceCandidates": [
+        "Rain_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Rain_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Hope",
+      "proposedGloss": "HOPE",
+      "sourceCandidates": [
+        "Hope_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Hope_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Ant",
+      "proposedGloss": "ANT",
+      "sourceCandidates": [
+        "Ant_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Ant_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 3,
+      "captionWord": "Elephant",
+      "proposedGloss": "ELEPHANT",
+      "sourceCandidates": [
+        "Elephant_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Elephant_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Contraction",
+      "proposedGloss": "CONTRACTION",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 6,
+      "captionWord": "Wrong",
+      "proposedGloss": "WRONG",
+      "sourceCandidates": [
+        "Wrong_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Wrong_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Contractions",
+      "proposedGloss": "CONTRACTIONS",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 6,
+      "captionWord": "Am",
+      "proposedGloss": "AM",
+      "sourceCandidates": [
+        "Am_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Am_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Before",
+      "proposedGloss": "BEFORE",
+      "sourceCandidates": [
+        "Before_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Before_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Share",
+      "proposedGloss": "SHARE",
+      "sourceCandidates": [
+        "Share_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Share_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Common",
+      "proposedGloss": "COMMON",
+      "sourceCandidates": [
+        "Common_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Common_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Those",
+      "proposedGloss": "THOSE",
+      "sourceCandidates": [
+        "Those_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Those_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "America",
+      "proposedGloss": "AMERICA",
+      "sourceCandidates": [
+        "America_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "America_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Way",
+      "proposedGloss": "WAY",
+      "sourceCandidates": [
+        "Way_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Way_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Remove",
+      "proposedGloss": "REMOVE",
+      "sourceCandidates": [
+        "Remove_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Remove_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Lover",
+      "proposedGloss": "LOVER",
+      "sourceCandidates": [
+        "Lover_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Lover_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Short",
+      "proposedGloss": "SHORT",
+      "sourceCandidates": [
+        "Short_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Short_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Sister",
+      "proposedGloss": "SISTER",
+      "sourceCandidates": [
+        "Sister_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Sister_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Someone",
+      "proposedGloss": "SOMEONE",
+      "sourceCandidates": [],
+      "status": "missing-source",
+      "selectedSource": null,
+      "phaseReviewRequired": false,
+      "interpreterMeaningReviewRequired": false
+    },
+    {
+      "video": 6,
+      "captionWord": "Bottom",
+      "proposedGloss": "BOTTOM",
+      "sourceCandidates": [
+        "Bottom_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Bottom_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Brother",
+      "proposedGloss": "BROTHER",
+      "sourceCandidates": [
+        "Brother_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Brother_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Who",
+      "proposedGloss": "WHO",
+      "sourceCandidates": [
+        "Who_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Who_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Mistake",
+      "proposedGloss": "MISTAKE",
+      "sourceCandidates": [
+        "Mistake_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Mistake_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    },
+    {
+      "video": 6,
+      "captionWord": "Car",
+      "proposedGloss": "CAR",
+      "sourceCandidates": [
+        "Car_mixamo.fbx"
+      ],
+      "status": "ready-for-import-review",
+      "selectedSource": "Car_mixamo.fbx",
+      "phaseReviewRequired": true,
+      "interpreterMeaningReviewRequired": true
+    }
+  ]
+}

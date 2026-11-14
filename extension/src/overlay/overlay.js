@@ -19,8 +19,39 @@ const STATUS_TEXT = {
   signing: 'Signing',
   paused: 'Paused',
   'catch-up': 'Video paused while the sign finishes',
+  'sync-hold': 'Video paused while the avatar signs',
+  'sync-buffering': 'Buffering next sign…',
+  advertisement: 'Advertisement — signing paused',
   'buffering-signs': 'Buffering next signs…',
   ended: 'Finished',
+}
+
+export const MODE_TEXT = {
+  'play-together': 'Play together',
+  'sync-pause': 'Sync and pause',
+}
+
+/**
+ * How honest the current unit's signs are, for the label under the gloss chips. Fingerspelling is
+ * named first: it is letter-by-letter alphabet fallback, never a reviewed ISL sign.
+ */
+export function unitNotice({ fingerspelledWords = [], unitStatus = null } = {}) {
+  if (fingerspelledWords.length) {
+    return `Fingerspelling (alphabet fallback, not a reviewed ISL sign): ${fingerspelledWords.join(', ')}`
+  }
+  if (unitStatus === 'literal-preview') {
+    return 'Literal preview: candidate signs, not a reviewed ISL translation'
+  }
+  return ''
+}
+
+/** Which caption source the current plan was built from, in the viewer's words. */
+export function subtitleSourceText(source) {
+  if (!source) return ''
+  if (source.kind === 'bundled') return `Using bundled lesson subtitle: ${source.title}`
+  if (source.kind === 'youtube') return 'Using YouTube captions'
+  if (source.kind === 'manual') return 'Using manually selected subtitle file'
+  return ''
 }
 
 const STATUS_KIND = {
@@ -28,15 +59,19 @@ const STATUS_KIND = {
   'no-captions': 'bad',
   'plan-failed': 'bad',
   'catch-up': 'warn',
+  'sync-hold': 'good',
+  'sync-buffering': 'warn',
   'buffering-signs': 'warn',
+  advertisement: 'warn',
   paused: 'warn',
   signing: 'good',
   ready: 'good',
 }
 
 export class Overlay {
-  constructor({ onRetry, onPickSubtitle, onDownloadCaptions, onToggleEnabled } = {}) {
+  constructor({ onRetry, onPickSubtitle, onDownloadCaptions, onToggleEnabled, onChangeMode } = {}) {
     this.onRetry = onRetry
+    this.onChangeMode = onChangeMode
     this.onPickSubtitle = onPickSubtitle
     this.onDownloadCaptions = onDownloadCaptions
     this.onToggleEnabled = onToggleEnabled
@@ -46,6 +81,8 @@ export class Overlay {
     this.state = {
       status: 'idle', detail: '', caption: '', glosses: [], activeGloss: null,
       progress: 0, rate: 1, coverage: null, unsupported: [], avatarMount: null,
+      playbackMode: 'play-together', modePending: false, fingerspelledWords: [], unitStatus: null,
+      subtitleSource: null, subtitleError: '',
     }
   }
 
@@ -124,16 +161,27 @@ export class Overlay {
         }
         button:hover { background: rgba(255,255,255,0.16); }
         button.primary { background: #4f46e5; border-color: #6366f1; color: #fff; }
+        button:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 1px; }
+        .modechip { font-size: 10px; font-weight: 600; color: #c7d2fe; background: rgba(99,102,241,.22);
+                    border: 1px solid rgba(129,140,248,.45); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+        .modes { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+        .modes button[aria-pressed="true"] { background: #4f46e5; border-color: #6366f1; color: #fff; }
+        .modenote { font-size: 11px; color: #a1a1aa; }
+        .notice { font-size: 11.5px; color: #93c5fd; }
+        .source { font-size: 11.5px; color: #a7f3d0; }
       </style>
       <div class="panel">
         <div class="head" part="head">
           <span class="dot" id="dot"></span>
           <span class="mark">Signora</span>
           <span class="status" id="status">Idle</span>
+          <span class="modechip" id="modechip" title="Playback mode">Play together</span>
           <span class="chev" id="chev">▾</span>
         </div>
         <div class="body" id="body">
           <div class="avatar" id="avatar"></div>
+          <div class="source" id="source" hidden></div>
+          <div class="detail" id="suberror" role="alert" hidden></div>
           <div>
             <div class="label">Current caption</div>
             <div class="caption" id="caption"><span class="muted">—</span></div>
@@ -141,6 +189,15 @@ export class Overlay {
           <div>
             <div class="label">Signs</div>
             <div class="glosses" id="glosses"><span class="muted">—</span></div>
+          </div>
+          <div class="notice" id="notice" hidden></div>
+          <div>
+            <div class="label" id="modelabel">Playback mode</div>
+            <div class="modes" role="group" aria-labelledby="modelabel">
+              <button id="mode-together" data-mode="play-together" aria-pressed="true">Play together</button>
+              <button id="mode-sync" data-mode="sync-pause" aria-pressed="false">Sync and pause</button>
+              <span class="modenote" id="modenote" aria-live="polite"></span>
+            </div>
           </div>
           <div class="bar"><i id="bar" style="width:0%"></i></div>
           <div class="meta" id="meta"></div>
@@ -160,11 +217,21 @@ export class Overlay {
       caption: $('caption'), glosses: $('glosses'), bar: $('bar'), meta: $('meta'),
       warn: $('warn'), detail: $('detail'), avatar: $('avatar'),
       retry: $('retry'), pick: $('pick'), download: $('download'),
+      modechip: $('modechip'), notice: $('notice'), modenote: $('modenote'),
+      source: $('source'), suberror: $('suberror'),
+      modeButtons: [$('mode-together'), $('mode-sync')],
     }
     $('status').parentElement.addEventListener('click', () => this.toggle())
     this.el.retry.addEventListener('click', (e) => { e.stopPropagation(); this.onRetry?.() })
     this.el.pick.addEventListener('click', (e) => { e.stopPropagation(); this.onPickSubtitle?.() })
     this.el.download.addEventListener('click', (e) => { e.stopPropagation(); this.onDownloadCaptions?.() })
+    for (const button of this.el.modeButtons) {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation()
+        this.update({ playbackMode: button.dataset.mode })
+        this.onChangeMode?.(button.dataset.mode)
+      })
+    }
 
     document.documentElement.appendChild(host)
     this.el.body.hidden = !this.expanded
@@ -215,6 +282,24 @@ export class Overlay {
     } else {
       this.el.glosses.innerHTML = '<span class="muted">—</span>'
     }
+
+    const mode = MODE_TEXT[s.playbackMode] ? s.playbackMode : 'play-together'
+    this.el.modechip.textContent = MODE_TEXT[mode]
+    for (const button of this.el.modeButtons) {
+      button.setAttribute('aria-pressed', String(button.dataset.mode === mode))
+    }
+    this.el.modenote.textContent = s.modePending ? 'applies after the current sign' : ''
+
+    const source = subtitleSourceText(s.subtitleSource)
+    this.el.source.hidden = !source
+    this.el.source.textContent = source
+    this.el.source.title = s.subtitleSource?.name || ''
+    this.el.suberror.hidden = !s.subtitleError
+    this.el.suberror.textContent = s.subtitleError || ''
+
+    const notice = unitNotice(s)
+    this.el.notice.hidden = !notice
+    this.el.notice.textContent = notice
 
     this.el.bar.style.width = `${Math.round((s.progress || 0) * 100)}%`
 

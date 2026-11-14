@@ -159,7 +159,7 @@ export default class SignoraPlayer {
     assertPayloadShape(payload)
     // A rest-pose fallback and a reviewed recording's labelled settle are validated tracks too;
     // anything else (including "rejected") failed transition validation.
-    if (payload.blendQuality && !['direct', 'neutral-fallback', 'reviewed-direct'].includes(payload.blendQuality.status)) {
+    if (payload.blendQuality && !['direct', 'neutral-fallback', 'reviewed-direct', 'caption-linear'].includes(payload.blendQuality.status)) {
       throw new Error('Animation failed transition validation.')
     }
     if (!this.calibrated) {

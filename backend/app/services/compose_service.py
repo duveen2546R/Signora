@@ -20,14 +20,17 @@ import numpy as np
 from app.ingest.resample import resample_positions
 from app.ingest.compose import (
     ALGORITHM_VERSION,
+    HOLD_SECONDS,
     TARGET_FPS,
     BlendRejected,
     Composition,
+    Segment,
     compose,
     enforce_track,
     prepare,
 )
-from app.ingest.landmarks import LandmarkSkeleton, LandmarkTake
+from app.ingest.landmarks import LandmarkSkeleton, LandmarkTake, concat, slice_frames
+from app.ingest.segment import find_phases
 from app.models import SignClip
 from app.services.artifact_paths import clip_file, source_file
 from app.services.source_motion import load_source_motion
@@ -255,7 +258,120 @@ def compose_clips(
 
 
 # Every status a playback surface may play. "rejected" is never among them.
-PLAYABLE_STATUSES = frozenset({"direct", "neutral-fallback", "reviewed-direct"})
+PLAYABLE_STATUSES = frozenset({
+    "direct", "neutral-fallback", "reviewed-direct", "caption-linear",
+})
+
+
+def _linear_transition(
+    before: LandmarkTake, after: LandmarkTake, fps: float,
+) -> LandmarkTake:
+    """Create a short, deterministic bridge for caption playback.
+
+    The full composer is deliberately exhaustive: it evaluates many candidate seams and rejects
+    a bridge whose motion quality is not proven.  That work is right for authoring a reviewed
+    sentence, but it made a subtitle plan with dozens of captions look permanently stuck.  Video
+    playback instead needs a bounded operation.  The normalised captures share the avatar's
+    playback coordinate system; interpolating a handful of frames avoids a one-frame pose jump while
+    retaining the author-reviewed sign itself untouched.
+    """
+    frames = max(2, int(round(HOLD_SECONDS * fps)))
+    weights = np.linspace(0.0, 1.0, frames + 2, dtype=np.float64)[1:-1]
+
+    def between(left: np.ndarray, right: np.ndarray) -> np.ndarray:
+        shape = (frames,) + (1,) * left.ndim
+        values = weights.reshape(shape)
+        return left[None] * (1.0 - values) + right[None] * values
+
+    return LandmarkTake(
+        name="caption-transition", fps=fps,
+        pose=between(before.pose[-1], after.pose[0]),
+        left_hand=between(before.left_hand[-1], after.left_hand[0]),
+        right_hand=between(before.right_hand[-1], after.right_hand[0]),
+        face_blendshapes=between(before.face_blendshapes[-1], after.face_blendshapes[0]),
+    )
+
+
+def compose_caption_sequence(clips: list[tuple[str, SignClip]]) -> tuple[Composition, list[str]]:
+    """Build a prompt, timestamp-faithful track for one subtitle caption.
+
+    This path is intentionally separate from :func:`compose_playable`.  It preserves each
+    reviewer-selected **Sign** interval exactly and uses fixed-duration interpolation only between
+    signs.  Unlike the authoring composer it never performs an unbounded seam search, which lets
+    units become ready while the YouTube video is playing.  The payload is explicitly labelled
+    ``caption-linear`` so it is never mistaken for a quality-optimised sentence blend.
+    """
+    if not clips:
+        raise ComposeError("a caption needs at least one sign with a recording")
+
+    raw: list[tuple[str, LandmarkTake]] = []
+    for gloss, clip in clips:
+        path = landmark_path(clip)
+        if not path.exists():
+            raise ComposeError(f"{gloss} has no landmark frames; re-ingest the capture for that sign")
+        try:
+            # Video plans consume immutable, normalised landmarks that were already checked
+            # against their FBX at ingestion time.  Re-parsing an FBX for every caption costs
+            # seconds per word and is what previously kept the first plan unit at 0/87.
+            raw.append((gloss, _raw(str(path))))
+        except (ValueError, OSError) as exc:
+            raise ComposeError(f"{gloss}: {exc}") from exc
+
+    signed: list[tuple[str, LandmarkTake]] = []
+    expected_fps = raw[0][1].fps
+    if expected_fps <= 0 or any(track.fps != expected_fps for _, track in raw):
+        raise ComposeError("caption recordings must share the normalised 60 fps playback rate")
+    for gloss, track in raw:
+        phases = find_phases(track)
+        # For reviewed takes this is exactly the hand-authored Sign range.  For a legacy take,
+        # find_phases supplies the conservative detected span instead of silently dropping it.
+        signed.append((gloss, slice_frames(track, phases.stroke_start, phases.stroke_end)))
+
+    pieces: list[LandmarkTake] = []
+    segments: list[Segment] = []
+    seams: list[dict] = []
+    cursor = 0
+    for index, (gloss, track) in enumerate(signed):
+        if index:
+            transition = _linear_transition(signed[index - 1][1], track, expected_fps)
+            pieces.append(transition)
+            seams.append({
+                "fromGloss": signed[index - 1][0], "toGloss": gloss,
+                "fromFrame": cursor - 1, "toFrame": cursor + transition.frame_count,
+                "mode": "caption-linear", "passed": True,
+                "durationMs": int(round(transition.duration * 1000)),
+            })
+            segments.append(Segment("", cursor, cursor + transition.frame_count,
+                                    "transition", "caption-linear"))
+            cursor += transition.frame_count
+        pieces.append(track)
+        segments.append(Segment(gloss, cursor, cursor + track.frame_count, "sign",
+                                "caption-linear", occurrence_index=index))
+        cursor += track.frame_count
+
+    composition = Composition(
+        track=concat(pieces, name="caption-sequence"),
+        segments=segments,
+        blend_quality={
+            "status": "caption-linear",
+            "score": 0.0,
+            "qualityAssessed": False,
+            "algorithmVersion": ALGORITHM_VERSION,
+            "seams": seams,
+            "detail": "Reviewed sign spans joined by bounded linear caption transitions.",
+        },
+    )
+    unreviewed = list(dict.fromkeys(gloss for gloss, track in raw if not track.phase_reviewed))
+    source = (
+        "saved Sign timestamps" if not unreviewed
+        else "saved timestamps where available and automatically detected Sign intervals for: "
+             + ", ".join(unreviewed)
+    )
+    return composition, [
+        "Caption playback uses " + source
+        + " with short deterministic transitions; use Sequence Review to create a fully "
+          "quality-optimised sentence blend.",
+    ]
 
 
 def compose_playable(clips: list[tuple[str, SignClip]]) -> tuple[Composition, list[str]]:

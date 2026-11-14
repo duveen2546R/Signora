@@ -4,7 +4,7 @@ import { assertPayloadShape } from '../unity/canonicalFrame.js'
 // pose instead; every leg of it still passed the backend's motion checks.
 // "reviewed-direct" means a reviewed recording captured slightly short settles to or from rest;
 // the backend kept every integrity check mandatory and lists the boundary checks it waived.
-export const PLAYABLE_BLEND_STATUSES = new Set(['direct', 'neutral-fallback', 'reviewed-direct'])
+export const PLAYABLE_BLEND_STATUSES = new Set(['direct', 'neutral-fallback', 'reviewed-direct', 'caption-linear'])
 
 /**
  * A seam may play when it passed the strict gate, or when it is a settle whose failures the backend

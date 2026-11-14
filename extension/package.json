@@ -5,9 +5,10 @@
   "type": "module",
   "description": "Manifest V3 Chrome extension that signs YouTube English captions with the Signora avatar.",
   "scripts": {
-    "build": "node tools/build.mjs",
-    "check-build": "node tools/build.mjs --check",
-    "test": "node tools/build.mjs && node --test",
+    "build": "node tools/bundle-subtitles.mjs && node tools/build.mjs",
+    "check-build": "node tools/bundle-subtitles.mjs --check && node tools/build.mjs --check",
+    "bundle-subtitles": "node tools/bundle-subtitles.mjs",
+    "test": "npm run build && node --test",
     "sync-vendor": "node tools/sync-vendor.mjs",
     "check-vendor": "node tools/sync-vendor.mjs --check"
   }

@@ -1,0 +1,224 @@
+{
+  "playlistId": "PL2IkMHFHWdErCjwGKA3InTW6a0gfMPRRM",
+  "playlistTitle": "Basic English Grammar with Esther (Shaw English Online)",
+  "sourceDir": "SRT Files",
+  "notes": "Hand-maintained map from YouTube video ID to a bundled lesson subtitle. `source` is the file in the repository's `SRT Files/` folder (never modified); `file` is the byte-identical copy under extension/subtitles/ that the extension ships. After adding or changing an SRT, edit this list if needed and run `npm run build` in extension/. Video IDs were read from the playlist page (playlist position = `playlistIndex`; position 1 is the course introduction, which has no lesson SRT).",
+  "lessons": [
+    {
+      "lesson": 1,
+      "playlistIndex": 2,
+      "videoId": "bobPMUfr_c0",
+      "title": "Learn English Consonants and Vowels",
+      "displayTitle": "Lesson 1 — Learn English Consonants and Vowels",
+      "source": "01 - Learn English Consonants and Vowels _ Basic English Grammar Course.srt",
+      "file": "lesson-01.srt"
+    },
+    {
+      "lesson": 2,
+      "playlistIndex": 3,
+      "videoId": "iJt12OE3c7k",
+      "title": "Learn Singular Nouns a / an + noun",
+      "displayTitle": "Lesson 2 — Learn Singular Nouns a / an + noun",
+      "source": "02 - Learn Singular Nouns a an + noun Basic English Grammar Course.srt",
+      "file": "lesson-02.srt"
+    },
+    {
+      "lesson": 3,
+      "playlistIndex": 4,
+      "videoId": "ne2AXok2bl4",
+      "title": "Learn Singular and Plural Nouns +s +es",
+      "displayTitle": "Lesson 3 — Learn Singular and Plural Nouns +s +es",
+      "source": "03 - Learn Singular and Plural Nouns +s +es _ Basic English Grammar Course.srt",
+      "file": "lesson-03.srt"
+    },
+    {
+      "lesson": 4,
+      "playlistIndex": 5,
+      "videoId": "WZWqZnxpYLA",
+      "title": "Learn Subject Pronouns",
+      "displayTitle": "Lesson 4 — Learn Subject Pronouns",
+      "source": "04 - Learn Subject Pronouns _ Basic English Grammar Course.srt",
+      "file": "lesson-04.srt"
+    },
+    {
+      "lesson": 5,
+      "playlistIndex": 6,
+      "videoId": "mKxKVi0N6yc",
+      "title": "Learn Subject Pronouns + 'be' verb ( am, is, are )",
+      "displayTitle": "Lesson 5 — Learn Subject Pronouns + 'be' verb ( am, is, are )",
+      "source": "05 - Learn Subject Pronouns + _be_ verb ( am, is, are ) _ Basic English Grammar Course.srt",
+      "file": "lesson-05.srt"
+    },
+    {
+      "lesson": 6,
+      "playlistIndex": 7,
+      "videoId": "aN1dAHdHsLg",
+      "title": "Learn Subject Pronouns + Not",
+      "displayTitle": "Lesson 6 — Learn Subject Pronouns + Not",
+      "source": "06 - Learn Subject Pronouns + Not _ Basic English Grammar Course.srt",
+      "file": "lesson-06.srt"
+    },
+    {
+      "lesson": 7,
+      "playlistIndex": 8,
+      "videoId": "L1syIYooHrA",
+      "title": "Learn Subject Pronoun Question Forms",
+      "displayTitle": "Lesson 7 — Learn Subject Pronoun Question Forms",
+      "source": "07 - Learn Subject Pronoun Question Forms Basic English Grammar Course.srt",
+      "file": "lesson-07.srt"
+    },
+    {
+      "lesson": 8,
+      "playlistIndex": 9,
+      "videoId": "M9PjXi32y8I",
+      "title": "Subject Pronouns | Extra Grammar Review",
+      "displayTitle": "Lesson 8 — Subject Pronouns | Extra Grammar Review",
+      "source": "08 - Subject Pronouns Extra Grammar Review Basic English Grammar Course.srt",
+      "file": "lesson-08.srt"
+    },
+    {
+      "lesson": 9,
+      "playlistIndex": 10,
+      "videoId": "KpqRCwQvaX0",
+      "title": "Grammar Checkup #1 | Subject Pronouns | 'be' Verbs",
+      "displayTitle": "Lesson 9 — Grammar Checkup #1 | Subject Pronouns | 'be' Verbs",
+      "source": "09 - Grammar Checkup #1 _ Subject Pronouns _ _be_ Verbs _ Basic English Grammar Course.srt",
+      "file": "lesson-09.srt"
+    },
+    {
+      "lesson": 10,
+      "playlistIndex": 11,
+      "videoId": "aQ5aTykc8So",
+      "title": "What + 'be' Verb English Questions",
+      "displayTitle": "Lesson 10 — What + 'be' Verb English Questions",
+      "source": "10 - What + _be_ Verb English Questions Basic English Grammar Course.srt",
+      "file": "lesson-10.srt"
+    },
+    {
+      "lesson": 11,
+      "playlistIndex": 12,
+      "videoId": "623tfKSXD0g",
+      "title": "Learn THIS / THAT",
+      "displayTitle": "Lesson 11 — Learn THIS / THAT",
+      "source": "11 - Learn THIS THAT Basic English Grammar Course [English].srt",
+      "file": "lesson-11.srt"
+    },
+    {
+      "lesson": 12,
+      "playlistIndex": 13,
+      "videoId": "mFVDtDNDmvc",
+      "title": "Learn THESE / THOSE",
+      "displayTitle": "Lesson 12 — Learn THESE / THOSE",
+      "source": "12 - Learn THESE THOSE Basic English Grammar Course.srt",
+      "file": "lesson-12.srt"
+    },
+    {
+      "lesson": 13,
+      "playlistIndex": 14,
+      "videoId": "BYIkz7alGKU",
+      "title": "Practice THIS THAT THESE THOSE",
+      "displayTitle": "Lesson 13 — Practice THIS THAT THESE THOSE",
+      "source": "13 - Practice THIS THAT THESE THOSE Basic English Grammar Course.srt",
+      "file": "lesson-13.srt"
+    },
+    {
+      "lesson": 14,
+      "playlistIndex": 15,
+      "videoId": "-Jc8jkVqde0",
+      "title": "Learn Possessive Adjectives",
+      "displayTitle": "Lesson 14 — Learn Possessive Adjectives",
+      "source": "14 - Learn Possessive Adjectives _ Basic English Grammar Course.srt",
+      "file": "lesson-14.srt"
+    },
+    {
+      "lesson": 15,
+      "playlistIndex": 16,
+      "videoId": "DftysDW3C98",
+      "title": "Learn Possessive Pronouns",
+      "displayTitle": "Lesson 15 — Learn Possessive Pronouns",
+      "source": "15 - Learn Possessive Pronouns _ Basic English Grammar Course.srt",
+      "file": "lesson-15.srt"
+    },
+    {
+      "lesson": 16,
+      "playlistIndex": 17,
+      "videoId": "MZcQr7ZY4L4",
+      "title": "Grammar Checkup #2 This, That, These, Those Possessive Adjectives + Pronouns",
+      "displayTitle": "Lesson 16 — Grammar Checkup #2 This, That, These, Those Possessive Adjectives + Pronouns",
+      "source": "16 - Grammar Checkup #2 This, That, These, Those Possessive Adjectives + Pronouns Basic English Grammar.srt",
+      "file": "lesson-16.srt"
+    },
+    {
+      "lesson": 17,
+      "playlistIndex": 18,
+      "videoId": "r_yUCo0SL3A",
+      "title": "Learn Articles a / an / the",
+      "displayTitle": "Lesson 17 — Learn Articles a / an / the",
+      "source": "17 - Learn Articles a an the Basic English Grammar Course.srt",
+      "file": "lesson-17.srt"
+    },
+    {
+      "lesson": 18,
+      "playlistIndex": 19,
+      "videoId": "teywjptwHJo",
+      "title": "Learn Prepositions IN ON UNDER",
+      "displayTitle": "Lesson 18 — Learn Prepositions IN ON UNDER",
+      "source": "18 - Learn Prepositions IN ON UNDER Basic English Grammar Course.srt",
+      "file": "lesson-18.srt"
+    },
+    {
+      "lesson": 19,
+      "playlistIndex": 20,
+      "videoId": "360QM6cDdTU",
+      "title": "Learn Adjectives",
+      "displayTitle": "Lesson 19 — Learn Adjectives",
+      "source": "19 - Learn Adjectives Basic English Grammar Course.srt",
+      "file": "lesson-19.srt"
+    },
+    {
+      "lesson": 20,
+      "playlistIndex": 21,
+      "videoId": "43sRun6NeZc",
+      "title": "Grammar Checkup #3 | Articles | Prepositions | Adjectives",
+      "displayTitle": "Lesson 20 — Grammar Checkup #3 | Articles | Prepositions | Adjectives",
+      "source": "20 - Grammar Checkup #3 Articles Prepositions Adjectives Basic English Grammar Course.srt",
+      "file": "lesson-20.srt"
+    },
+    {
+      "lesson": 21,
+      "playlistIndex": 22,
+      "videoId": "yXn5F9mFhOo",
+      "title": "Learn HAVE and HAS",
+      "displayTitle": "Lesson 21 — Learn HAVE and HAS",
+      "source": "21 - Learn HAVE and HAS Basic English Grammar Course.srt",
+      "file": "lesson-21.srt"
+    },
+    {
+      "lesson": 22,
+      "playlistIndex": 23,
+      "videoId": "O1yeSIs01v4",
+      "title": "Learn DON'T HAVE and DOESN'T HAVE",
+      "displayTitle": "Lesson 22 — Learn DON'T HAVE and DOESN'T HAVE",
+      "source": "22 - Learn DON_T HAVE and DOESN_T HAVE Basic English Grammar Course.srt",
+      "file": "lesson-22.srt"
+    },
+    {
+      "lesson": 23,
+      "playlistIndex": 24,
+      "videoId": "lVeENu-HLDo",
+      "title": "Learn to ask English questions using HAVE",
+      "displayTitle": "Lesson 23 — Learn to ask English questions using HAVE",
+      "source": "23 - Learn to ask English questions using HAVE Basic English Grammar Course.srt",
+      "file": "lesson-23.srt"
+    },
+    {
+      "lesson": 24,
+      "playlistIndex": 25,
+      "videoId": "YaT-Xoxyt8U",
+      "title": "Grammar Checkup #4 | HAVE / HAS | DON'T HAVE / DOESN'T HAVE",
+      "displayTitle": "Lesson 24 — Grammar Checkup #4 | HAVE / HAS | DON'T HAVE / DOESN'T HAVE",
+      "source": "24 - Grammar Checkup #4 HAVE HAS DON_T HAVE DOESN_T HAVE.srt",
+      "file": "lesson-24.srt"
+    }
+  ]
+}

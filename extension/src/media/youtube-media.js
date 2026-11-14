@@ -39,6 +39,21 @@ export function videoEventToPlayerState(eventName) {
 export const WATCHED_EVENTS = ['playing', 'pause', 'waiting', 'ended', 'seeked', 'ratechange']
 
 /**
+ * YouTube marks its player while an advertisement has temporarily replaced the lesson stream.
+ * Captions and the `<video>` element remain present, so neither identifies an ad on its own.
+ * The probe is defensive for tests and for changes in YouTube's page layout.
+ */
+export function isYouTubeAdvertisement(video) {
+  const documentRef = globalThis.document
+  const player = video?.closest?.('#movie_player')
+    || documentRef?.getElementById?.('movie_player')
+  return Boolean(
+    player?.classList?.contains('ad-showing')
+    || documentRef?.querySelector?.('#movie_player.ad-showing, .html5-video-player.ad-showing'),
+  )
+}
+
+/**
  * Wrap a video element.
  *
  * `pauseVideo`/`playVideo` additionally record whether the extension was the caller. The
@@ -56,6 +71,10 @@ export function createYouTubeMedia(video) {
     pauseVideo: () => {
       pausedByExtension = true
       try { video.pause() } catch { /* a detached element is not an error worth raising */ }
+    },
+    // Used by 'sync-pause' to put a pause that landed a tick late back on the caption boundary.
+    seekTo: (seconds) => {
+      try { video.currentTime = Number(seconds) || 0 } catch { /* detached element */ }
     },
     playVideo: () => {
       pausedByExtension = false

@@ -14,6 +14,7 @@
  */
 
 import { DEFAULTS, loadConfig } from './src/config.js'
+import { loadBundledSubtitle } from './src/captions/bundled.js'
 
 async function apiBase() {
   const config = await loadConfig()
@@ -47,7 +48,9 @@ async function createVideoPlan({ youtubeUrl, vtt, filename = 'captions.vtt' }) {
   const base = await apiBase()
   const form = new FormData()
   form.append('youtube_url', youtubeUrl)
-  form.append('subtitle', new Blob([vtt], { type: 'text/vtt' }), filename)
+  // The backend picks its SRT or WebVTT parser from the filename's extension.
+  const type = filename.toLowerCase().endsWith('.srt') ? 'application/x-subrip' : 'text/vtt'
+  form.append('subtitle', new Blob([vtt], { type }), filename)
   const response = await fetch(`${base}/video-plans`, { method: 'POST', body: form })
   if (!response.ok) throw new Error(await readError(response))
   return response.json()
@@ -76,7 +79,27 @@ async function getUnitMotion(motionUrl) {
   return response.json()
 }
 
-const HANDLERS = { health, createVideoPlan, getVideoPlan, getUnitMotion }
+/**
+ * The bundled lesson SRT for a known playlist video, or null. Read through the extension's own
+ * URLs, which the service worker may fetch without web_accessible_resources; the content script
+ * running on youtube.com has no access to these files or to the user's filesystem.
+ */
+async function readExtensionText(path) {
+  let response
+  try {
+    response = await fetch(chrome.runtime.getURL(path))
+  } catch (error) {
+    throw new Error(`file not found in the extension (${error.message})`)
+  }
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.text()
+}
+
+function getBundledSubtitle({ videoId }) {
+  return loadBundledSubtitle(videoId, readExtensionText)
+}
+
+const HANDLERS = { health, createVideoPlan, getVideoPlan, getUnitMotion, getBundledSubtitle }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const handler = message && HANDLERS[message.type]

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "pluralMarkerGloss": "MANY",
+  "notes": "An ordinary English plural with no explicit quantity is signed as its singular base followed by the generic plural marker MANY, so the singular/plural distinction stays visible. MANY is never replaced by EVERYBODY (everyone), and is not added when the caption already states a quantity (three, all, many, every...). Every sequence built here is a literal plural preview until an interpreter approves the entry. `entries` are explicit plural aliases; `nounBaseGlosses` lists recorded glosses that are nouns, the only bases the automatic -s/-es/-ies rule may use, because the same endings also mark verbs (likes, wants, says).",
+  "entries": [
+    {
+      "pluralEnglish": "pens",
+      "singularEnglish": "pen",
+      "baseGloss": "PEN",
+      "pluralMarkerGloss": "MANY",
+      "reviewStatus": "candidate",
+      "notes": "Initial project-policy example."
+    },
+    {
+      "pluralEnglish": "teachers",
+      "singularEnglish": "teacher",
+      "baseGloss": "TEACHER",
+      "pluralMarkerGloss": "MANY",
+      "reviewStatus": "candidate",
+      "notes": "Plural people noun: MANY, never EVERYBODY."
+    },
+    {
+      "pluralEnglish": "dogs",
+      "singularEnglish": "dog",
+      "baseGloss": "DOG",
+      "pluralMarkerGloss": "MANY",
+      "reviewStatus": "candidate",
+      "notes": "Initial project-policy example."
+    },
+    {
+      "pluralEnglish": "girls",
+      "singularEnglish": "girl",
+      "baseGloss": "GIRL",
+      "pluralMarkerGloss": "MANY",
+      "reviewStatus": "candidate",
+      "notes": "Plural people noun: MANY, never EVERYBODY."
+    },
+    {
+      "pluralEnglish": "books",
+      "singularEnglish": "book",
+      "baseGloss": "BOOK",
+      "pluralMarkerGloss": "MANY",
+      "reviewStatus": "candidate",
+      "notes": "Initial project-policy example."
+    }
+  ],
+  "nounBaseGlosses": [
+    "ANIMAL", "APPLE", "APP", "APPOINTMENT", "ANT", "BANANA", "BICYCLE", "BOARD", "BOOK", "BOY",
+    "BROTHER", "CAR", "CAT", "CHAIR", "DOCTOR", "DOG", "EGG", "ELEPHANT", "EXAMPLE", "FATHER",
+    "FRIEND", "GIRL", "MISTAKE", "ORANGE", "PARK", "PEN", "PERSON", "QUESTION", "SCHOOL",
+    "SENTENCE", "SINGER", "SISTER", "STUDENT", "TEACHER", "THING", "UMBRELLA", "VIDEO", "WORD"
+  ],
+  "notPlural": [
+    "is", "was", "has", "does", "goes", "this", "his", "hers", "its", "ours", "yours", "theirs",
+    "us", "yes", "thus", "plus", "bus", "gas", "class", "glass", "grass", "news", "species",
+    "series", "means", "lens", "always", "sometimes", "perhaps", "besides", "towards", "afterwards",
+    "thanks", "less", "unless", "across", "physics", "mathematics", "politics", "economics"
+  ]
+}

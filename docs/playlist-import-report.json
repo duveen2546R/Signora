@@ -1,0 +1,4170 @@
+{
+  "generatedBy": "backend/tools/import_playlist_vocabulary.py",
+  "note": "Phase boundaries were detected automatically and are NOT human-reviewed; video plans refuse these clips until each is reviewed in Capture -> Edit timestamps. Duplicate takes were chosen mechanically, not by quality or meaning.",
+  "records": [
+    {
+      "gloss": "HI",
+      "captionWords": [
+        "Hi"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "hi__mixamo.fbx",
+      "candidates": [
+        "hi__mixamo.fbx",
+        "hi_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 28,
+      "contentHash": "c205ea99cc9ddf1242e6a4d7565f89e1",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "GO",
+      "captionWords": [
+        "Go"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Go_mixamo.fbx",
+      "candidates": [
+        "Go_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 29,
+      "contentHash": "b8ffa556b35a4dfcf6867f884519aa22",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "S",
+      "captionWords": [
+        "S"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "s_mixamo.fbx",
+      "candidates": [
+        "s_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 30,
+      "contentHash": "9c19f34eb9b03da03da47db22677dacd",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "EVERYBODY",
+      "captionWords": [
+        "Everybody"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "everybody_mixamo.fbx",
+      "candidates": [
+        "everybody_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 31,
+      "contentHash": "c6696541d6332ac2288202bb47ccb1a7",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SCHOOL",
+      "captionWords": [
+        "School"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "School_mixamo.fbx",
+      "candidates": [
+        "School_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 32,
+      "contentHash": "60dcd04bca3958f7927f47fc94e2113b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "FRONT",
+      "captionWords": [
+        "Front"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Front_mixamo.fbx",
+      "candidates": [
+        "Front_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 33,
+      "contentHash": "1425042ef5cfc05c2f73b96245a18a30",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THIS",
+      "captionWords": [
+        "This"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "this_mixamo.fbx",
+      "candidates": [
+        "this_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 34,
+      "contentHash": "10e80c407790aa15b174ad5139fc65c0",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LEARN",
+      "captionWords": [
+        "Learn"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Learn_mixamo.fbx",
+      "candidates": [
+        "Learn_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 35,
+      "contentHash": "4b7009b6c7bdbdc7fe19c774dc7da192",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THEY_RE",
+      "captionWords": [
+        "They're"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "They're_mixamo.fbx",
+      "candidates": [
+        "They're_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 36,
+      "contentHash": "7942e55f31a6bddd537a8ed952fb39c9",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "VIDEO",
+      "captionWords": [
+        "Video"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "video_mixamo.fbx",
+      "candidates": [
+        "video_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 37,
+      "contentHash": "ee90405ebe8a9414a3dedbd1ee804f84",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TEACHER",
+      "captionWords": [
+        "Teacher"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Teacher_mixamo.fbx",
+      "candidates": [
+        "Teacher_1_mixamo.fbx",
+        "Teacher_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 38,
+      "contentHash": "d939ff070cf676a656e813c44b59e0db",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SAME",
+      "captionWords": [
+        "Same"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Same_mixamo.fbx",
+      "candidates": [
+        "Same_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 39,
+      "contentHash": "dcda5b21dd104ca662a5bfe60ee00659",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WE",
+      "captionWords": [
+        "We"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "we_mixamo.fbx",
+      "candidates": [
+        "we_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 40,
+      "contentHash": "554470d9b12a6ae577a60303643ca3aa",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "OR",
+      "captionWords": [
+        "Or"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SOME",
+      "captionWords": [
+        "Some"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Some_mixamo.fbx",
+      "candidates": [
+        "Some_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 41,
+      "contentHash": "382f9a5960df1c96f1afe153e498a688",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TALK",
+      "captionWords": [
+        "Talk"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "talk_mixamo.fbx",
+      "candidates": [
+        "_Talk_1_mixamo.fbx",
+        "_Talk_2_mixamo.fbx",
+        "talk_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 42,
+      "contentHash": "23d544fd1b16771aa785a0772b2f2cc8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SEE",
+      "captionWords": [
+        "See"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MORE",
+      "captionWords": [
+        "More"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "More_mixamo.fbx",
+      "candidates": [
+        "More_1_mixamo.fbx",
+        "More_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 43,
+      "contentHash": "110adb229264ea94186e4a0d49db63ec",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ABOUT",
+      "captionWords": [
+        "About"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "About__mixamo.fbx",
+      "candidates": [
+        "About_1_mixamo.fbx",
+        "About__mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 44,
+      "contentHash": "39b608255ae53fc633c2e9817ea22155",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HAVE",
+      "captionWords": [
+        "Have"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Have_mixamo.fbx",
+      "candidates": [
+        "Have_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 45,
+      "contentHash": "fb948feb360e7b890b4b91d1161cdc4c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "EXAMPLE",
+      "captionWords": [
+        "Example"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Example_mixamo.fbx",
+      "candidates": [
+        "Example_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 46,
+      "contentHash": "e70a80ddd911aa34e3cbc9e2b545ea03",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SUBJECTIVE",
+      "captionWords": [
+        "Subjective"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PRONOUN",
+      "captionWords": [
+        "Pronoun"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WANT",
+      "captionWords": [
+        "Want"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Want_mixamo.fbx",
+      "candidates": [
+        "Want_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 47,
+      "contentHash": "e1e218e4bc3eb35ed8f6c38496509d40",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PRONOUNS",
+      "captionWords": [
+        "Pronouns"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THE",
+      "captionWords": [
+        "The"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "REPEAT",
+      "captionWords": [
+        "Repeat"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Repeat_mixamo.fbx",
+      "candidates": [
+        "Repeat_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 48,
+      "contentHash": "e9f7ebe4d4fd70c634823eabf474bb87",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BE",
+      "captionWords": [
+        "Be"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "VERB",
+      "captionWords": [
+        "Verb"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "START",
+      "captionWords": [
+        "Start"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Start_mixamo.fbx",
+      "candidates": [
+        "Start_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 49,
+      "contentHash": "370da9d60da574eeb9c817a7f4545919",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "VERBS",
+      "captionWords": [
+        "Verbs"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "verbs_mixamo.fbx",
+      "candidates": [
+        "verbs_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 50,
+      "contentHash": "bf324963e79cdb5c67be7d50908c0d95",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THEN",
+      "captionWords": [
+        "Then"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Then_mixamo.fbx",
+      "candidates": [
+        "Then_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 51,
+      "contentHash": "7c4c85e57fed4384f7d4659b124b6c89",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BOY",
+      "captionWords": [
+        "Boy"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Boy_mixamo.fbx",
+      "candidates": [
+        "Boy_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 52,
+      "contentHash": "bdfbf454e67cd8a1a69335d0a99619d7",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "AND",
+      "captionWords": [
+        "And"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PUT",
+      "captionWords": [
+        "Put"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Put_mixamo.fbx",
+      "candidates": [
+        "Put_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 53,
+      "contentHash": "4b341ef3185d2aa46195fa45f500f3cd",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "GIRL",
+      "captionWords": [
+        "Girl"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Girl_mixamo.fbx",
+      "candidates": [
+        "Girl_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 54,
+      "contentHash": "fb35c190f944d0449eb1c66a1e99ca2c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HOW",
+      "captionWords": [
+        "How"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "how_mixamo.fbx",
+      "candidates": [
+        "how_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 55,
+      "contentHash": "877e954a12ee568282ff8352d0206518",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "COME",
+      "captionWords": [
+        "Come"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Come_mixamo.fbx",
+      "candidates": [
+        "Come_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 56,
+      "contentHash": "638354f96ad33a051d68fd0c9cba358e",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MAN",
+      "captionWords": [
+        "Man"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Man_mixamo.fbx",
+      "candidates": [
+        "Man_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 57,
+      "contentHash": "9894137a111054f9e24369c5c0e7ef16",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "USE",
+      "captionWords": [
+        "Use"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Use_mixamo.fbx",
+      "candidates": [
+        "Use_1_mixamo.fbx",
+        "Use_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 58,
+      "contentHash": "8816c6e1416c30882626b829e2993027",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "AFTER",
+      "captionWords": [
+        "After"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "After_mixamo.fbx",
+      "candidates": [
+        "After_mixamo (1).fbx",
+        "After_mixamo (2).fbx",
+        "After_mixamo (3).fbx",
+        "After_mixamo (4).fbx",
+        "After_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "already-in-library",
+      "clipId": 12,
+      "contentHash": "84a589b1ff43d714f0e1b020c6ee0a26",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "WOMAN",
+      "captionWords": [
+        "Woman"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THEM",
+      "captionWords": [
+        "Them"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "NOUN",
+      "captionWords": [
+        "Noun"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CHAIR",
+      "captionWords": [
+        "Chair"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Chair_mixamo.fbx",
+      "candidates": [
+        "Chair_mixamo (1).fbx",
+        "Chair_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 59,
+      "contentHash": "6eac5efdcaf69a438f22cc4bfce2f66f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WITH",
+      "captionWords": [
+        "With"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "With_mixamo.fbx",
+      "candidates": [
+        "With_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 60,
+      "contentHash": "ac8774004f062b8c58dfa7dfb6c7a6fe",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LISTEN",
+      "captionWords": [
+        "Listen"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Listen_mixamo.fbx",
+      "candidates": [
+        "Listen_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 61,
+      "contentHash": "1a3afe47aca3f16c1005b996dfddf530",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CAT",
+      "captionWords": [
+        "Cat"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Cat_mixamo.fbx",
+      "candidates": [
+        "Cat_mixamo.fbx",
+        "_Cat_1_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 62,
+      "contentHash": "3263cdbf01630b1782c82940b3775554",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WORD",
+      "captionWords": [
+        "Word"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Word_mixamo.fbx",
+      "candidates": [
+        "Word_1_mixamo.fbx",
+        "Word_mixamo.fbx",
+        "_Word_2_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 63,
+      "contentHash": "0e16c904093f3a54e8b0bcad07c5372c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CAREFULLY",
+      "captionWords": [
+        "Carefully"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Carefully_mixamo.fbx",
+      "candidates": [
+        "Carefully_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 64,
+      "contentHash": "3c81729f28690a76c33a4d571ce2d279",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SINGER",
+      "captionWords": [
+        "Singer"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Singer_mixamo.fbx",
+      "candidates": [
+        "Singer_1_mixamo.fbx",
+        "Singer_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 65,
+      "contentHash": "7834af55bace4131dee8c062217f5469",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "NOT",
+      "captionWords": [
+        "Not"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Not_mixamo.fbx",
+      "candidates": [
+        "Not_1_mixamo.fbx",
+        "Not_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 66,
+      "contentHash": "b2759e95fef5c03794006d3ed8fd5616",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SOUND",
+      "captionWords": [
+        "Sound"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Sound_1_mixamo.fbx",
+      "candidates": [
+        "Sound_1_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 67,
+      "contentHash": "5ac20d93018891b97d943b5a11289062",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "FRIEND",
+      "captionWords": [
+        "Friend"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Friend_mixamo.fbx",
+      "candidates": [
+        "Friend_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 68,
+      "contentHash": "954eb3349096af95bf27722bfd34938a",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "OKAY",
+      "captionWords": [
+        "Okay"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Okay_mixamo.fbx",
+      "candidates": [
+        "Okay_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 69,
+      "contentHash": "03703f967139d3715d65dad40efca6fe",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LIKE",
+      "captionWords": [
+        "Like"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Like_mixamo.fbx",
+      "candidates": [
+        "Like_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 70,
+      "contentHash": "ba7bb13598f36a29e07faff27d8e2b83",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SISTERS",
+      "captionWords": [
+        "Sisters"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LOOK",
+      "captionWords": [
+        "Look"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Look_mixamo.fbx",
+      "candidates": [
+        "Look_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 71,
+      "contentHash": "48e7a4230af9ccd6a29215a31b0a03e2",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ONE",
+      "captionWords": [
+        "One"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BROTHERS",
+      "captionWords": [
+        "Brothers"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BOARD",
+      "captionWords": [
+        "Board"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Board__mixamo.fbx",
+      "candidates": [
+        "Board__mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 72,
+      "contentHash": "e666b35475db29ea4c5c448075ce6991",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "NEXT",
+      "captionWords": [
+        "Next"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Next_mixamo.fbx",
+      "candidates": [
+        "Next_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 73,
+      "contentHash": "5382e427ceb3066f6767d2b5fe25ca25",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PEOPLE",
+      "captionWords": [
+        "People"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "People_mixamo.fbx",
+      "candidates": [
+        "People_mixamo.fbx",
+        "_People_2_mixamo (1).fbx",
+        "_People_2_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 74,
+      "contentHash": "608e318d5d1a2c025625b744c9bf37dc",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HELP",
+      "captionWords": [
+        "Help"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Help_mixamo.fbx",
+      "candidates": [
+        "Help_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 75,
+      "contentHash": "618a31976401d46e6f75822134a916a3",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HE_S",
+      "captionWords": [
+        "He's"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "He's_mixamo.fbx",
+      "candidates": [
+        "He's_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 76,
+      "contentHash": "07ad91a3e5d032838c1d93f54bc78543",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CARS",
+      "captionWords": [
+        "Cars"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "US",
+      "captionWords": [
+        "Us"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Us_mixamo.fbx",
+      "candidates": [
+        "Us_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 77,
+      "contentHash": "776c9457c2df4d12fc15570e7224f74b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SHE_S",
+      "captionWords": [
+        "She's"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "She's_mixamo.fbx",
+      "candidates": [
+        "She's_2_mixamo.fbx",
+        "She's_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 78,
+      "contentHash": "b4100b0457f167f417192c94e3d18c1a",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WRITE",
+      "captionWords": [
+        "Write"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Write_mixamo.fbx",
+      "candidates": [
+        "Write_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 79,
+      "contentHash": "28b64c64c19e24e8d65e6bb85e14e6c7",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "NOW",
+      "captionWords": [
+        "Now"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Now_mixamo.fbx",
+      "candidates": [
+        "Now_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 80,
+      "contentHash": "fb2ed99360cd741aab27aba651a287d3",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "IT_S",
+      "captionWords": [
+        "It's"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SENTENCES",
+      "captionWords": [
+        "Sentences"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "FIRST",
+      "captionWords": [
+        "First"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "First__mixamo.fbx",
+      "candidates": [
+        "First__mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 81,
+      "contentHash": "637cae1200be63ff17f7c3d35d8a703f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "DOG",
+      "captionWords": [
+        "Dog"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Dog_mixamo.fbx",
+      "candidates": [
+        "Dog_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 82,
+      "contentHash": "92f573c16a3cbaca95aa6a44592e2e1a",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MYSELF",
+      "captionWords": [
+        "Myself"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Myself_mixamo.fbx",
+      "candidates": [
+        "Myself_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 83,
+      "contentHash": "651b9d1a3d1e6b6e1e86264820c71d34",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SENTENCE",
+      "captionWords": [
+        "Sentence"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Sentence_mixamo.fbx",
+      "candidates": [
+        "Sentence_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 84,
+      "contentHash": "1fe444da13c14ea66cb55e5e10e7dda8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "IT",
+      "captionWords": [
+        "It"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WHAT",
+      "captionWords": [
+        "What"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "What_mixamo.fbx",
+      "candidates": [
+        "What_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 85,
+      "contentHash": "4a480b032ae5d128b325abb3c56a1754",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SAY",
+      "captionWords": [
+        "Say"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Say_mixamo.fbx",
+      "candidates": [
+        "Say_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 86,
+      "contentHash": "18b80e99aeabbe181673f18f3bf7d2f1",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PLACE",
+      "captionWords": [
+        "Place"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Place_mixamo.fbx",
+      "candidates": [
+        "Place_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 87,
+      "contentHash": "8cc53ef8ce2a11776e9336378f570444",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CANADA",
+      "captionWords": [
+        "Canada"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "I_M",
+      "captionWords": [
+        "I'm"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "I'm_mixamo.fbx",
+      "candidates": [
+        "I'm_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 88,
+      "contentHash": "436474060dcbf48cc2947086a568c003",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THING",
+      "captionWords": [
+        "Thing"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Thing_mixamo.fbx",
+      "candidates": [
+        "Thing_mixamo (1).fbx",
+        "Thing_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 89,
+      "contentHash": "3fde42db131ffb55c77ea116fa77c559",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LAST",
+      "captionWords": [
+        "Last"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Last_mixamo.fbx",
+      "candidates": [
+        "Last_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 90,
+      "contentHash": "42bfdf286ca0b0143c0d6add896d598b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "A",
+      "captionWords": [
+        "A"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "a_mixamo.fbx",
+      "candidates": [
+        "a_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 91,
+      "contentHash": "1fd7153319051448e41acca69097ce2c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ANIMAL",
+      "captionWords": [
+        "Animal"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Animal_mixamo.fbx",
+      "candidates": [
+        "Animal_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 92,
+      "contentHash": "fbd686a2b968faf9dc51a6d542361db0",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "FAILURE",
+      "captionWords": [
+        "Failure"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Failure_mixamo.fbx",
+      "candidates": [
+        "Failure_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 93,
+      "contentHash": "feb74f01d327097b97bded2d816415b8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "STUDENT",
+      "captionWords": [
+        "Student"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Student_mixamo.fbx",
+      "candidates": [
+        "Student_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 94,
+      "contentHash": "1ea6a91b691ec97bf87af74cd2d61aea",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "YOU_RE",
+      "captionWords": [
+        "You're"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "You're_mixamo.fbx",
+      "candidates": [
+        "You're_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 95,
+      "contentHash": "c76e725859e331a5bddaf862b3211072",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ME",
+      "captionWords": [
+        "Me"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Me_mixamo.fbx",
+      "candidates": [
+        "Me_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 96,
+      "contentHash": "df3e4f8ccbb705ecfd30781b7bb9f4f2",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MEAN",
+      "captionWords": [
+        "Mean"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Mean_mixamo.fbx",
+      "candidates": [
+        "Mean_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 97,
+      "contentHash": "cf6eae62a2bfcff1eb5993badca34a08",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LITTLE",
+      "captionWords": [
+        "Little"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Little_mixamo.fbx",
+      "candidates": [
+        "Little_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 98,
+      "contentHash": "22eccd16e54e21872b15baa77a4cc6ac",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THANK",
+      "captionWords": [
+        "Thank"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Thank_mixamo.fbx",
+      "candidates": [
+        "Thank_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 99,
+      "contentHash": "5aba23e110ab03752c4d5e9539b17ff7",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TRUE",
+      "captionWords": [
+        "True"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "True_mixamo.fbx",
+      "candidates": [
+        "True_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 100,
+      "contentHash": "ddf86b675575ba1a76de2e7199f1b4b8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BIT",
+      "captionWords": [
+        "Bit"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WATCH",
+      "captionWords": [
+        "Watch"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Watch_mixamo.fbx",
+      "candidates": [
+        "Watch_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 101,
+      "contentHash": "d82466fbdf2f8fdfa0ce97a97fc02d16",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "NO",
+      "captionWords": [
+        "No"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "DIFFERENT",
+      "captionWords": [
+        "Different"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Different_mixamo.fbx",
+      "candidates": [
+        "Different_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 102,
+      "contentHash": "3b6f6e04300df1fefaa9662249e4a8a3",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TIME",
+      "captionWords": [
+        "Time"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Time_mixamo.fbx",
+      "candidates": [
+        "Time_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 103,
+      "contentHash": "bdf5748b4b77708065cbce19ea7b4cdc",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "REMEMBER",
+      "captionWords": [
+        "Remember"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Remember_mixamo.fbx",
+      "candidates": [
+        "Remember_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 104,
+      "contentHash": "caff34d44fa83ce53af0f2a0e799fef2",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ARE",
+      "captionWords": [
+        "Are"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BYE",
+      "captionWords": [
+        "Bye"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Bye_mixamo.fbx",
+      "candidates": [
+        "Bye_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 105,
+      "contentHash": "84fad995fe61c2e6d6529d0fc330e04d",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "YES",
+      "captionWords": [
+        "Yes"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Yes_mixamo.fbx",
+      "candidates": [
+        "Yes_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 106,
+      "contentHash": "0e8c4cb988c41f7afd25c0c052558488",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WE_RE",
+      "captionWords": [
+        "We're"
+      ],
+      "videos": [
+        7
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "I",
+      "captionWords": [
+        "I"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "i_mixamo.fbx",
+      "candidates": [
+        "I_3_mixamo.fbx",
+        "I_mixamo (1).fbx",
+        "i_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 107,
+      "contentHash": "a69c1d551758c76ad5b9b6953af89b21",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MANY",
+      "captionWords": [
+        "Many"
+      ],
+      "videos": [
+        7
+      ],
+      "source": "Many_mixamo.fbx",
+      "candidates": [
+        "Many_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 108,
+      "contentHash": "9bd7b32d27ab249f762930e2a6c579ac",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WELCOME",
+      "captionWords": [
+        "Welcome"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Welcome_mixamo.fbx",
+      "candidates": [
+        "Welcome_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 109,
+      "contentHash": "6ade37206ec97694e0a94682080f6251",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "F",
+      "captionWords": [
+        "F"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "F_mixamo.fbx",
+      "candidates": [
+        "F_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 110,
+      "contentHash": "02f7c28df51f933d0f9f12d9a2c04aca",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MAYBE",
+      "captionWords": [
+        "Maybe"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Maybe_mixamo.fbx",
+      "candidates": [
+        "Maybe_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 111,
+      "contentHash": "7614efeed70dda5b385b07d8822471f8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "DIFFERENCE",
+      "captionWords": [
+        "Difference"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Difference_mixamo.fbx",
+      "candidates": [
+        "Difference_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 112,
+      "contentHash": "d194462be2987d000499e0714431c9d4",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "G",
+      "captionWords": [
+        "G"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "G_mixamo.fbx",
+      "candidates": [
+        "G_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 113,
+      "contentHash": "f43bc651038fe2e1d5b0c82f468784fe",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THESE",
+      "captionWords": [
+        "These"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "These_mixamo.fbx",
+      "candidates": [
+        "These_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 114,
+      "contentHash": "8477ca0f4c656e43faa4dcfd302593c9",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BETWEEN",
+      "captionWords": [
+        "Between"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Between_mixamo.fbx",
+      "candidates": [
+        "Between_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 115,
+      "contentHash": "29e22f5669560b854b415c9fb9e27f82",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "H",
+      "captionWords": [
+        "H"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "H_mixamo.fbx",
+      "candidates": [
+        "H_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 116,
+      "contentHash": "0b93da30f4e1b121d47c5f8d19267ce1",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "EGG",
+      "captionWords": [
+        "Egg"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Egg_mixamo.fbx",
+      "candidates": [
+        "Egg_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 117,
+      "contentHash": "d9910e4a20ee1d2043ac7fc6ee47dd3c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CONSONANTS",
+      "captionWords": [
+        "Consonants"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "J",
+      "captionWords": [
+        "J"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "J_mixamo.fbx",
+      "candidates": [
+        "J_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 118,
+      "contentHash": "bfd27f321aff2a7a5c202a6ac6439085",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HIT",
+      "captionWords": [
+        "Hit"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Hit_mixamo.fbx",
+      "candidates": [
+        "Hit_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 119,
+      "contentHash": "9e362b52d6670df16c9a0cf0a3bb6b60",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "VOWELS",
+      "captionWords": [
+        "Vowels"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Vowels_mixamo.fbx",
+      "candidates": [
+        "Vowels_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 120,
+      "contentHash": "5e2e1758e30f2c4cc55983a8ea48bc93",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "K",
+      "captionWords": [
+        "K"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "K_mixamo.fbx",
+      "candidates": [
+        "K_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 121,
+      "contentHash": "00598765e7dec7f2d0112f261ccaf0be",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TOP",
+      "captionWords": [
+        "Top"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Top_mixamo.fbx",
+      "candidates": [
+        "Top_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 122,
+      "contentHash": "da39e30a3c3b86e26c94486eefcb75b6",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "IN",
+      "captionWords": [
+        "In"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "In_mixamo.fbx",
+      "candidates": [
+        "In_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 123,
+      "contentHash": "262ae37b58e7035898263df869567ab4",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "L",
+      "captionWords": [
+        "L"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "L_mixamo.fbx",
+      "candidates": [
+        "L_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 124,
+      "contentHash": "bd0506895eede74c7c80241ec92f317e",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CUT",
+      "captionWords": [
+        "Cut"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Cut_mixamo.fbx",
+      "candidates": [
+        "Cut_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 125,
+      "contentHash": "7f0171acff1cf68f2a0c789017588564",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ENGLISH",
+      "captionWords": [
+        "English"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "English_mixamo.fbx",
+      "candidates": [
+        "English_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 126,
+      "contentHash": "ad865965ae4b90ffc6d68ec7bff99bf5",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "M",
+      "captionWords": [
+        "M"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "m_mixamo.fbx",
+      "candidates": [
+        "M_2_mixamo.fbx",
+        "m_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 127,
+      "contentHash": "ba999ddb6697d62cc7d5238ccafa7837",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BECAUSE",
+      "captionWords": [
+        "Because"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Because_mixamo.fbx",
+      "candidates": [
+        "Because_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 128,
+      "contentHash": "451e8949ed670b262c43c36bd3f3e944",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ALPHABET",
+      "captionWords": [
+        "Alphabet"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "N",
+      "captionWords": [
+        "N"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "N_mixamo.fbx",
+      "candidates": [
+        "N_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "already-in-library",
+      "clipId": 26,
+      "contentHash": "0f4efbd760b17d7ff3372f4758505d80",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "SOMETIMES",
+      "captionWords": [
+        "Sometimes"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THERE",
+      "captionWords": [
+        "There"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "There_mixamo.fbx",
+      "candidates": [
+        "There_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 129,
+      "contentHash": "d339b388e2bbe30dc4f16a0551315e92",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "O",
+      "captionWords": [
+        "O"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "o_mixamo.fbx",
+      "candidates": [
+        "o_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 130,
+      "contentHash": "0c4467722d60139dc7394e9ae252f6db",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SOMETIME",
+      "captionWords": [
+        "Sometime"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Sometime_mixamo.fbx",
+      "candidates": [
+        "Sometime_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 131,
+      "contentHash": "2d4f9f46556c503d2179ba298cba9d0a",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TWENTY",
+      "captionWords": [
+        "Twenty"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "P",
+      "captionWords": [
+        "P"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "p_mixamo.fbx",
+      "candidates": [
+        "p_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 132,
+      "contentHash": "0d94dd09b41b4811f225337399b619eb",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WHY",
+      "captionWords": [
+        "Why"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Why_mixamo.fbx",
+      "candidates": [
+        "Why_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 133,
+      "contentHash": "d284acb84443981e408b1cd49d71f117",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SIX",
+      "captionWords": [
+        "Six"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "Q",
+      "captionWords": [
+        "Q"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "q_mixamo.fbx",
+      "candidates": [
+        "q_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 134,
+      "contentHash": "98bf5ad875430d981369191f4d5545ee",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BICYCLE",
+      "captionWords": [
+        "Bicycle"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Bicycle_mixamo.fbx",
+      "candidates": [
+        "Bicycle_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 135,
+      "contentHash": "a72465772db9a561951e4c06dd7b4424",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LETTERS",
+      "captionWords": [
+        "Letters"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "R",
+      "captionWords": [
+        "R"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "r_mixamo.fbx",
+      "candidates": [
+        "r_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 136,
+      "contentHash": "e1fc063f0e7d3d8fca0007f95662e845",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "RIGHT",
+      "captionWords": [
+        "Right"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Right_mixamo.fbx",
+      "candidates": [
+        "Right_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 137,
+      "contentHash": "bbb714447f632e238bf8c6e4ec8ca52a",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "FIVE",
+      "captionWords": [
+        "Five"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "T",
+      "captionWords": [
+        "T"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "t_mixamo.fbx",
+      "candidates": [
+        "t_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 138,
+      "contentHash": "8bbc3532fa46b92bb45c0f6004e31567",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ALSO",
+      "captionWords": [
+        "Also"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Also_mixamo.fbx",
+      "candidates": [
+        "Also_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 139,
+      "contentHash": "9859371317a763f31ad2428e5783cfb4",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MAIN",
+      "captionWords": [
+        "Main"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Main_mixamo.fbx",
+      "candidates": [
+        "Main_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 140,
+      "contentHash": "d5024e9eb6a285fc3cdaa1dc1f580a9f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ALL",
+      "captionWords": [
+        "All"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "All_mixamo.fbx",
+      "candidates": [
+        "All_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "already-in-library",
+      "clipId": 16,
+      "contentHash": "1d5d4091b51ff70389b603242fa9f8b0",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "PRETTY",
+      "captionWords": [
+        "Pretty"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Pretty_mixamo.fbx",
+      "candidates": [
+        "Pretty_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 141,
+      "contentHash": "e0fd3c8343e6585032376eb862c2194f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SPECIAL",
+      "captionWords": [
+        "Special"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Special_mixamo.fbx",
+      "candidates": [
+        "Special_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 142,
+      "contentHash": "7e77dc076bf824e3e81b698c50d45c08",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "U",
+      "captionWords": [
+        "U"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "u_mixamo.fbx",
+      "candidates": [
+        "u_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 143,
+      "contentHash": "412181341658715ffbbab49abbe0c23b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "TWO",
+      "captionWords": [
+        "Two"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "VOWEL",
+      "captionWords": [
+        "Vowel"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "V",
+      "captionWords": [
+        "V"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "v_mixamo.fbx",
+      "candidates": [
+        "v_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 144,
+      "contentHash": "9511ca8f499e069e8133262160218bc6",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "YOU",
+      "captionWords": [
+        "You"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "You_mixamo.fbx",
+      "candidates": [
+        "You_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 145,
+      "contentHash": "deab5df2cd483a0bbbef286f3a20e2f6",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BALANCE",
+      "captionWords": [
+        "Balance"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Balance_1_mixamo.fbx",
+      "candidates": [
+        "Balance_1_mixamo.fbx",
+        "Balance_2_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 146,
+      "contentHash": "506022d5b7c5ede06af8a691023d2b5c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "W",
+      "captionWords": [
+        "W"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "w_mixamo.fbx",
+      "candidates": [
+        "w_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 147,
+      "contentHash": "c16965a4115f3fb7371a5d93105f98a1",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "USUALLY",
+      "captionWords": [
+        "Usually"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Usually_mixamo.fbx",
+      "candidates": [
+        "Usually_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 148,
+      "contentHash": "3445276a0ce89e8195993cdb59b7895b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HERE",
+      "captionWords": [
+        "Here"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Here_mixamo.fbx",
+      "candidates": [
+        "Here_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 149,
+      "contentHash": "befaca8c2c891c1dd4eea86c042d11b1",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "X",
+      "captionWords": [
+        "X"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "x_mixamo.fbx",
+      "candidates": [
+        "x_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 150,
+      "contentHash": "6f6ac6d8776fdebd1b93ee74cfaf6cec",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BEGINNING",
+      "captionWords": [
+        "Beginning"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Beginning_mixamo.fbx",
+      "candidates": [
+        "Beginning_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 151,
+      "contentHash": "424fea448bcff0e0b1cb3aa364d27e1d",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LETTER",
+      "captionWords": [
+        "Letter"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "Y",
+      "captionWords": [
+        "Y"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "y_mixamo.fbx",
+      "candidates": [
+        "y_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 152,
+      "contentHash": "9745fc2106a24a9a8aa46b79780aec3d",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MAKE",
+      "captionWords": [
+        "Make"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Make_mixamo.fbx",
+      "candidates": [
+        "Make_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 153,
+      "contentHash": "f5e6912d51ff3a5c3ba5efca6690e66b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "B",
+      "captionWords": [
+        "☒  B"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "B_mixamo.fbx",
+      "candidates": [
+        "B_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "already-in-library",
+      "clipId": 24,
+      "contentHash": "290f9806301a66d9ffdf4edb11f487fd",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "LATER",
+      "captionWords": [
+        "Later"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Later_mixamo.fbx",
+      "candidates": [
+        "Later_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 154,
+      "contentHash": "b525bd7433bf59229178e07027e8c0bb",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "AGAIN",
+      "captionWords": [
+        "Again"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Again_mixamo.fbx",
+      "candidates": [
+        "Again_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "already-in-library",
+      "clipId": 13,
+      "contentHash": "e9135e32a9c9c9c3f3781f45225c935e",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "CONSONANT",
+      "captionWords": [
+        "Consonant"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "Z",
+      "captionWords": [
+        "Z"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "z_mixamo.fbx",
+      "candidates": [
+        "z_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 155,
+      "contentHash": "dc584617bb1788818a26c18ea94f9db3",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "FAST",
+      "captionWords": [
+        "Fast"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Fast_mixamo.fbx",
+      "candidates": [
+        "Fast_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 156,
+      "contentHash": "a451f5ce52c99494f334bd71517fd4be",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "C",
+      "captionWords": [
+        "☒  C"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "C_mixamo.fbx",
+      "candidates": [
+        "C_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 157,
+      "contentHash": "df54434288fa89508ca452f01d7a797b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MOVE",
+      "captionWords": [
+        "Move"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "Move_mixamo.fbx",
+      "candidates": [
+        "Move_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 158,
+      "contentHash": "80401b4ae08e14f3a1297200117aede4",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "END",
+      "captionWords": [
+        "End"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "End_mixamo.fbx",
+      "candidates": [
+        "End_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 159,
+      "contentHash": "2aacf908e82b3bc28d0e010668073180",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "D",
+      "captionWords": [
+        "☒  D"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "D_mixamo.fbx",
+      "candidates": [
+        "D_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "already-in-library",
+      "clipId": 27,
+      "contentHash": "422ffdb584b7f57ec17c86c07b6eff7f",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "PART",
+      "captionWords": [
+        "Part"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "E",
+      "captionWords": [
+        "E"
+      ],
+      "videos": [
+        2
+      ],
+      "source": "e_mixamo.fbx",
+      "candidates": [
+        "E_2_mixamo.fbx",
+        "e_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "already-in-library",
+      "clipId": 25,
+      "contentHash": "4ae066a31d5e9f0519466f1309d28fad",
+      "phaseReviewed": true,
+      "error": null
+    },
+    {
+      "gloss": "WORDS",
+      "captionWords": [
+        "Words"
+      ],
+      "videos": [
+        2
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "AN",
+      "captionWords": [
+        "An"
+      ],
+      "videos": [
+        3
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WHEN",
+      "captionWords": [
+        "When"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "When_mixamo.fbx",
+      "candidates": [
+        "When_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 160,
+      "contentHash": "d24c56c199a327818c002a3ff8e8463f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "DOCTOR",
+      "captionWords": [
+        "Doctor"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Doctor_1_mixamo.fbx",
+      "candidates": [
+        "Doctor_1_mixamo.fbx",
+        "Doctor_2_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 161,
+      "contentHash": "f87eb7c407d1a567ecaa79a53608458f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "QUESTION",
+      "captionWords": [
+        "Question"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Question_mixamo.fbx",
+      "candidates": [
+        "Question_1_mixamo.fbx",
+        "Question_2_mixamo.fbx",
+        "Question_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 162,
+      "contentHash": "4c42775987e42df2f754ba91160e542c",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "DO",
+      "captionWords": [
+        "Do"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Do_mixamo.fbx",
+      "candidates": [
+        "Do_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 163,
+      "contentHash": "8af44b632912cc5bed38a04596e9c126",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ORANGE",
+      "captionWords": [
+        "Orange"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Orange_mixamo.fbx",
+      "candidates": [
+        "Orange_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 164,
+      "contentHash": "acb421df714dcbf3341a268b452dd048",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PERSON",
+      "captionWords": [
+        "Person"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Person_mixamo.fbx",
+      "candidates": [
+        "Person_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 165,
+      "contentHash": "55dd43f814d6858b752cf2290fa7c1b8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PRACTICE",
+      "captionWords": [
+        "Practice"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Practice_mixamo.fbx",
+      "candidates": [
+        "Practice_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 166,
+      "contentHash": "51d536b94e68eae42c279efb770ef744",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "EAT",
+      "captionWords": [
+        "Eat"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Eat_mixamo.fbx",
+      "candidates": [
+        "Eat_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 167,
+      "contentHash": "aeaa837180bcea7310a623e365e32e60",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BANANA",
+      "captionWords": [
+        "Banana"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Banana_mixamo.fbx",
+      "candidates": [
+        "Banana_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 168,
+      "contentHash": "01452b108e01604e75004f55ff38ee3d",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BOOK",
+      "captionWords": [
+        "Book"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Book_mixamo.fbx",
+      "candidates": [
+        "Book_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 169,
+      "contentHash": "3ec4a0d57a3d553c8eac9cedc0fbe1af",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HEAR",
+      "captionWords": [
+        "Hear"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Hear_mixamo.fbx",
+      "candidates": [
+        "Hear_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 170,
+      "contentHash": "1214cbf364f1a89705e091f693728124",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "APPLE",
+      "captionWords": [
+        "Apple"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Apple_mixamo.fbx",
+      "candidates": [
+        "Apple_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 171,
+      "contentHash": "84098c0c9af06d9b94e702a840ea978d",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "PARK",
+      "captionWords": [
+        "Park"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Park_mixamo.fbx",
+      "candidates": [
+        "Park_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 172,
+      "contentHash": "ca649c41fe273f4343811f398b076f30",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BEGIN",
+      "captionWords": [
+        "Begin"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Begin_mixamo.fbx",
+      "candidates": [
+        "Begin_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 173,
+      "contentHash": "928575bb870d416c4bbdb318cc1f0a01",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SHOULD",
+      "captionWords": [
+        "Should"
+      ],
+      "videos": [
+        3
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "UMBRELLA",
+      "captionWords": [
+        "Umbrella"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Umbrella_mixamo.fbx",
+      "candidates": [
+        "Umbrella_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 174,
+      "contentHash": "899cbca07384f14af6cd8821eabbca0f",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "EACH",
+      "captionWords": [
+        "Each"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Each_mixamo.fbx",
+      "candidates": [
+        "Each_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 175,
+      "contentHash": "b3fe566958ceefef59d653ac23b108ec",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "IF",
+      "captionWords": [
+        "If"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "If_mixamo.fbx",
+      "candidates": [
+        "If_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 176,
+      "contentHash": "bf013650b2bf4fcee3e787fbba29121e",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CORRECT",
+      "captionWords": [
+        "Correct"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Correct_mixamo.fbx",
+      "candidates": [
+        "Correct_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 177,
+      "contentHash": "ff658105288c5606443150b04d78c9c4",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "NOTICE",
+      "captionWords": [
+        "Notice"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Notice_mixamo.fbx",
+      "candidates": [
+        "Notice_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 178,
+      "contentHash": "d8f643be4a82faa0cfc930216c667086",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "READ",
+      "captionWords": [
+        "Read"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Read_mixamo.fbx",
+      "candidates": [
+        "Read_2_mixamo.fbx",
+        "Read_mixamo.fbx"
+      ],
+      "selection": "choose-canonical-take",
+      "outcome": "imported",
+      "clipId": 179,
+      "contentHash": "89f382e75fc0591d7ee2166c98b77ae2",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "RAIN",
+      "captionWords": [
+        "Rain"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Rain_mixamo.fbx",
+      "candidates": [
+        "Rain_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 180,
+      "contentHash": "47c7d1b6d5ef4ccc3035ef589d9f4e26",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "HOPE",
+      "captionWords": [
+        "Hope"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Hope_mixamo.fbx",
+      "candidates": [
+        "Hope_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 181,
+      "contentHash": "a2a2e890f6af8cd739403fe5ebec0588",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ANT",
+      "captionWords": [
+        "Ant"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Ant_mixamo.fbx",
+      "candidates": [
+        "Ant_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 182,
+      "contentHash": "ac417605292f654649990c8fd9264fcc",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "ELEPHANT",
+      "captionWords": [
+        "Elephant"
+      ],
+      "videos": [
+        3
+      ],
+      "source": "Elephant_mixamo.fbx",
+      "candidates": [
+        "Elephant_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 183,
+      "contentHash": "0e21bcdf70afc26c57e3953f82bd1595",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CONTRACTION",
+      "captionWords": [
+        "Contraction"
+      ],
+      "videos": [
+        6
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WRONG",
+      "captionWords": [
+        "Wrong"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Wrong_mixamo.fbx",
+      "candidates": [
+        "Wrong_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 184,
+      "contentHash": "27adbb9c6df12f980d54d487f01afc2d",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CONTRACTIONS",
+      "captionWords": [
+        "Contractions"
+      ],
+      "videos": [
+        6
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "AM",
+      "captionWords": [
+        "Am"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Am_mixamo.fbx",
+      "candidates": [
+        "Am_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 185,
+      "contentHash": "185acb5c8ce60f0a0337b4d701695561",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BEFORE",
+      "captionWords": [
+        "Before"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Before_mixamo.fbx",
+      "candidates": [
+        "Before_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 186,
+      "contentHash": "7fdd610a8e6241cea221a960afe694c3",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SHARE",
+      "captionWords": [
+        "Share"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Share_mixamo.fbx",
+      "candidates": [
+        "Share_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 187,
+      "contentHash": "a9c469a35937b8b7591097bb18de2d38",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "COMMON",
+      "captionWords": [
+        "Common"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Common_mixamo.fbx",
+      "candidates": [
+        "Common_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 188,
+      "contentHash": "07bf32c3667c04690a0c7102f30d5b5b",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "THOSE",
+      "captionWords": [
+        "Those"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Those_mixamo.fbx",
+      "candidates": [
+        "Those_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 189,
+      "contentHash": "9521b4be9232b3849928e1b365aac971",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "AMERICA",
+      "captionWords": [
+        "America"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "America_mixamo.fbx",
+      "candidates": [
+        "America_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 190,
+      "contentHash": "a7e24e306a47868ca8a43fab8edadf37",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WAY",
+      "captionWords": [
+        "Way"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Way_mixamo.fbx",
+      "candidates": [
+        "Way_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 191,
+      "contentHash": "d4f0036d6414916a4440e64daecd7a99",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "REMOVE",
+      "captionWords": [
+        "Remove"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Remove_mixamo.fbx",
+      "candidates": [
+        "Remove_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 192,
+      "contentHash": "01f328b1f53f4860bbff1b5e5f5de133",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "LOVER",
+      "captionWords": [
+        "Lover"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Lover_mixamo.fbx",
+      "candidates": [
+        "Lover_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 193,
+      "contentHash": "c51d5f36fadbce07b50889e6c0b87022",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SHORT",
+      "captionWords": [
+        "Short"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Short_mixamo.fbx",
+      "candidates": [
+        "Short_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 194,
+      "contentHash": "c1788476493b3cddb189e6572653f7cd",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SISTER",
+      "captionWords": [
+        "Sister"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Sister_mixamo.fbx",
+      "candidates": [
+        "Sister_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 195,
+      "contentHash": "d6fd645ac1955849f58d9e7d0248ff16",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "SOMEONE",
+      "captionWords": [
+        "Someone"
+      ],
+      "videos": [
+        6
+      ],
+      "source": null,
+      "candidates": [],
+      "selection": "missing-source",
+      "outcome": "missing-source",
+      "clipId": null,
+      "contentHash": null,
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BOTTOM",
+      "captionWords": [
+        "Bottom"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Bottom_mixamo.fbx",
+      "candidates": [
+        "Bottom_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 196,
+      "contentHash": "9412d172ceb9862b3e234e608c180871",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "BROTHER",
+      "captionWords": [
+        "Brother"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Brother_mixamo.fbx",
+      "candidates": [
+        "Brother_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 197,
+      "contentHash": "b5420c96714ba2e5c16306ddeff59a75",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "WHO",
+      "captionWords": [
+        "Who"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Who_mixamo.fbx",
+      "candidates": [
+        "Who_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 198,
+      "contentHash": "25bee6df93da1556b620767529caef57",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "MISTAKE",
+      "captionWords": [
+        "Mistake"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Mistake_mixamo.fbx",
+      "candidates": [
+        "Mistake_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 199,
+      "contentHash": "6fec3342ec63abe968a626244488dcd8",
+      "phaseReviewed": false,
+      "error": null
+    },
+    {
+      "gloss": "CAR",
+      "captionWords": [
+        "Car"
+      ],
+      "videos": [
+        6
+      ],
+      "source": "Car_mixamo.fbx",
+      "candidates": [
+        "Car_mixamo.fbx"
+      ],
+      "selection": "ready-for-import-review",
+      "outcome": "imported",
+      "clipId": 200,
+      "contentHash": "f64c5dddff23138ea58e52d280835514",
+      "phaseReviewed": false,
+      "error": null
+    }
+  ]
+}

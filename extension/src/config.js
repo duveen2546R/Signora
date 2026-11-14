@@ -26,7 +26,7 @@ export const DEFAULTS = {
    * Origin + path that serves the Unity avatar host page (the Vite dev server's default), used
    * only when avatarAdapter === 'unity'. Keep in sync with host_permissions in manifest.json.
    */
-  unityHostUrl: 'http://127.0.0.1:5173/signora-avatar',
+  unityHostUrl: 'http://localhost:5173/signora-avatar',
 
   /** Preferred caption languages, in order. Auto-generated (ASR) tracks are accepted. */
   captionLanguages: ['en', 'en-US', 'en-GB'],
@@ -39,7 +39,16 @@ export const DEFAULTS = {
   planPollMs: 700,
   planTimeoutMs: 45000,
 
-  /** Keep video playing continuously; caption motion is time-scaled to its own cue window. */
+  /**
+   * Viewer-selectable playback mode (overlay toggle, saved in chrome.storage.sync):
+   *   'play-together' - video and avatar run together; caption motion is time-scaled to its cue
+   *                     window and the video is never paused for the avatar (`overrunPolicy`).
+   *   'sync-pause'    - the video is paused while the avatar signs, at the motion's own pace, and
+   *                     resumed when the sign finishes.
+   */
+  playbackMode: 'play-together',
+
+  /** Scheduler policy used by 'play-together'. */
   overrunPolicy: 'continue',
 
   /** How many upcoming caption units count as "the look-ahead buffer" for the overlay's status. */
@@ -70,6 +79,37 @@ export async function loadConfig() {
     }
   } catch {
     // Storage unavailable (e.g. during tests); defaults are correct.
+  }
+  return cache
+}
+
+export const PLAYBACK_MODES = {
+  'play-together': { label: 'Play together' },
+  'sync-pause': { label: 'Sync and pause' },
+}
+
+/**
+ * Rate the avatar plays at. 'sync-pause' holds the video for the sign, so the avatar always signs
+ * at its natural recorded speed whatever the video speed; otherwise it follows the video.
+ */
+export function avatarRateFor(policy, videoRate) {
+  return policy === 'sync-pause' ? 1 : videoRate
+}
+
+/** The scheduler overrun policy a playback mode runs with. */
+export function overrunPolicyFor(settings) {
+  return settings.playbackMode === 'sync-pause' ? 'sync-pause' : settings.overrunPolicy
+}
+
+/** Merge `patch` into the cached config and the user's stored overrides. */
+export async function saveConfig(patch) {
+  cache = { ...cache, ...patch }
+  try {
+    const stored = await chrome.storage?.sync?.get('signora')
+    const previous = stored && typeof stored.signora === 'object' ? stored.signora : {}
+    await chrome.storage?.sync?.set({ signora: { ...previous, ...patch } })
+  } catch {
+    // Storage unavailable; the choice still applies for this page.
   }
   return cache
 }

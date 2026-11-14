@@ -10,6 +10,7 @@ from app.models import Gloss, SignClip
 from app.services.function_words import (
     letter_gloss, match_phrases, may_fingerspell, phrase_key, plan_function_words,
 )
+from app.services.plurals import plural_issue, resolve_plural
 from app.services.translate_service import (
     Interpretation,
     PlaylistItem,
@@ -47,6 +48,13 @@ def _aliases(registry: Registry, recordings: dict[str, SignClip]) -> list[tuple[
             if gloss not in options:
                 options.append(gloss)
     return sorted(values.items(), key=lambda item: (-len(item[0]), item[0]))
+
+
+def alias_lookup(aliases: list[tuple[tuple[str, ...], list[str]]]):
+    """One English word -> its single unambiguous gloss, for the plural rule's singular lookup."""
+    single = {phrase[0]: glosses[0] for phrase, glosses in aliases
+              if len(phrase) == 1 and len(glosses) == 1}
+    return single.get
 
 
 def interpret_live(session: Session, text: str, registry: Registry | None = None,
@@ -87,12 +95,24 @@ def interpret_live(session: Session, text: str, registry: Registry | None = None
     for clip in recordings:
         by_gloss.setdefault(clip.gloss.name, clip)
     aliases = _aliases(registry, by_gloss)
+    lookup = alias_lookup(aliases)
 
     resolved: list[tuple[str, str, bool]] = []
     missing_words: list[str] = []
     missing_letters: list[str] = []
     needs_sign: list[str] = []
+    plural_words: list[str] = []
+    seen: list[str] = []
     for token, phrase, glosses in match_phrases(plan.tokens, aliases):
+        plural = None
+        if glosses is None and token.kind == "word":
+            plural = resolve_plural(token.text, seen, lookup, by_gloss.__contains__)
+        seen.extend(phrase or (token.text,))
+        if plural is not None:
+            resolved.extend((gloss, token.text, False) for gloss in plural.glosses)
+            if plural.marked and not plural.reviewed:
+                plural_words.append(token.text)
+            continue
         if glosses is not None:
             if len(glosses) != 1:
                 return Interpretation("unsupported", registry.version, issues=[{
@@ -152,4 +172,6 @@ def interpret_live(session: Session, text: str, registry: Registry | None = None
         "code": "unreviewed-preview",
         "message": "Playing literal recorded signs and fingerspelling; this is not a reviewed ISL sentence.",
     })
+    if plural_issue(plural_words):
+        result.issues.append(plural_issue(plural_words))
     return result

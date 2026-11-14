@@ -11,6 +11,7 @@ SIGNORA_SLOW_TESTS=1.
 import json
 import logging
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -146,12 +147,22 @@ def test_an_omitted_article_leaves_no_pause_or_blank_frame(with_article, without
     assert between == {"transition"}, between
 
 
-def test_words_without_any_recording_stay_unsupported():
+def test_words_without_any_recording_are_never_substituted():
+    """No unrelated sign stands in for an unknown word: it is fingerspelled whole when every
+    letter is recorded, and the unit is skipped otherwise."""
+    import string
+
     from app.services.video_plan_service import resolve_caption
     with SessionLocal() as session:
+        letters = {clip.gloss.name for clip in session.scalars(
+            select(SignClip).where(SignClip.is_canonical.is_(True))) if len(clip.gloss.name) == 1}
         result = resolve_caption(session, "Zebra quixotic.")
-    assert result.status == "unsupported" and not result.items
-    assert set(result.unmapped) == {"zebra", "quixotic"}
+    if set(string.ascii_uppercase) <= letters:
+        assert [item.gloss for item in result.items] == list("ZEBRAQUIXOTIC")
+        assert all(item.fingerspelled for item in result.items)
+    else:
+        assert result.status == "unsupported" and not result.items
+        assert set(result.unmapped) == {"zebra", "quixotic"}
 
 
 def _vtt(units: list[dict]) -> str:
@@ -174,8 +185,12 @@ def test_youtube_test_video_plan_signs_every_unit(client):
     assert response.status_code == 202, response.text
     plan_id = response.json()["id"]
     try:
-        # TestClient runs the background preparation before returning control.
+        # Preparation runs in a worker thread; poll as the extension does.
+        deadline = time.monotonic() + 1800
         plan = client.get(f"/api/v1/video-plans/{plan_id}").json()
+        while plan["status"] in {"pending", "processing"} and time.monotonic() < deadline:
+            time.sleep(1)
+            plan = client.get(f"/api/v1/video-plans/{plan_id}").json()
         assert plan["status"] == "ready", plan.get("error")
         assert plan["coverage"]["totalUnits"] == len(units) == 33
         assert plan["coverage"]["signedUnits"] == 33

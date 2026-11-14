@@ -4,6 +4,7 @@
  *   src/config.js
  *   src/captions/convert.js
  *   src/captions/discover.js
+ *   src/captions/bundled.js
  *   vendor/YouTubeSignScheduler.js
  *   src/media/youtube-media.js
  *   src/avatar/adapter.js
@@ -59,7 +60,7 @@ const DEFAULTS = {
    * Origin + path that serves the Unity avatar host page (the Vite dev server's default), used
    * only when avatarAdapter === 'unity'. Keep in sync with host_permissions in manifest.json.
    */
-  unityHostUrl: 'http://127.0.0.1:5173/signora-avatar',
+  unityHostUrl: 'http://localhost:5173/signora-avatar',
 
   /** Preferred caption languages, in order. Auto-generated (ASR) tracks are accepted. */
   captionLanguages: ['en', 'en-US', 'en-GB'],
@@ -72,7 +73,16 @@ const DEFAULTS = {
   planPollMs: 700,
   planTimeoutMs: 45000,
 
-  /** Keep video playing continuously; caption motion is time-scaled to its own cue window. */
+  /**
+   * Viewer-selectable playback mode (overlay toggle, saved in chrome.storage.sync):
+   *   'play-together' - video and avatar run together; caption motion is time-scaled to its cue
+   *                     window and the video is never paused for the avatar (`overrunPolicy`).
+   *   'sync-pause'    - the video is paused while the avatar signs, at the motion's own pace, and
+   *                     resumed when the sign finishes.
+   */
+  playbackMode: 'play-together',
+
+  /** Scheduler policy used by 'play-together'. */
   overrunPolicy: 'continue',
 
   /** How many upcoming caption units count as "the look-ahead buffer" for the overlay's status. */
@@ -107,6 +117,37 @@ async function loadConfig() {
   return cache
 }
 
+const PLAYBACK_MODES = {
+  'play-together': { label: 'Play together' },
+  'sync-pause': { label: 'Sync and pause' },
+}
+
+/**
+ * Rate the avatar plays at. 'sync-pause' holds the video for the sign, so the avatar always signs
+ * at its natural recorded speed whatever the video speed; otherwise it follows the video.
+ */
+function avatarRateFor(policy, videoRate) {
+  return policy === 'sync-pause' ? 1 : videoRate
+}
+
+/** The scheduler overrun policy a playback mode runs with. */
+function overrunPolicyFor(settings) {
+  return settings.playbackMode === 'sync-pause' ? 'sync-pause' : settings.overrunPolicy
+}
+
+/** Merge `patch` into the cached config and the user's stored overrides. */
+async function saveConfig(patch) {
+  cache = { ...cache, ...patch }
+  try {
+    const stored = await chrome.storage?.sync?.get('signora')
+    const previous = stored && typeof stored.signora === 'object' ? stored.signora : {}
+    await chrome.storage?.sync?.set({ signora: { ...previous, ...patch } })
+  } catch {
+    // Storage unavailable; the choice still applies for this page.
+  }
+  return cache
+}
+
 function config() {
   return cache
 }
@@ -121,6 +162,10 @@ function warn(...args) {
 
   __x.DEFAULTS = DEFAULTS;
   __x.loadConfig = loadConfig;
+  __x.PLAYBACK_MODES = PLAYBACK_MODES;
+  __x.avatarRateFor = avatarRateFor;
+  __x.overrunPolicyFor = overrunPolicyFor;
+  __x.saveConfig = saveConfig;
   __x.config = config;
   __x.log = log;
   __x.warn = warn;
@@ -568,12 +613,205 @@ async function discoverCaptions(bridge, { onStatus = () => {} } = {}) {
   __x.discoverCaptions = discoverCaptions;
 });
 
+__def("src/captions/bundled.js", function (__x, __req) {
+/**
+ * Bundled lesson subtitles for the target grammar playlist, and the order in which a caption
+ * source is chosen for a video.
+ *
+ * subtitles/lessons.json maps each known YouTube video ID to a byte-identical copy of its SRT
+ * under extension/subtitles/ (copied there by tools/bundle-subtitles.mjs). The video ID is the
+ * only key used at runtime - never a filename's position. The service worker reads the files
+ * through the extension's own URLs; a YouTube content script cannot reach the filesystem.
+ *
+ * Priority for a video:
+ *   1. a subtitle file the viewer picked for this video in this tab (it always wins);
+ *   2. the bundled lesson SRT for a known playlist video;
+ *   3. normal YouTube caption discovery (which keeps the manual picker as its fallback).
+ * A bundled file that is missing, malformed or rejected by the backend is reported visibly and
+ * then falls through to (3). Subtitle text is passed on unchanged; the backend's own SRT/VTT
+ * validation still decides what is acceptable.
+ */
+
+const LESSONS_PATH = 'subtitles/lessons.json'
+const SUBTITLE_DIR = 'subtitles'
+const REBUILD_HINT = 'Run `npm run build` in extension/, then reload the extension.'
+
+class BundledSubtitleError extends Error {
+  constructor(message) {
+    super(message)
+    this.name = 'BundledSubtitleError'
+  }
+}
+
+function findLesson(manifest, videoId) {
+  if (!videoId || !Array.isArray(manifest?.lessons)) return null
+  return manifest.lessons.find((lesson) => lesson.videoId === videoId) ?? null
+}
+
+function lessonTitle(lesson) {
+  return lesson.displayTitle || lesson.title || `Lesson ${lesson.lesson}`
+}
+
+const TIMESTAMP = /^(?:(\d+):)?(\d{2}):(\d{2})[,.](\d{3})$/
+
+function timestampMs(value) {
+  const match = TIMESTAMP.exec(value.trim())
+  if (!match || Number(match[2]) > 59 || Number(match[3]) > 59) return null
+  const [hours, minutes, seconds, millis] = [match[1] || 0, match[2], match[3], match[4]].map(Number)
+  return ((hours * 60 + minutes) * 60 + seconds) * 1000 + millis
+}
+
+/**
+ * Structural SRT check, so a broken bundled file is reported with its block number before it is
+ * sent anywhere. It mirrors the backend's per-block rules (a timing line with valid timestamps,
+ * ending after it starts) but changes nothing: the backend still parses the original bytes.
+ * Returns the number of cue blocks.
+ */
+function checkSrt(text, name = 'subtitle') {
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new BundledSubtitleError(`Bundled subtitle ${name} is empty. ${REBUILD_HINT}`)
+  }
+  const malformed = (block, problem) => new BundledSubtitleError(
+    `Bundled subtitle ${name} is malformed: block ${block} ${problem}. `
+    + `Fix that block in the file in "SRT Files/". ${REBUILD_HINT}`,
+  )
+  const blocks = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n').trim().split(/\n\s*\n/)
+  blocks.forEach((block, index) => {
+    const timing = block.split('\n').find((line) => line.includes('-->'))
+    const [start = '', rest = ''] = timing ? timing.split('-->') : []
+    const startMs = timestampMs(start)
+    const endMs = timestampMs(rest.trim().split(/\s+/)[0] ?? '')
+    if (startMs === null || endMs === null) {
+      throw malformed(index + 1, 'has no valid "start --> end" timing line')
+    }
+    if (endMs <= startMs) throw malformed(index + 1, `ends before it starts (${timing.trim()})`)
+  })
+  return blocks.length
+}
+
+/**
+ * The playlist's authored SRTs carry two text lines per cue: the spoken English caption followed
+ * by its concise signing line. Keep the latter for motion planning so the backend does not try to
+ * sign both versions consecutively. The original bundled SRT remains untouched for display and
+ * auditing; this transform is only applied to known bundled lesson files, never a viewer-picked
+ * subtitle where two lines may simply be visual wrapping.
+ */
+function signingTextSrt(text) {
+  const blocks = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n').trim().split(/\n\s*\n/)
+  return `${blocks.map((block) => {
+    const lines = block.split('\n')
+    const timingIndex = lines.findIndex((line) => line.includes('-->'))
+    if (timingIndex < 0) return block
+    const captionLines = lines.slice(timingIndex + 1).filter((line) => line.trim())
+    if (captionLines.length < 2) return block
+    return [...lines.slice(0, timingIndex + 1), captionLines.at(-1)].join('\n')
+  }).join('\n\n')}\n`
+}
+
+/**
+ * The bundled subtitle for `videoId`, or null when the video is not a known playlist lesson.
+ * `readText(path)` reads an extension-relative file (fetch of chrome.runtime.getURL in the
+ * service worker; the filesystem in tests). Throws BundledSubtitleError with an actionable
+ * message when the mapped file is missing or malformed.
+ */
+async function loadBundledSubtitle(videoId, readText) {
+  let manifest
+  try {
+    manifest = JSON.parse(await readText(LESSONS_PATH))
+  } catch (error) {
+    throw new BundledSubtitleError(`Cannot read ${LESSONS_PATH} (${error.message}). ${REBUILD_HINT}`)
+  }
+  const lesson = findLesson(manifest, videoId)
+  if (!lesson) return null
+
+  const path = `${SUBTITLE_DIR}/${lesson.file}`
+  let text
+  try {
+    text = await readText(path)
+  } catch (error) {
+    throw new BundledSubtitleError(
+      `Bundled subtitle for ${lessonTitle(lesson)} is missing (${path}: ${error.message}). ${REBUILD_HINT}`,
+    )
+  }
+  const cues = checkSrt(text, path)
+  return {
+    videoId, lesson: lesson.lesson, title: lessonTitle(lesson), filename: lesson.file, text, cues,
+  }
+}
+
+/**
+ * Pick and start the caption source for one video, in priority order (see the module comment).
+ *
+ *   manual        - { videoId, name, text, filename } chosen with "Load subtitle file…", or null
+ *   loadBundled   - videoId -> bundled subtitle | null; throws on a missing/malformed file
+ *   buildPlan     - (text, { filename }) -> { ok, error }; ok:false when the backend rejects it
+ *   discover      - normal YouTube caption discovery
+ *   report        - ({ source?, subtitleError? }) -> overlay patch
+ *   isCurrent     - false once a newer choice (e.g. a manual pick) has superseded this one
+ *
+ * Resolves to which source started: 'manual' | 'bundled' | 'youtube' | 'superseded'.
+ */
+async function startSubtitleSource({
+  videoId, manual = null, loadBundled, buildPlan, discover, report, isCurrent = () => true,
+}) {
+  if (manual && manual.videoId === videoId) {
+    report({ source: { kind: 'manual', name: manual.name } })
+    await buildPlan(manual.text, { filename: manual.filename })
+    return 'manual'
+  }
+
+  let bundled = null
+  try {
+    bundled = await loadBundled(videoId)
+  } catch (error) {
+    if (!isCurrent()) return 'superseded'
+    report({ subtitleError: `${error.message} Falling back to YouTube captions.` })
+  }
+  if (!isCurrent()) return 'superseded'
+
+  if (bundled) {
+    report({ source: { kind: 'bundled', title: bundled.title, name: bundled.filename } })
+    const result = await buildPlan(signingTextSrt(bundled.text), { filename: bundled.filename })
+    if (result?.ok) return 'bundled'
+    if (!isCurrent()) return 'superseded'
+    report({
+      source: null,
+      subtitleError: `The backend rejected bundled subtitle ${bundled.filename}: ${result?.error || 'unknown error'}. `
+        + 'Falling back to YouTube captions.',
+    })
+  }
+
+  await discover()
+  return 'youtube'
+}
+
+  __x.LESSONS_PATH = LESSONS_PATH;
+  __x.SUBTITLE_DIR = SUBTITLE_DIR;
+  __x.REBUILD_HINT = REBUILD_HINT;
+  __x.BundledSubtitleError = BundledSubtitleError;
+  __x.findLesson = findLesson;
+  __x.lessonTitle = lessonTitle;
+  __x.checkSrt = checkSrt;
+  __x.signingTextSrt = signingTextSrt;
+  __x.loadBundledSubtitle = loadBundledSubtitle;
+  __x.startSubtitleSource = startSubtitleSource;
+});
+
 __def("vendor/YouTubeSignScheduler.js", function (__x, __req) {
 const YT_STATE = { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 }
 
+// 'continue': video and avatar run together. 'pause': pause only when a sign overruns its cue.
+// 'sync-pause': pause the video at the exact start of every unit, wait for its motion if it is
+// still composing, play the whole sign, and resume the video only when the avatar finishes.
+const OVERRUN_POLICIES = ['continue', 'pause', 'sync-pause']
+
+// A unit with `motionPending: true` is still being composed: it is waited for, never skipped.
+// In 'sync-pause' a pause that lands later than this past the unit's start is snapped back to it.
+const SNAP_TOLERANCE_MS = 40
+
 class YouTubeSignScheduler {
   constructor({ media, avatar, units, loadMotion, onUnit, onSync, now = () => performance.now(),
-    overrunPolicy = 'pause', prepareMotion = (motion) => motion }) {
+    overrunPolicy = 'pause', prepareMotion = (motion) => motion, maxHoldMs = 60000 }) {
     this.media = media
     this.avatar = avatar
     this.units = [...units].sort((a, b) => a.startMs - b.startMs)
@@ -583,9 +821,18 @@ class YouTubeSignScheduler {
     this.now = now
     this.overrunPolicy = overrunPolicy
     this.prepareMotion = prepareMotion
+    this.maxHoldMs = maxHoldMs
+    this.pendingPolicy = null
     this.index = 0
     this.active = null
     this.autoPaused = false
+    // YouTube advertisements reuse the lesson's <video> element but have an unrelated clock.
+    // Preserve the lesson plan and freeze the exact avatar frame until content returns.
+    this.externalPaused = false
+    this.heldUnit = null
+    this.holdStartedMs = null
+    this.overriddenUnit = null
+    this.boundaryTimer = null
     this.playerState = YT_STATE.CUED
     this.cache = new Map()
     this.lastMediaMs = null
@@ -602,14 +849,104 @@ class YouTubeSignScheduler {
   stop() {
     if (this.timer !== null) clearInterval(this.timer)
     this.timer = null
+    this._clearBoundaryTimer()
     this.generation += 1
     this.avatar.resetToIdle?.()
+    // Never leave the video held by a pause the scheduler took.
+    if (this.autoPaused) this._release()
+  }
+
+  /** Switch policy at the next unit boundary, so a sign in progress is never cut or re-timed. */
+  setOverrunPolicy(policy) {
+    if (!OVERRUN_POLICIES.includes(policy)) throw new Error(`unknown overrun policy: ${policy}`)
+    this.pendingPolicy = policy
+    if (!this.active) this._applyPendingPolicy()
+  }
+
+  /** Pause all lesson scheduling while YouTube is playing an advertisement. */
+  setExternalPause(paused) {
+    const next = Boolean(paused)
+    if (this.externalPaused === next) return
+    this.externalPaused = next
+    this._clearBoundaryTimer()
+    if (next) {
+      this.avatar.pause?.()
+      this.onSync?.('Advertisement playing — signing paused')
+    } else {
+      // Ad media time is not lesson media time; do not mistake the swap for a viewer seek.
+      this.lastMediaMs = Number(this.media.getCurrentTime?.() ?? 0) * 1000
+      this.lastWallMs = this.now()
+      if (this.playerState === YT_STATE.PLAYING && !this.autoPaused) this.avatar.resume?.()
+      this.onSync?.('Advertisement ended')
+    }
+  }
+
+  /**
+   * Merge fresh unit data (e.g. a unit whose motion just finished composing) into the schedule.
+   * Known units are updated in place so `active`/`heldUnit` keep their identity; new ones are
+   * inserted in start order without moving the unit the schedule is currently on.
+   */
+  updateUnits(units) {
+    const current = this.units[this.index] ?? null
+    const byId = new Map(this.units.map((unit) => [unit.id, unit]))
+    for (const unit of units) {
+      if (byId.has(unit.id)) Object.assign(byId.get(unit.id), unit)
+      else this.units.push(unit)
+    }
+    this.units.sort((a, b) => a.startMs - b.startMs)
+    if (current) this.index = this.units.indexOf(current)
+  }
+
+  /** The unit the video is held at while its motion is still being composed, if any. */
+  get bufferingUnit() {
+    return this.autoPaused && this.heldUnit && this.heldUnit !== this.active ? this.heldUnit : null
+  }
+
+  _applyPendingPolicy() {
+    if (this.pendingPolicy === null) return
+    this.overrunPolicy = this.pendingPolicy
+    this.pendingPolicy = null
+  }
+
+  _hold(message, unit = this.active) {
+    this.autoPaused = true
+    this.heldUnit = unit
+    this.holdStartedMs = this.now()
+    this.media.pauseVideo()
+    this.avatar.resume?.()
+    this.onSync?.(message)
+  }
+
+  _release() {
+    this.autoPaused = false
+    this.holdStartedMs = null
+    try {
+      this.media.playVideo()
+    } catch {
+      // A player torn down during stop() cannot be resumed; there is nothing left to hold.
+    }
   }
 
   setPlayerState(state) {
+    // The viewer pressed play while the scheduler held the video: their choice wins, and the
+    // held unit is not paused again.
+    if (state === YT_STATE.PLAYING && this.autoPaused) {
+      this.autoPaused = false
+      this.holdStartedMs = null
+      this.overriddenUnit = this.heldUnit
+    }
     this.playerState = state
+    if (this.externalPaused) {
+      // YouTube emits normal player events while it swaps ad creatives. None of them should
+      // restart the lesson avatar until the ad marker itself disappears.
+      this.avatar.pause?.()
+      this.lastMediaMs = Number(this.media.getCurrentTime?.() ?? 0) * 1000
+      this.lastWallMs = this.now()
+      return
+    }
     if (state === YT_STATE.PLAYING) this.avatar.resume?.()
-    if ((state === YT_STATE.PAUSED && !this.autoPaused) || state === YT_STATE.BUFFERING) {
+    if ((state === YT_STATE.PAUSED && !this.autoPaused)
+        || (state === YT_STATE.BUFFERING && !this.autoPaused)) {
       this.avatar.pause?.()
     }
     if (state === YT_STATE.PAUSED && this.autoPaused) this.avatar.resume?.()
@@ -619,8 +956,9 @@ class YouTubeSignScheduler {
   }
 
   _prefetch() {
-    for (const unit of this.units.slice(this.index, this.index + 2)) {
-      if (!unit.motionAvailable || this.cache.has(unit.id)) continue
+    // The next two units that have motion; units still composing do not use up the look-ahead.
+    for (const unit of this.units.slice(this.index).filter((u) => u.motionAvailable).slice(0, 2)) {
+      if (this.cache.has(unit.id)) continue
       const promise = Promise.resolve(this.loadMotion(unit)).catch((error) => ({ loadError: error }))
       this.cache.set(unit.id, promise)
     }
@@ -634,22 +972,95 @@ class YouTubeSignScheduler {
       const motion = await this.cache.get(unit.id)
       if (motion?.loadError) throw motion.loadError
       if (generation !== this.generation || this.active) return
-      this.avatar.play(this.prepareMotion(motion, unit))
+      this.avatar.play(this.prepareMotion(motion, unit, this.overrunPolicy))
       this.active = unit
       this.onSync?.('Signing')
+      if (this.overrunPolicy === 'sync-pause' && this.playerState === YT_STATE.PLAYING
+          && this.heldUnit !== unit && this.overriddenUnit !== unit) {
+        this._hold('Video paused while the avatar signs')
+      }
     } catch (error) {
       if (generation === this.generation) {
         this.index += 1
+        // A unit that cannot play must not keep the video held at its start.
+        if (this.autoPaused && this.heldUnit === unit) this._release()
+        if (this.heldUnit === unit) this.heldUnit = null
         this.onSync?.(`Motion unavailable: ${error.message}`)
       }
     }
   }
 
+  /**
+   * 'sync-pause' at a unit boundary: hold the video exactly at the unit's start (snapping back a
+   * pause that landed late), then play the motion as soon as it is composed. A unit whose hold the
+   * viewer overrode by pressing play is still signed if it becomes ready, but never held again.
+   */
+  _engageSync(unit, mediaMs) {
+    if (this.heldUnit !== unit && this.overriddenUnit !== unit && this.playerState === YT_STATE.PLAYING) {
+      this._hold(unit.motionAvailable ? 'Video paused while the avatar signs' : 'Buffering next sign…', unit)
+      if (mediaMs - unit.startMs > SNAP_TOLERANCE_MS && this.media.seekTo) {
+        this.media.seekTo(unit.startMs / 1000, true)
+        this.lastMediaMs = unit.startMs
+      }
+    }
+    if (unit.motionAvailable) this._launch(unit)
+  }
+
+  /** One 'sync-pause' scheduling step; `previousMediaMs` is null when this tick was a seek. */
+  _syncStep(mediaMs, previousMediaMs) {
+    if (this.active) return
+    for (;;) {
+      const unit = this.units[this.index]
+      if (!unit) return
+      const held = this.heldUnit === unit
+      if (mediaMs < unit.startMs && !held) {
+        this._armBoundary(unit, mediaMs)
+        return
+      }
+      // Crossed by ordinary playback since the last tick, however short the unit: never skipped.
+      const crossed = previousMediaMs !== null && unit.startMs > previousMediaMs
+      const passed = unit.endMs <= mediaMs && !crossed && !held
+      const settledWithoutMotion = !unit.motionAvailable && !unit.motionPending
+      const abandoned = this.overriddenUnit === unit && unit.endMs <= mediaMs
+      if (passed || settledWithoutMotion || abandoned) {
+        if (held && this.autoPaused) this._release()
+        if (held) this.heldUnit = null
+        this.index += 1
+        continue
+      }
+      this._engageSync(unit, mediaMs)
+      return
+    }
+  }
+
+  /** Wake exactly when media time reaches the next unit's start, instead of up to a tick late. */
+  _armBoundary(unit, mediaMs) {
+    this._clearBoundaryTimer()
+    if (this.timer === null || this.playerState !== YT_STATE.PLAYING) return
+    const rate = Number(this.media.getPlaybackRate?.() ?? 1) || 1
+    const delay = (unit.startMs - mediaMs) / rate
+    if (delay > 150) return
+    this.boundaryTimer = setTimeout(() => {
+      this.boundaryTimer = null
+      this.tick()
+    }, Math.max(0, delay))
+  }
+
+  _clearBoundaryTimer() {
+    if (this.boundaryTimer !== null) clearTimeout(this.boundaryTimer)
+    this.boundaryTimer = null
+  }
+
   _resync(mediaMs) {
     this.generation += 1
     this.active = null
-    this.autoPaused = false
+    this.heldUnit = null
+    this.overriddenUnit = null
+    this._clearBoundaryTimer()
     this.avatar.resetToIdle?.()
+    // The motion the video was waiting for is gone; hand playback back instead of staying paused.
+    if (this.autoPaused) this._release()
+    this._applyPendingPolicy()
     this.index = this.units.findIndex((unit) => unit.startMs >= mediaMs)
     if (this.index < 0) this.index = this.units.length
     this.onSync?.('Resynced after seek')
@@ -658,36 +1069,58 @@ class YouTubeSignScheduler {
   tick() {
     const wallMs = this.now()
     const mediaMs = Number(this.media.getCurrentTime?.() ?? 0) * 1000
+    if (this.externalPaused) {
+      this.lastMediaMs = mediaMs
+      this.lastWallMs = wallMs
+      return
+    }
     const current = this.units.find((unit) => mediaMs >= unit.startMs && mediaMs < unit.endMs) ?? null
     this.onUnit?.(current)
 
+    let previousMediaMs = this.lastMediaMs
     if (this.lastMediaMs !== null && this.lastWallMs !== null) {
       const elapsedWall = wallMs - this.lastWallMs
       const expected = this.playerState === YT_STATE.PLAYING
         ? elapsedWall * Number(this.media.getPlaybackRate?.() ?? 1) : 0
-      if (Math.abs((mediaMs - this.lastMediaMs) - expected) > 750) this._resync(mediaMs)
+      if (Math.abs((mediaMs - this.lastMediaMs) - expected) > 750) {
+        this._resync(mediaMs)
+        previousMediaMs = null
+      }
     }
     this.lastMediaMs = mediaMs
     this.lastWallMs = wallMs
 
+    if (this.active && this.autoPaused && this.holdStartedMs !== null
+        && wallMs - this.holdStartedMs > this.maxHoldMs) {
+      // An avatar that never reports completion must not keep the video paused forever.
+      this.avatar.resetToIdle?.()
+    }
+
     if (this.active && !this.avatar.isPlaying()) {
       this.active = null
+      this.heldUnit = null
       this.index += 1
       if (this.autoPaused) {
-        this.autoPaused = false
-        this.media.playVideo()
+        this._release()
         this.onSync?.('Video resumed')
       } else {
         this.onSync?.('In sync')
       }
     }
+    if (!this.active) this._applyPendingPolicy()
 
-    if (this.overrunPolicy === 'pause' && this.active && mediaMs >= this.active.endMs && this.avatar.isPlaying()
-        && !this.autoPaused && this.playerState === YT_STATE.PLAYING) {
-      this.autoPaused = true
-      this.media.pauseVideo()
-      this.avatar.resume?.()
-      this.onSync?.('Video paused while the sign finishes')
+    const canHold = this.active && this.avatar.isPlaying() && !this.autoPaused
+      && this.playerState === YT_STATE.PLAYING && this.heldUnit !== this.active
+    if (canHold && this.overrunPolicy === 'pause' && mediaMs >= this.active.endMs) {
+      this._hold('Video paused while the sign finishes')
+    } else if (canHold && this.overrunPolicy === 'sync-pause') {
+      this._hold('Video paused while the avatar signs')
+    }
+
+    if (this.overrunPolicy === 'sync-pause') {
+      this._syncStep(mediaMs, previousMediaMs)
+      this._prefetch()
+      return
     }
 
     while (!this.active && this.index < this.units.length && this.units[this.index].endMs <= mediaMs) {
@@ -696,13 +1129,14 @@ class YouTubeSignScheduler {
     const next = this.units[this.index]
     if (!this.active && next && mediaMs >= next.startMs && mediaMs < next.endMs) {
       if (next.motionAvailable) this._launch(next)
-      else this.index += 1
+      else if (!next.motionPending) this.index += 1
     }
     this._prefetch()
   }
 }
 
   __x.YT_STATE = YT_STATE;
+  __x.OVERRUN_POLICIES = OVERRUN_POLICIES;
   __x.default = YouTubeSignScheduler;
 });
 
@@ -748,6 +1182,21 @@ function videoEventToPlayerState(eventName) {
 const WATCHED_EVENTS = ['playing', 'pause', 'waiting', 'ended', 'seeked', 'ratechange']
 
 /**
+ * YouTube marks its player while an advertisement has temporarily replaced the lesson stream.
+ * Captions and the `<video>` element remain present, so neither identifies an ad on its own.
+ * The probe is defensive for tests and for changes in YouTube's page layout.
+ */
+function isYouTubeAdvertisement(video) {
+  const documentRef = globalThis.document
+  const player = video?.closest?.('#movie_player')
+    || documentRef?.getElementById?.('movie_player')
+  return Boolean(
+    player?.classList?.contains('ad-showing')
+    || documentRef?.querySelector?.('#movie_player.ad-showing, .html5-video-player.ad-showing'),
+  )
+}
+
+/**
  * Wrap a video element.
  *
  * `pauseVideo`/`playVideo` additionally record whether the extension was the caller. The
@@ -765,6 +1214,10 @@ function createYouTubeMedia(video) {
     pauseVideo: () => {
       pausedByExtension = true
       try { video.pause() } catch { /* a detached element is not an error worth raising */ }
+    },
+    // Used by 'sync-pause' to put a pause that landed a tick late back on the caption boundary.
+    seekTo: (seconds) => {
+      try { video.currentTime = Number(seconds) || 0 } catch { /* detached element */ }
     },
     playVideo: () => {
       pausedByExtension = false
@@ -788,6 +1241,7 @@ function createYouTubeMedia(video) {
 
   __x.videoEventToPlayerState = videoEventToPlayerState;
   __x.WATCHED_EVENTS = WATCHED_EVENTS;
+  __x.isYouTubeAdvertisement = isYouTubeAdvertisement;
   __x.createYouTubeMedia = createYouTubeMedia;
 });
 
@@ -1275,8 +1729,39 @@ const STATUS_TEXT = {
   signing: 'Signing',
   paused: 'Paused',
   'catch-up': 'Video paused while the sign finishes',
+  'sync-hold': 'Video paused while the avatar signs',
+  'sync-buffering': 'Buffering next sign…',
+  advertisement: 'Advertisement — signing paused',
   'buffering-signs': 'Buffering next signs…',
   ended: 'Finished',
+}
+
+const MODE_TEXT = {
+  'play-together': 'Play together',
+  'sync-pause': 'Sync and pause',
+}
+
+/**
+ * How honest the current unit's signs are, for the label under the gloss chips. Fingerspelling is
+ * named first: it is letter-by-letter alphabet fallback, never a reviewed ISL sign.
+ */
+function unitNotice({ fingerspelledWords = [], unitStatus = null } = {}) {
+  if (fingerspelledWords.length) {
+    return `Fingerspelling (alphabet fallback, not a reviewed ISL sign): ${fingerspelledWords.join(', ')}`
+  }
+  if (unitStatus === 'literal-preview') {
+    return 'Literal preview: candidate signs, not a reviewed ISL translation'
+  }
+  return ''
+}
+
+/** Which caption source the current plan was built from, in the viewer's words. */
+function subtitleSourceText(source) {
+  if (!source) return ''
+  if (source.kind === 'bundled') return `Using bundled lesson subtitle: ${source.title}`
+  if (source.kind === 'youtube') return 'Using YouTube captions'
+  if (source.kind === 'manual') return 'Using manually selected subtitle file'
+  return ''
 }
 
 const STATUS_KIND = {
@@ -1284,15 +1769,19 @@ const STATUS_KIND = {
   'no-captions': 'bad',
   'plan-failed': 'bad',
   'catch-up': 'warn',
+  'sync-hold': 'good',
+  'sync-buffering': 'warn',
   'buffering-signs': 'warn',
+  advertisement: 'warn',
   paused: 'warn',
   signing: 'good',
   ready: 'good',
 }
 
 class Overlay {
-  constructor({ onRetry, onPickSubtitle, onDownloadCaptions, onToggleEnabled } = {}) {
+  constructor({ onRetry, onPickSubtitle, onDownloadCaptions, onToggleEnabled, onChangeMode } = {}) {
     this.onRetry = onRetry
+    this.onChangeMode = onChangeMode
     this.onPickSubtitle = onPickSubtitle
     this.onDownloadCaptions = onDownloadCaptions
     this.onToggleEnabled = onToggleEnabled
@@ -1302,6 +1791,8 @@ class Overlay {
     this.state = {
       status: 'idle', detail: '', caption: '', glosses: [], activeGloss: null,
       progress: 0, rate: 1, coverage: null, unsupported: [], avatarMount: null,
+      playbackMode: 'play-together', modePending: false, fingerspelledWords: [], unitStatus: null,
+      subtitleSource: null, subtitleError: '',
     }
   }
 
@@ -1380,16 +1871,27 @@ class Overlay {
         }
         button:hover { background: rgba(255,255,255,0.16); }
         button.primary { background: #4f46e5; border-color: #6366f1; color: #fff; }
+        button:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 1px; }
+        .modechip { font-size: 10px; font-weight: 600; color: #c7d2fe; background: rgba(99,102,241,.22);
+                    border: 1px solid rgba(129,140,248,.45); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+        .modes { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+        .modes button[aria-pressed="true"] { background: #4f46e5; border-color: #6366f1; color: #fff; }
+        .modenote { font-size: 11px; color: #a1a1aa; }
+        .notice { font-size: 11.5px; color: #93c5fd; }
+        .source { font-size: 11.5px; color: #a7f3d0; }
       </style>
       <div class="panel">
         <div class="head" part="head">
           <span class="dot" id="dot"></span>
           <span class="mark">Signora</span>
           <span class="status" id="status">Idle</span>
+          <span class="modechip" id="modechip" title="Playback mode">Play together</span>
           <span class="chev" id="chev">▾</span>
         </div>
         <div class="body" id="body">
           <div class="avatar" id="avatar"></div>
+          <div class="source" id="source" hidden></div>
+          <div class="detail" id="suberror" role="alert" hidden></div>
           <div>
             <div class="label">Current caption</div>
             <div class="caption" id="caption"><span class="muted">—</span></div>
@@ -1397,6 +1899,15 @@ class Overlay {
           <div>
             <div class="label">Signs</div>
             <div class="glosses" id="glosses"><span class="muted">—</span></div>
+          </div>
+          <div class="notice" id="notice" hidden></div>
+          <div>
+            <div class="label" id="modelabel">Playback mode</div>
+            <div class="modes" role="group" aria-labelledby="modelabel">
+              <button id="mode-together" data-mode="play-together" aria-pressed="true">Play together</button>
+              <button id="mode-sync" data-mode="sync-pause" aria-pressed="false">Sync and pause</button>
+              <span class="modenote" id="modenote" aria-live="polite"></span>
+            </div>
           </div>
           <div class="bar"><i id="bar" style="width:0%"></i></div>
           <div class="meta" id="meta"></div>
@@ -1416,11 +1927,21 @@ class Overlay {
       caption: $('caption'), glosses: $('glosses'), bar: $('bar'), meta: $('meta'),
       warn: $('warn'), detail: $('detail'), avatar: $('avatar'),
       retry: $('retry'), pick: $('pick'), download: $('download'),
+      modechip: $('modechip'), notice: $('notice'), modenote: $('modenote'),
+      source: $('source'), suberror: $('suberror'),
+      modeButtons: [$('mode-together'), $('mode-sync')],
     }
     $('status').parentElement.addEventListener('click', () => this.toggle())
     this.el.retry.addEventListener('click', (e) => { e.stopPropagation(); this.onRetry?.() })
     this.el.pick.addEventListener('click', (e) => { e.stopPropagation(); this.onPickSubtitle?.() })
     this.el.download.addEventListener('click', (e) => { e.stopPropagation(); this.onDownloadCaptions?.() })
+    for (const button of this.el.modeButtons) {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation()
+        this.update({ playbackMode: button.dataset.mode })
+        this.onChangeMode?.(button.dataset.mode)
+      })
+    }
 
     document.documentElement.appendChild(host)
     this.el.body.hidden = !this.expanded
@@ -1472,6 +1993,24 @@ class Overlay {
       this.el.glosses.innerHTML = '<span class="muted">—</span>'
     }
 
+    const mode = MODE_TEXT[s.playbackMode] ? s.playbackMode : 'play-together'
+    this.el.modechip.textContent = MODE_TEXT[mode]
+    for (const button of this.el.modeButtons) {
+      button.setAttribute('aria-pressed', String(button.dataset.mode === mode))
+    }
+    this.el.modenote.textContent = s.modePending ? 'applies after the current sign' : ''
+
+    const source = subtitleSourceText(s.subtitleSource)
+    this.el.source.hidden = !source
+    this.el.source.textContent = source
+    this.el.source.title = s.subtitleSource?.name || ''
+    this.el.suberror.hidden = !s.subtitleError
+    this.el.suberror.textContent = s.subtitleError || ''
+
+    const notice = unitNotice(s)
+    this.el.notice.hidden = !notice
+    this.el.notice.textContent = notice
+
     this.el.bar.style.width = `${Math.round((s.progress || 0) * 100)}%`
 
     const bits = [`<span>Speed <b>${Number(s.rate || 1).toFixed(2)}×</b></span>`]
@@ -1516,6 +2055,9 @@ class Overlay {
   }
 }
 
+  __x.MODE_TEXT = MODE_TEXT;
+  __x.unitNotice = unitNotice;
+  __x.subtitleSourceText = subtitleSourceText;
   __x.Overlay = Overlay;
 });
 
@@ -1607,6 +2149,19 @@ function describeReadiness(mediaMs, units, readyIds, planStatus, lookaheadCount 
 }
 
 /**
+ * Plan units as the scheduler consumes them: every unit, with `motionPending` marking one the
+ * backend is still composing (so 'sync-pause' waits for it instead of skipping it). Once the plan
+ * is terminal, or the backend is unreachable (`settled`), nothing is pending any more.
+ */
+function toScheduleUnits(units, planStatus, { settled = false } = {}) {
+  const final = settled || isPlanTerminal(planStatus)
+  return (units ?? []).map((unit) => ({
+    ...unit,
+    motionPending: !unit.motionAvailable && !final && !isSettled(unit),
+  }))
+}
+
+/**
  * What the overlay should report as not signed, and how many units played through a labelled
  * transition fallback, from the backend's own per-unit issue reports.
  *
@@ -1644,6 +2199,7 @@ function progressSummary(units, readyIds) {
   __x.isPlanTerminal = isPlanTerminal;
   __x.diffNewlyReady = diffNewlyReady;
   __x.describeReadiness = describeReadiness;
+  __x.toScheduleUnits = toScheduleUnits;
   __x.summarizeIssues = summarizeIssues;
   __x.progressSummary = progressSummary;
 });
@@ -1652,7 +2208,8 @@ __def("src/main.js", function (__x, __req) {
 /**
  * Orchestrator. Runs in the isolated content-script world on a YouTube watch page.
  *
- * Sequence: find the <video> -> check the backend -> get English captions -> convert to VTT ->
+ * Sequence: find the <video> -> check the backend -> get English captions (a manually picked file,
+ * else the bundled lesson SRT for a known playlist video, else YouTube's own) -> convert to VTT ->
  * POST to the existing /api/v1/video-plans -> poll until ready -> hand the returned timed units
  * to the unmodified YouTubeSignScheduler, with the page's <video> adapted to its media contract
  * and an AvatarAdapter standing in for playback.
@@ -1663,15 +2220,18 @@ __def("src/main.js", function (__x, __req) {
  * competing planner the task rules out.
  */
 
-const { config, loadConfig, log, warn } = __req("src/config.js");
+const {
+  PLAYBACK_MODES, avatarRateFor, config, loadConfig, log, overrunPolicyFor, saveConfig, warn,
+} = __req("src/config.js");
 const { CaptionsUnavailableError, PageBridge, discoverCaptions } = __req("src/captions/discover.js");
 const { timedTextToVtt } = __req("src/captions/convert.js");
-const { WATCHED_EVENTS, createYouTubeMedia, videoEventToPlayerState } = __req("src/media/youtube-media.js");
+const { startSubtitleSource } = __req("src/captions/bundled.js");
+const { WATCHED_EVENTS, createYouTubeMedia, isYouTubeAdvertisement, videoEventToPlayerState } = __req("src/media/youtube-media.js");
 const { MockAvatarAdapter } = __req("src/avatar/adapter.js");
 const { UnityIframeAvatarAdapter } = __req("src/avatar/unity-iframe.js");
 const { Overlay } = __req("src/overlay/overlay.js");
 const {
-  describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary, summarizeIssues,
+  describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary, summarizeIssues, toScheduleUnits,
 } = __req("src/plan/progressive.js");
 const YouTubeSignScheduler = __req("vendor/YouTubeSignScheduler.js").default; const { YT_STATE } = __req("vendor/YouTubeSignScheduler.js");
 
@@ -1723,7 +2283,13 @@ class SignoraSession {
     this.uiTimer = null
     this.videoId = videoId()
     this.unsupported = []
+    this.adShowing = false
     this.destroyed = false
+    // A subtitle file the viewer picked, kept for this tab: it overrides bundled lesson SRTs and
+    // YouTube captions for the video it was picked on, including after Retry or navigating back.
+    this.manualSubtitle = null
+    // Bumped whenever a newer caption choice supersedes an in-flight one.
+    this.sourceGeneration = 0
   }
 
   // --- lifecycle ---------------------------------------------------------------------------
@@ -1736,8 +2302,12 @@ class SignoraSession {
       onRetry: () => this.restart(),
       onPickSubtitle: () => this.pickSubtitleFile(),
       onDownloadCaptions: () => this.downloadCaptions(),
+      onChangeMode: (mode) => this.setPlaybackMode(mode),
     }).mount(settings.overlayExpanded)
-    this.overlay.update({ adapterName: settings.avatarAdapter })
+    this.overlay.update({
+      adapterName: settings.avatarAdapter,
+      playbackMode: PLAYBACK_MODES[settings.playbackMode] ? settings.playbackMode : 'play-together',
+    })
 
     // Progressive plan state. `allUnits` always holds the full, latest-known unit list (every
     // unit's startMs/endMs/text is known immediately after POSTing - only motionAvailable/status
@@ -1773,6 +2343,28 @@ class SignoraSession {
       return
     }
 
+    const generation = ++this.sourceGeneration
+    await startSubtitleSource({
+      videoId: this.videoId,
+      manual: this.manualSubtitle,
+      loadBundled: (id) => callBackground('getBundledSubtitle', { videoId: id }),
+      buildPlan: (text, options) => this.buildPlan(text, options),
+      discover: () => this.discoverYouTubeCaptions(generation),
+      report: (patch) => this.reportSubtitle(patch),
+      isCurrent: () => !this.destroyed && generation === this.sourceGeneration,
+    })
+  }
+
+  /** Overlay patch for the active caption source and any bundled-subtitle failure. */
+  reportSubtitle({ source, subtitleError }) {
+    const patch = {}
+    if (source !== undefined) patch.subtitleSource = source
+    if (subtitleError !== undefined) patch.subtitleError = subtitleError
+    this.overlay.update(patch)
+  }
+
+  /** Normal caption discovery: capture the English captions YouTube's own player loads. */
+  async discoverYouTubeCaptions(generation) {
     let captions
     try {
       this.overlay.update({ status: 'preparing-captions', detail: '' })
@@ -1791,9 +2383,11 @@ class SignoraSession {
       this.watchForLateCaptions()
       return
     }
+    if (this.destroyed || generation !== this.sourceGeneration) return
 
     log('captions', captions.format, captions.cues.length, 'cues via', captions.via)
     this.overlay.update({
+      subtitleSource: { kind: 'youtube' },
       detail: `${captions.cues.length} caption cues (${captions.format}, ${captions.track?.kind === 'asr' ? 'auto-generated' : 'manual'}, via ${captions.via})`,
     })
     await this.buildPlan(captions.vtt)
@@ -1820,6 +2414,7 @@ class SignoraSession {
       this.lateCaptionOff = null
       log('late captions captured after the initial failure')
       this.overlay.update({
+        subtitleSource: { kind: 'youtube' },
         detail: `Captions arrived (${converted.cues.length} cues). Preparing the sign plan…`,
       })
       this.buildPlan(converted.vtt)
@@ -1836,8 +2431,12 @@ class SignoraSession {
    * alone measured 31 s). So the fix is entirely client-side: stop waiting for
    * `plan.status === 'ready'` before doing anything. The scheduler is attached straight away with
    * zero units and fed units one at a time as `pollPlanProgress` discovers them ready.
+   *
+   * `filename` tells the backend which parser to use (.srt or .vtt). Resolves to `{ ok: false,
+   * error }` when the backend rejects the subtitle, so a bundled lesson can fall back.
    */
-  async buildPlan(vtt) {
+  async buildPlan(vtt, { filename = 'captions.vtt' } = {}) {
+    const generation = this.sourceGeneration
     this.lastVtt = vtt
     this.overlay.update({ status: 'preparing-plan', detail: 'Sending captions to the Signora backend…' })
     let plan
@@ -1845,13 +2444,14 @@ class SignoraSession {
       plan = await callBackground('createVideoPlan', {
         youtubeUrl: location.href.split('&')[0],
         vtt,
-        filename: 'captions.vtt',
+        filename,
       })
     } catch (error) {
       this.overlay.update({ status: 'plan-failed', detail: error.message })
-      return
+      return { ok: false, error: error.message }
     }
-    if (this.destroyed) return
+    // A newer caption choice (e.g. a manual pick) arrived while this one was being posted.
+    if (this.destroyed || generation !== this.sourceGeneration) return { ok: true }
 
     this.planId = plan.id
     this.allUnits = plan.units
@@ -1864,6 +2464,7 @@ class SignoraSession {
       detail: `Preparing the first signs… (${plan.units.length} caption units total)`,
     })
     this.pollPlanProgress(plan.id)
+    return { ok: true }
   }
 
   /**
@@ -1882,6 +2483,9 @@ class SignoraSession {
         plan = await callBackground('getVideoPlan', planId)
       } catch (error) {
         this.overlay.update({ detail: `Lost contact with the backend while composing: ${error.message}` })
+        // Units still composing will never arrive: stop waiting for them, so 'sync-pause' does
+        // not hold the video at a boundary forever.
+        this.scheduler?.updateUnits(toScheduleUnits(this.allUnits, this.planStatusValue, { settled: true }))
         return
       }
       if (this.destroyed || this.planId !== planId) return
@@ -1891,14 +2495,10 @@ class SignoraSession {
 
       const { newlyReady, readyIds } = diffNewlyReady(plan.units, this.readyIds)
       this.readyIds = readyIds
-      if (newlyReady.length && this.scheduler) {
-        // Mutate the scheduler's own array rather than its constructor argument: the vendored
-        // scheduler copies `units` into `this.units` at construction and never looks at the
-        // original reference again, but `this.units` itself is a plain, public field. Pushing
-        // into it is the whole mechanism that lets later units become playable without
-        // reconstructing the scheduler or forking its source.
-        this.scheduler.units.push(...newlyReady)
-        this.scheduler.units.sort((a, b) => a.startMs - b.startMs)
+      // The scheduler knows every unit from the start, each marked `motionPending` until it is
+      // composed; this updates them in place as they become playable (or settle without motion).
+      this.scheduler?.updateUnits(toScheduleUnits(plan.units, plan.status))
+      if (newlyReady.length) {
         log(`${newlyReady.length} unit(s) became playable:`, newlyReady.map((u) => u.glosses).flat())
       }
 
@@ -1984,20 +2584,26 @@ class SignoraSession {
     }
 
     // The scheduler is used exactly as the Watch page uses it; `loadMotion` routes through the
-    // service worker, and `units` starts empty on purpose - see pollPlanProgress() for why. Every
-    // other behaviour (play/pause/seek/rate/overrun) is the scheduler's own, untouched logic.
+    // service worker. It is given every unit at once, those still composing marked
+    // `motionPending` - see pollPlanProgress(). Every other behaviour (play/pause/seek/rate/
+    // overrun) is the scheduler's own logic.
     this.scheduler = new YouTubeSignScheduler({
       media: this.media,
       avatar: this.adapter,
-      units: [],
+      units: toScheduleUnits(plan.units, plan.status),
       loadMotion: (unit) => callBackground('getUnitMotion', unit.motionUrl),
-      overrunPolicy: settings.overrunPolicy,
-      prepareMotion: (motion, unit) => ({
-        ...motion,
-        // This is a video-caption performance, not a live microphone queue.  Fit the entire
-        // composed unit to its source cue so the avatar and spoken words progress together.
-        playbackTiming: { targetDurationMs: Math.max(250, unit.endMs - unit.startMs) },
-      }),
+      overrunPolicy: overrunPolicyFor(settings),
+      prepareMotion: (motion, unit, policy) => {
+        // Called as each sign starts, with the policy it plays under.
+        this.adapter?.setPlaybackRate(avatarRateFor(policy, this.media.getPlaybackRate()))
+        // 'sync-pause' holds the video for the sign, so the motion keeps its own recorded pace.
+        return policy === 'sync-pause' ? motion : {
+          ...motion,
+          // This is a video-caption performance, not a live microphone queue.  Fit the entire
+          // composed unit to its source cue so the avatar and spoken words progress together.
+          playbackTiming: { targetDurationMs: Math.max(250, unit.endMs - unit.startMs) },
+        }
+      },
       onSync: (detail) => this.overlay.update({ detail }),
     })
 
@@ -2005,9 +2611,34 @@ class SignoraSession {
     this.scheduler.start()
     // Seed the scheduler with the player's current state so a video already playing is picked up.
     this.scheduler.setPlayerState(this.video.paused ? YT_STATE.PAUSED : YT_STATE.PLAYING)
-    this.adapter.setPlaybackRate(this.media.getPlaybackRate())
+    this.adapter.setPlaybackRate(avatarRateFor(this.scheduler.overrunPolicy, this.media.getPlaybackRate()))
 
-    this.uiTimer = setInterval(() => this.paintStatus(), 250)
+    this.syncAdvertisementState()
+    this.uiTimer = setInterval(() => {
+      this.syncAdvertisementState()
+      this.paintStatus()
+    }, 250)
+  }
+
+  /** Freeze the lesson avatar whenever YouTube swaps its stream for an advertisement. */
+  syncAdvertisementState() {
+    const showing = isYouTubeAdvertisement(this.video)
+    if (showing === this.adShowing) return
+    this.adShowing = showing
+    this.scheduler?.setExternalPause(showing)
+    log(showing ? 'advertisement started — signing paused' : 'advertisement ended — signing resumed')
+  }
+
+  /**
+   * Overlay toggle. The choice is saved immediately; a running scheduler adopts it at its next
+   * unit boundary, so a sign in progress is never re-timed and a hold it took is still released.
+   */
+  async setPlaybackMode(mode) {
+    if (!PLAYBACK_MODES[mode]) return
+    const settings = await saveConfig({ playbackMode: mode })
+    this.scheduler?.setOverrunPolicy(overrunPolicyFor(settings))
+    this.overlay.update({ playbackMode: mode })
+    log('playback mode', mode)
   }
 
   bindVideoEvents() {
@@ -2020,7 +2651,8 @@ class SignoraSession {
       add(this.video, name, () => {
         if (name === 'ratechange') {
           const rate = this.media.getPlaybackRate()
-          this.adapter?.setPlaybackRate(rate)
+          // In 'sync-pause' the avatar keeps natural speed; the video resumes at the viewer's rate.
+          this.adapter?.setPlaybackRate(avatarRateFor(this.scheduler?.overrunPolicy, rate))
           this.overlay.update({ rate })
           return
         }
@@ -2060,6 +2692,13 @@ class SignoraSession {
    */
   paintStatus() {
     if (!this.scheduler || !this.adapter) return
+    if (this.adShowing) {
+      this.overlay.update({
+        status: 'advertisement', caption: 'Advertisement — signing paused', glosses: [],
+        activeGloss: null, unitStatus: null, fingerspelledWords: [],
+      })
+      return
+    }
     const snapshot = this.adapter.snapshot?.() ?? {}
     const paused = Boolean(this.video?.paused)
     const autoPaused = Boolean(this.scheduler.autoPaused)
@@ -2069,7 +2708,8 @@ class SignoraSession {
     )
 
     let status
-    if (autoPaused) status = 'catch-up'
+    if (autoPaused && this.scheduler.bufferingUnit) status = 'sync-buffering'
+    else if (autoPaused) status = this.scheduler.overrunPolicy === 'sync-pause' ? 'sync-hold' : 'catch-up'
     else if (this.video?.ended) status = 'ended'
     else if (paused) status = 'paused'
     else if (snapshot.playing) status = 'signing'
@@ -2077,16 +2717,18 @@ class SignoraSession {
       status = 'buffering-signs'
     } else status = 'ready'
 
-    const patch = { status, progress: snapshot.progress ?? 0, rate: this.media.getPlaybackRate() }
-    if (readiness.unit) {
-      patch.caption = readiness.unit.text || ''
-      patch.glosses = readiness.unit.glosses || []
-      patch.activeGloss = snapshot.activeGloss ?? null
-    } else if (readiness.units?.length) {
-      // Nothing is current yet, but show what the look-ahead buffer is working on.
-      patch.caption = readiness.units[0].text || ''
-      patch.glosses = readiness.units[0].glosses || []
-      patch.activeGloss = null
+    const patch = {
+      status, progress: snapshot.progress ?? 0, rate: this.media.getPlaybackRate(),
+      modePending: this.scheduler.pendingPolicy !== null,
+    }
+    const shown = readiness.unit ?? readiness.units?.[0] ?? null
+    if (shown) {
+      patch.caption = shown.text || ''
+      patch.glosses = shown.glosses || []
+      // Nothing is current yet when only the look-ahead is shown, so nothing is highlighted.
+      patch.activeGloss = readiness.unit ? snapshot.activeGloss ?? null : null
+      patch.unitStatus = shown.status
+      patch.fingerspelledWords = shown.fingerspelledWords || []
     }
     this.overlay.update(patch)
 
@@ -2121,7 +2763,12 @@ class SignoraSession {
           ? timedTextToVtt(text).vtt
           : text
         this.teardownScheduler()
-        this.overlay.update({ detail: `Using local file ${file.name}` })
+        this.manualSubtitle = { videoId: this.videoId, name: file.name, text: vtt, filename: 'captions.vtt' }
+        this.overlay.update({
+          subtitleSource: { kind: 'manual', name: file.name },
+          subtitleError: '',
+          detail: `Using local file ${file.name}`,
+        })
         await this.buildPlan(vtt)
       } catch (error) {
         this.overlay.update({ status: 'plan-failed', detail: error.message })
@@ -2134,6 +2781,7 @@ class SignoraSession {
   // --- teardown ----------------------------------------------------------------------------
 
   teardownScheduler() {
+    this.sourceGeneration += 1
     this.lateCaptionOff?.()
     this.lateCaptionOff = null
     if (this.uiTimer) { clearInterval(this.uiTimer); this.uiTimer = null }
@@ -2155,8 +2803,9 @@ class SignoraSession {
     this.videoId = videoId()
     this.lastVtt = ''
     this.overlay.update({
-      status: 'idle', caption: '', glosses: [], activeGloss: null,
+      status: 'idle', caption: '', glosses: [], activeGloss: null, unitStatus: null, fingerspelledWords: [],
       progress: 0, coverage: null, unsupported: [], fallbackUnits: 0, detail: '',
+      subtitleSource: null, subtitleError: '',
     })
     this.video = await waitForVideo()
     if (this.video) this.media = createYouTubeMedia(this.video)

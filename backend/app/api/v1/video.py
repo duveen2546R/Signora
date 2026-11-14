@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.db import get_session
 from app.models import VideoPlan, VideoPlanUnit
 from app.services.subtitle_service import MAX_SUBTITLE_BYTES, SubtitleError, build_translation_units, parse_subtitles
-from app.services.video_plan_service import create_plan, prepare_plan, serialize_plan
+from app.services.video_plan_service import create_plan, serialize_plan, start_preparation
 
 router = APIRouter(tags=["video signing"])
 _VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
@@ -50,7 +50,6 @@ def _get_plan(session: Session, plan_id: str) -> VideoPlan:
 
 @router.post("/video-plans", status_code=status.HTTP_202_ACCEPTED)
 async def post_video_plan(
-    background: BackgroundTasks,
     youtube_url: str = Form(..., min_length=1, max_length=500),
     subtitle: UploadFile = File(...),
     session: Session = Depends(get_session),
@@ -64,7 +63,8 @@ async def post_video_plan(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     plan, reused = create_plan(session, video_id, hashlib.sha256(payload).hexdigest(), units)
     if not reused:
-        background.add_task(prepare_plan, plan.id)
+        # Not a request background task: those hold up server shutdown until they finish.
+        start_preparation(plan.id)
     value = serialize_plan(plan, session)
     value["reused"] = reused
     return value

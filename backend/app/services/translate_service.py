@@ -16,6 +16,7 @@ from app.models import Gloss, SignClip
 from app.services.function_words import (
     letter_gloss, match_phrases, may_fingerspell, phrase_key, plan_function_words,
 )
+from app.services.plurals import plural_issue, resolve_plural
 
 REGISTRY_PATH = Path(__file__).with_name("isl_patterns.json")
 
@@ -250,7 +251,17 @@ def interpret_literal_sequence(
     def playable(glosses: tuple[str, ...] | None) -> bool:
         return glosses is not None and all(name in by_gloss for name in glosses)
 
+    def singular_gloss(word: str) -> str | None:
+        glosses = phrases.get((word,))
+        if glosses is not None and len(glosses) == 1 and playable(glosses):
+            return glosses[0]
+        return word.upper() if len(word) > 1 and word.upper() in by_gloss else None
+
+    plural_words: list[str] = []
+    seen: list[str] = []
     for token, phrase, glosses in match_phrases(plan.tokens, list(phrases.items()), accept=playable):
+        previous = list(seen)
+        seen.extend(phrase or (token.text,))
         if glosses is not None:
             for name in glosses:
                 append_gloss(name, " ".join(phrase))
@@ -265,6 +276,13 @@ def interpret_literal_sequence(
         # letter I, and an article has already been omitted.
         if len(word) > 1 and append_gloss(word.upper(), word):
             continue
+        plural = resolve_plural(word, previous, singular_gloss, by_gloss.__contains__)
+        if plural is not None:
+            for name in plural.glosses:
+                append_gloss(name, word)
+            if plural.marked and not plural.reviewed:
+                plural_words.append(word)
+            continue
         letters = [letter.upper() for letter in word if letter.isalpha()]
         if may_fingerspell(token) and letters and all(letter in by_gloss for letter in letters):
             for letter in letters:
@@ -273,6 +291,8 @@ def interpret_literal_sequence(
             unmapped(word)
     if plan.issue():
         result.issues.append(plan.issue())
+    if plural_issue(plural_words):
+        result.issues.append(plural_issue(plural_words))
     if not result.items:
         # Nothing but omitted function words is not a failure; there is simply nothing to sign.
         result.status = "function-only" if plan.omitted and not result.unmapped else "unsupported"

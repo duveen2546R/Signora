@@ -1,7 +1,8 @@
 /**
  * Orchestrator. Runs in the isolated content-script world on a YouTube watch page.
  *
- * Sequence: find the <video> -> check the backend -> get English captions -> convert to VTT ->
+ * Sequence: find the <video> -> check the backend -> get English captions (a manually picked file,
+ * else the bundled lesson SRT for a known playlist video, else YouTube's own) -> convert to VTT ->
  * POST to the existing /api/v1/video-plans -> poll until ready -> hand the returned timed units
  * to the unmodified YouTubeSignScheduler, with the page's <video> adapted to its media contract
  * and an AvatarAdapter standing in for playback.
@@ -12,15 +13,18 @@
  * competing planner the task rules out.
  */
 
-import { config, loadConfig, log, warn } from './config.js'
+import {
+  PLAYBACK_MODES, avatarRateFor, config, loadConfig, log, overrunPolicyFor, saveConfig, warn,
+} from './config.js'
 import { CaptionsUnavailableError, PageBridge, discoverCaptions } from './captions/discover.js'
 import { timedTextToVtt } from './captions/convert.js'
-import { WATCHED_EVENTS, createYouTubeMedia, videoEventToPlayerState } from './media/youtube-media.js'
+import { startSubtitleSource } from './captions/bundled.js'
+import { WATCHED_EVENTS, createYouTubeMedia, isYouTubeAdvertisement, videoEventToPlayerState } from './media/youtube-media.js'
 import { MockAvatarAdapter } from './avatar/adapter.js'
 import { UnityIframeAvatarAdapter } from './avatar/unity-iframe.js'
 import { Overlay } from './overlay/overlay.js'
 import {
-  describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary, summarizeIssues,
+  describeReadiness, diffNewlyReady, isPlanTerminal, progressSummary, summarizeIssues, toScheduleUnits,
 } from './plan/progressive.js'
 import YouTubeSignScheduler, { YT_STATE } from '../vendor/YouTubeSignScheduler.js'
 
@@ -72,7 +76,13 @@ export class SignoraSession {
     this.uiTimer = null
     this.videoId = videoId()
     this.unsupported = []
+    this.adShowing = false
     this.destroyed = false
+    // A subtitle file the viewer picked, kept for this tab: it overrides bundled lesson SRTs and
+    // YouTube captions for the video it was picked on, including after Retry or navigating back.
+    this.manualSubtitle = null
+    // Bumped whenever a newer caption choice supersedes an in-flight one.
+    this.sourceGeneration = 0
   }
 
   // --- lifecycle ---------------------------------------------------------------------------
@@ -85,8 +95,12 @@ export class SignoraSession {
       onRetry: () => this.restart(),
       onPickSubtitle: () => this.pickSubtitleFile(),
       onDownloadCaptions: () => this.downloadCaptions(),
+      onChangeMode: (mode) => this.setPlaybackMode(mode),
     }).mount(settings.overlayExpanded)
-    this.overlay.update({ adapterName: settings.avatarAdapter })
+    this.overlay.update({
+      adapterName: settings.avatarAdapter,
+      playbackMode: PLAYBACK_MODES[settings.playbackMode] ? settings.playbackMode : 'play-together',
+    })
 
     // Progressive plan state. `allUnits` always holds the full, latest-known unit list (every
     // unit's startMs/endMs/text is known immediately after POSTing - only motionAvailable/status
@@ -122,6 +136,28 @@ export class SignoraSession {
       return
     }
 
+    const generation = ++this.sourceGeneration
+    await startSubtitleSource({
+      videoId: this.videoId,
+      manual: this.manualSubtitle,
+      loadBundled: (id) => callBackground('getBundledSubtitle', { videoId: id }),
+      buildPlan: (text, options) => this.buildPlan(text, options),
+      discover: () => this.discoverYouTubeCaptions(generation),
+      report: (patch) => this.reportSubtitle(patch),
+      isCurrent: () => !this.destroyed && generation === this.sourceGeneration,
+    })
+  }
+
+  /** Overlay patch for the active caption source and any bundled-subtitle failure. */
+  reportSubtitle({ source, subtitleError }) {
+    const patch = {}
+    if (source !== undefined) patch.subtitleSource = source
+    if (subtitleError !== undefined) patch.subtitleError = subtitleError
+    this.overlay.update(patch)
+  }
+
+  /** Normal caption discovery: capture the English captions YouTube's own player loads. */
+  async discoverYouTubeCaptions(generation) {
     let captions
     try {
       this.overlay.update({ status: 'preparing-captions', detail: '' })
@@ -140,9 +176,11 @@ export class SignoraSession {
       this.watchForLateCaptions()
       return
     }
+    if (this.destroyed || generation !== this.sourceGeneration) return
 
     log('captions', captions.format, captions.cues.length, 'cues via', captions.via)
     this.overlay.update({
+      subtitleSource: { kind: 'youtube' },
       detail: `${captions.cues.length} caption cues (${captions.format}, ${captions.track?.kind === 'asr' ? 'auto-generated' : 'manual'}, via ${captions.via})`,
     })
     await this.buildPlan(captions.vtt)
@@ -169,6 +207,7 @@ export class SignoraSession {
       this.lateCaptionOff = null
       log('late captions captured after the initial failure')
       this.overlay.update({
+        subtitleSource: { kind: 'youtube' },
         detail: `Captions arrived (${converted.cues.length} cues). Preparing the sign plan…`,
       })
       this.buildPlan(converted.vtt)
@@ -185,8 +224,12 @@ export class SignoraSession {
    * alone measured 31 s). So the fix is entirely client-side: stop waiting for
    * `plan.status === 'ready'` before doing anything. The scheduler is attached straight away with
    * zero units and fed units one at a time as `pollPlanProgress` discovers them ready.
+   *
+   * `filename` tells the backend which parser to use (.srt or .vtt). Resolves to `{ ok: false,
+   * error }` when the backend rejects the subtitle, so a bundled lesson can fall back.
    */
-  async buildPlan(vtt) {
+  async buildPlan(vtt, { filename = 'captions.vtt' } = {}) {
+    const generation = this.sourceGeneration
     this.lastVtt = vtt
     this.overlay.update({ status: 'preparing-plan', detail: 'Sending captions to the Signora backend…' })
     let plan
@@ -194,13 +237,14 @@ export class SignoraSession {
       plan = await callBackground('createVideoPlan', {
         youtubeUrl: location.href.split('&')[0],
         vtt,
-        filename: 'captions.vtt',
+        filename,
       })
     } catch (error) {
       this.overlay.update({ status: 'plan-failed', detail: error.message })
-      return
+      return { ok: false, error: error.message }
     }
-    if (this.destroyed) return
+    // A newer caption choice (e.g. a manual pick) arrived while this one was being posted.
+    if (this.destroyed || generation !== this.sourceGeneration) return { ok: true }
 
     this.planId = plan.id
     this.allUnits = plan.units
@@ -213,6 +257,7 @@ export class SignoraSession {
       detail: `Preparing the first signs… (${plan.units.length} caption units total)`,
     })
     this.pollPlanProgress(plan.id)
+    return { ok: true }
   }
 
   /**
@@ -231,6 +276,9 @@ export class SignoraSession {
         plan = await callBackground('getVideoPlan', planId)
       } catch (error) {
         this.overlay.update({ detail: `Lost contact with the backend while composing: ${error.message}` })
+        // Units still composing will never arrive: stop waiting for them, so 'sync-pause' does
+        // not hold the video at a boundary forever.
+        this.scheduler?.updateUnits(toScheduleUnits(this.allUnits, this.planStatusValue, { settled: true }))
         return
       }
       if (this.destroyed || this.planId !== planId) return
@@ -240,14 +288,10 @@ export class SignoraSession {
 
       const { newlyReady, readyIds } = diffNewlyReady(plan.units, this.readyIds)
       this.readyIds = readyIds
-      if (newlyReady.length && this.scheduler) {
-        // Mutate the scheduler's own array rather than its constructor argument: the vendored
-        // scheduler copies `units` into `this.units` at construction and never looks at the
-        // original reference again, but `this.units` itself is a plain, public field. Pushing
-        // into it is the whole mechanism that lets later units become playable without
-        // reconstructing the scheduler or forking its source.
-        this.scheduler.units.push(...newlyReady)
-        this.scheduler.units.sort((a, b) => a.startMs - b.startMs)
+      // The scheduler knows every unit from the start, each marked `motionPending` until it is
+      // composed; this updates them in place as they become playable (or settle without motion).
+      this.scheduler?.updateUnits(toScheduleUnits(plan.units, plan.status))
+      if (newlyReady.length) {
         log(`${newlyReady.length} unit(s) became playable:`, newlyReady.map((u) => u.glosses).flat())
       }
 
@@ -333,20 +377,26 @@ export class SignoraSession {
     }
 
     // The scheduler is used exactly as the Watch page uses it; `loadMotion` routes through the
-    // service worker, and `units` starts empty on purpose - see pollPlanProgress() for why. Every
-    // other behaviour (play/pause/seek/rate/overrun) is the scheduler's own, untouched logic.
+    // service worker. It is given every unit at once, those still composing marked
+    // `motionPending` - see pollPlanProgress(). Every other behaviour (play/pause/seek/rate/
+    // overrun) is the scheduler's own logic.
     this.scheduler = new YouTubeSignScheduler({
       media: this.media,
       avatar: this.adapter,
-      units: [],
+      units: toScheduleUnits(plan.units, plan.status),
       loadMotion: (unit) => callBackground('getUnitMotion', unit.motionUrl),
-      overrunPolicy: settings.overrunPolicy,
-      prepareMotion: (motion, unit) => ({
-        ...motion,
-        // This is a video-caption performance, not a live microphone queue.  Fit the entire
-        // composed unit to its source cue so the avatar and spoken words progress together.
-        playbackTiming: { targetDurationMs: Math.max(250, unit.endMs - unit.startMs) },
-      }),
+      overrunPolicy: overrunPolicyFor(settings),
+      prepareMotion: (motion, unit, policy) => {
+        // Called as each sign starts, with the policy it plays under.
+        this.adapter?.setPlaybackRate(avatarRateFor(policy, this.media.getPlaybackRate()))
+        // 'sync-pause' holds the video for the sign, so the motion keeps its own recorded pace.
+        return policy === 'sync-pause' ? motion : {
+          ...motion,
+          // This is a video-caption performance, not a live microphone queue.  Fit the entire
+          // composed unit to its source cue so the avatar and spoken words progress together.
+          playbackTiming: { targetDurationMs: Math.max(250, unit.endMs - unit.startMs) },
+        }
+      },
       onSync: (detail) => this.overlay.update({ detail }),
     })
 
@@ -354,9 +404,34 @@ export class SignoraSession {
     this.scheduler.start()
     // Seed the scheduler with the player's current state so a video already playing is picked up.
     this.scheduler.setPlayerState(this.video.paused ? YT_STATE.PAUSED : YT_STATE.PLAYING)
-    this.adapter.setPlaybackRate(this.media.getPlaybackRate())
+    this.adapter.setPlaybackRate(avatarRateFor(this.scheduler.overrunPolicy, this.media.getPlaybackRate()))
 
-    this.uiTimer = setInterval(() => this.paintStatus(), 250)
+    this.syncAdvertisementState()
+    this.uiTimer = setInterval(() => {
+      this.syncAdvertisementState()
+      this.paintStatus()
+    }, 250)
+  }
+
+  /** Freeze the lesson avatar whenever YouTube swaps its stream for an advertisement. */
+  syncAdvertisementState() {
+    const showing = isYouTubeAdvertisement(this.video)
+    if (showing === this.adShowing) return
+    this.adShowing = showing
+    this.scheduler?.setExternalPause(showing)
+    log(showing ? 'advertisement started — signing paused' : 'advertisement ended — signing resumed')
+  }
+
+  /**
+   * Overlay toggle. The choice is saved immediately; a running scheduler adopts it at its next
+   * unit boundary, so a sign in progress is never re-timed and a hold it took is still released.
+   */
+  async setPlaybackMode(mode) {
+    if (!PLAYBACK_MODES[mode]) return
+    const settings = await saveConfig({ playbackMode: mode })
+    this.scheduler?.setOverrunPolicy(overrunPolicyFor(settings))
+    this.overlay.update({ playbackMode: mode })
+    log('playback mode', mode)
   }
 
   bindVideoEvents() {
@@ -369,7 +444,8 @@ export class SignoraSession {
       add(this.video, name, () => {
         if (name === 'ratechange') {
           const rate = this.media.getPlaybackRate()
-          this.adapter?.setPlaybackRate(rate)
+          // In 'sync-pause' the avatar keeps natural speed; the video resumes at the viewer's rate.
+          this.adapter?.setPlaybackRate(avatarRateFor(this.scheduler?.overrunPolicy, rate))
           this.overlay.update({ rate })
           return
         }
@@ -409,6 +485,13 @@ export class SignoraSession {
    */
   paintStatus() {
     if (!this.scheduler || !this.adapter) return
+    if (this.adShowing) {
+      this.overlay.update({
+        status: 'advertisement', caption: 'Advertisement — signing paused', glosses: [],
+        activeGloss: null, unitStatus: null, fingerspelledWords: [],
+      })
+      return
+    }
     const snapshot = this.adapter.snapshot?.() ?? {}
     const paused = Boolean(this.video?.paused)
     const autoPaused = Boolean(this.scheduler.autoPaused)
@@ -418,7 +501,8 @@ export class SignoraSession {
     )
 
     let status
-    if (autoPaused) status = 'catch-up'
+    if (autoPaused && this.scheduler.bufferingUnit) status = 'sync-buffering'
+    else if (autoPaused) status = this.scheduler.overrunPolicy === 'sync-pause' ? 'sync-hold' : 'catch-up'
     else if (this.video?.ended) status = 'ended'
     else if (paused) status = 'paused'
     else if (snapshot.playing) status = 'signing'
@@ -426,16 +510,18 @@ export class SignoraSession {
       status = 'buffering-signs'
     } else status = 'ready'
 
-    const patch = { status, progress: snapshot.progress ?? 0, rate: this.media.getPlaybackRate() }
-    if (readiness.unit) {
-      patch.caption = readiness.unit.text || ''
-      patch.glosses = readiness.unit.glosses || []
-      patch.activeGloss = snapshot.activeGloss ?? null
-    } else if (readiness.units?.length) {
-      // Nothing is current yet, but show what the look-ahead buffer is working on.
-      patch.caption = readiness.units[0].text || ''
-      patch.glosses = readiness.units[0].glosses || []
-      patch.activeGloss = null
+    const patch = {
+      status, progress: snapshot.progress ?? 0, rate: this.media.getPlaybackRate(),
+      modePending: this.scheduler.pendingPolicy !== null,
+    }
+    const shown = readiness.unit ?? readiness.units?.[0] ?? null
+    if (shown) {
+      patch.caption = shown.text || ''
+      patch.glosses = shown.glosses || []
+      // Nothing is current yet when only the look-ahead is shown, so nothing is highlighted.
+      patch.activeGloss = readiness.unit ? snapshot.activeGloss ?? null : null
+      patch.unitStatus = shown.status
+      patch.fingerspelledWords = shown.fingerspelledWords || []
     }
     this.overlay.update(patch)
 
@@ -470,7 +556,12 @@ export class SignoraSession {
           ? timedTextToVtt(text).vtt
           : text
         this.teardownScheduler()
-        this.overlay.update({ detail: `Using local file ${file.name}` })
+        this.manualSubtitle = { videoId: this.videoId, name: file.name, text: vtt, filename: 'captions.vtt' }
+        this.overlay.update({
+          subtitleSource: { kind: 'manual', name: file.name },
+          subtitleError: '',
+          detail: `Using local file ${file.name}`,
+        })
         await this.buildPlan(vtt)
       } catch (error) {
         this.overlay.update({ status: 'plan-failed', detail: error.message })
@@ -483,6 +574,7 @@ export class SignoraSession {
   // --- teardown ----------------------------------------------------------------------------
 
   teardownScheduler() {
+    this.sourceGeneration += 1
     this.lateCaptionOff?.()
     this.lateCaptionOff = null
     if (this.uiTimer) { clearInterval(this.uiTimer); this.uiTimer = null }
@@ -504,8 +596,9 @@ export class SignoraSession {
     this.videoId = videoId()
     this.lastVtt = ''
     this.overlay.update({
-      status: 'idle', caption: '', glosses: [], activeGloss: null,
+      status: 'idle', caption: '', glosses: [], activeGloss: null, unitStatus: null, fingerspelledWords: [],
       progress: 0, coverage: null, unsupported: [], fallbackUnits: 0, detail: '',
+      subtitleSource: null, subtitleError: '',
     })
     this.video = await waitForVideo()
     if (this.video) this.media = createYouTubeMedia(this.video)
